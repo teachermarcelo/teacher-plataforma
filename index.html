@@ -34,8 +34,19 @@
    <div class="field"><label>E-mail</label><input id="email" type="email" autocomplete="username" required></div>
    <div class="field"><label>Senha</label><input id="password" type="password" autocomplete="current-password" required></div>
    <label class="remember"><input id="remember" type="checkbox" checked> Lembrar e-mail</label>
-   <button class="btn primary">Entrar</button>
+   <button id="loginBtn" class="btn primary">Entrar</button>
+   <button type="button" class="btn ghost" onclick="showForgot()">Esqueci minha senha</button>
    <button type="button" class="btn secondary" onclick="showRegister()">Criar conta de aluno</button>
+  </form>
+  <form id="forgotForm" class="form hidden">
+   <div class="field"><label>E-mail da conta</label><input id="forgotEmail" type="email" autocomplete="email" required></div>
+   <button id="forgotBtn" class="btn primary">Enviar link para redefinir senha</button>
+   <button type="button" class="btn ghost" onclick="showLogin()">Voltar para o login</button>
+  </form>
+  <form id="recoveryForm" class="form hidden">
+   <div class="field"><label>Nova senha</label><input id="newPassword" type="password" minlength="6" required></div>
+   <div class="field"><label>Confirmar nova senha</label><input id="newPassword2" type="password" minlength="6" required></div>
+   <button id="recoveryBtn" class="btn primary">Salvar nova senha</button>
   </form>
   <form id="registerForm" class="form hidden">
    <div class="field"><label>Nome completo</label><input id="rName" required></div>
@@ -45,6 +56,7 @@
    <button class="btn primary">Cadastrar aluno</button>
    <button type="button" class="btn ghost" onclick="showLogin()">Voltar</button>
   </form>
+  <button type="button" class="btn ghost" style="width:100%;margin-top:12px" onclick="showDiagnostics()">🔎 Diagnosticar problema de login</button>
  </div>
 </div>
 
@@ -94,6 +106,7 @@
  <div class="float-item"><span>Buscar</span><button onclick="closeFloat();openGlobalSearch()">⌕</button></div>
 </div><button class="float-main" onclick="document.getElementById('float').classList.toggle('open')">+</button></div>
 
+<div id="diagModal" class="modal hidden"><div class="modal-card" style="max-width:620px"><div class="modal-head"><h3>🔎 Diagnóstico de Login</h3><button class="btn ghost" onclick="closeDiagnostics()">✕</button></div><p style="font-size:11px;color:#878696">Use este diagnóstico para descobrir exatamente em qual etapa o login está falhando.</p><div id="diagBox" style="border:1px solid #e9e8f0;border-radius:12px;overflow:hidden"></div><div class="modal-actions"><button class="btn ghost" onclick="closeDiagnostics()">Fechar</button></div></div></div>
 <div id="searchModal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3>Busca global</h3><button class="btn ghost" onclick="closeSearch()">✕</button></div><div class="form"><div class="field"><label>Buscar</label><input id="globalSearch" oninput="doSearch()" placeholder="aluno, aula, curso, material..."></div><div id="searchResults"></div></div></div></div>
 
 <script>
@@ -110,9 +123,15 @@ const fmtDate=d=>d?new Date(d).toLocaleDateString('pt-BR'):'—';
 const monthLabel=d=>d?new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'}):'—';
 const badge=(s)=>{let c=['paid','completed','active'].includes(s)?'green':['pending','reviewed','open'].includes(s)?'yellow':['overdue','cancelled'].includes(s)?'red':['submitted'].includes(s)?'blue':'gray';return `<span class="badge ${c}">${esc(s)}</span>`};
 
-function showLogin(){ $('loginForm').classList.remove('hidden');$('registerForm').classList.add('hidden');}
-function showRegister(){ $('loginForm').classList.add('hidden');$('registerForm').classList.remove('hidden');}
+function showLogin(){ $('loginForm').classList.remove('hidden');$('registerForm').classList.add('hidden');$('forgotForm').classList.add('hidden');$('recoveryForm').classList.add('hidden'); }
+function showRegister(){ $('loginForm').classList.add('hidden');$('registerForm').classList.remove('hidden');$('forgotForm').classList.add('hidden');$('recoveryForm').classList.add('hidden'); }
+function showForgot(){ $('loginForm').classList.add('hidden');$('registerForm').classList.add('hidden');$('forgotForm').classList.remove('hidden');$('recoveryForm').classList.add('hidden'); $('forgotEmail').value=$('email').value.trim(); }
+function showRecovery(){ $('loginForm').classList.add('hidden');$('registerForm').classList.add('hidden');$('forgotForm').classList.add('hidden');$('recoveryForm').classList.remove('hidden'); }
 function msg(t,bad=false){ $('authMsg').innerHTML=`<div class="auth-msg" style="${bad?'background:#ffe8ea;color:#a93442':''}">${esc(t)}</div>`;}
+function diag(label,ok,detail=''){ const box=$('diagBox'); if(!box)return; const row=document.createElement('div');row.style.cssText='padding:8px 10px;border-bottom:1px solid #e9e8f0;font-size:11px';row.innerHTML=`<b>${ok?'✅':'❌'} ${esc(label)}</b>${detail?`<div style="color:#878696;margin-top:3px">${esc(detail)}</div>`:''}`;box.appendChild(row); }
+function startDiag(){ const box=$('diagBox'); if(box)box.innerHTML=''; diag('Biblioteca Supabase',!!window.supabase,window.supabase?'carregada':'não carregada'); diag('URL do projeto',SUPABASE_URL.includes('.supabase.co'),SUPABASE_URL); diag('Cliente Supabase',!!sb,!!sb?'inicializado':'não inicializado'); }
+function showDiagnostics(){ startDiag(); $('diagModal').classList.remove('hidden'); }
+function closeDiagnostics(){ $('diagModal').classList.add('hidden'); }
 function toggleMobile(){$('sidebar').classList.toggle('open')}
 function closeFloat(){$('float').classList.remove('open')}
 function closeModal(){$('modal').classList.add('hidden')}
@@ -120,20 +139,56 @@ function openModal(title,body){$('modalTitle').textContent=title;$('modalBody').
 function setPage(t,s,actions=''){ $('pageTitle').textContent=t;$('pageSub').textContent=s;$('pageActions').innerHTML=actions;$('crumb').innerHTML=`Teacher Platform / <b>${esc(t)}</b>`; }
 
 $('loginForm').onsubmit=async e=>{
- e.preventDefault(); const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
- if(error){msg(error.message,true);return} if($('remember').checked)localStorage.setItem('tic_email',$('email').value.trim());else localStorage.removeItem('tic_email');
+ e.preventDefault();
+ const btn=$('loginBtn'); btn.disabled=true; btn.textContent='Verificando...';
+ startDiag(); diag('Tentativa de autenticação',true,'enviando e-mail e senha ao Supabase Auth');
+ msg('Verificando suas credenciais...');
+ const {data,error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
+ if(error){ diag('Autenticação',false,error.message+' | código: '+(error.code||'sem código')); msg(error.message,true); btn.disabled=false;btn.textContent='Entrar'; showDiagnostics(); return; }
+ diag('Autenticação',true,'Sessão criada. ID: '+data.user.id);
+ if($('remember').checked)localStorage.setItem('tic_email',$('email').value.trim());else localStorage.removeItem('tic_email');
+ btn.disabled=false;btn.textContent='Entrar';
+};
+$('forgotForm').onsubmit=async e=>{
+ e.preventDefault(); const btn=$('forgotBtn');btn.disabled=true;btn.textContent='Enviando...';
+ const email=$('forgotEmail').value.trim();
+ const redirectTo=location.origin+location.pathname;
+ const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo});
+ btn.disabled=false;btn.textContent='Enviar link para redefinir senha';
+ if(error){msg(error.message,true);return;}
+ msg('Se este e-mail estiver cadastrado, o Supabase enviará um link para redefinir a senha. Verifique também Spam/Lixo eletrônico.');
+};
+$('recoveryForm').onsubmit=async e=>{
+ e.preventDefault(); const p=$('newPassword').value,p2=$('newPassword2').value;
+ if(p!==p2){msg('As senhas não são iguais.',true);return;}
+ const btn=$('recoveryBtn');btn.disabled=true;btn.textContent='Salvando...';
+ const {error}=await sb.auth.updateUser({password:p});
+ btn.disabled=false;btn.textContent='Salvar nova senha';
+ if(error){msg(error.message,true);return;}
+ msg('Senha alterada com sucesso. Agora você pode entrar.');
+ await sb.auth.signOut(); showLogin();
 };
 $('registerForm').onsubmit=async e=>{
  e.preventDefault(); const name=$('rName').value.trim(),email=$('rEmail').value.trim(),password=$('rPassword').value;
  const {data,error}=await sb.auth.signUp({email,password,data:{full_name:name,role:'student'}});
  if(error){msg(error.message,true);return}
- if(data.user){await sb.from('tic_profiles').upsert({id:data.user.id,full_name:name,email,role:'student',active:true});}
- showLogin();msg('Cadastro criado. Confirme o e-mail se a confirmação estiver ativa e depois entre.');
+ if(data.user){
+   // tic_profiles is created server-side by the Supabase auth trigger.
+   // This also works when email confirmation is enabled, because there is no authenticated session yet.
+ }
+ showLogin();msg(data.session?'Cadastro criado e você já pode entrar.':'Cadastro criado. Confirme o e-mail se a confirmação estiver ativa e depois entre.');
 };
 (async()=>{
  $('email').value=localStorage.getItem('tic_email')||'';
- const {data}=await sb.auth.getSession(); if(data.session){session=data.session;await boot();}
- sb.auth.onAuthStateChange(async(_,s)=>{session=s;if(s){await boot()}});
+ startDiag();
+ const {data,error}=await sb.auth.getSession();
+ if(error)diag('Leitura da sessão',false,error.message);else diag('Leitura da sessão',true,data.session?'sessão existente':'nenhuma sessão ativa');
+ if(data.session){session=data.session;await boot();}
+ sb.auth.onAuthStateChange(async(event,s)=>{
+  session=s;
+  if(event==='PASSWORD_RECOVERY'){ showRecovery(); msg('Link de recuperação validado. Crie sua nova senha.'); return; }
+  if(s){await boot();}
+ });
 })();
 async function boot(){
  $('login').classList.add('hidden');$('app').classList.remove('hidden');
