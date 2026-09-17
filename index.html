@@ -1864,17 +1864,31 @@ const TIC_CEFR_ORDER_V11=['A0','A1','A2','B1','B2','C1','C2'];
 let ticCourseDragV11=null, ticModuleDragV11=null, ticLessonDragV11=null;
 function ticLevelRankV11(v){const i=TIC_CEFR_ORDER_V11.indexOf(String(v||'').toUpperCase());return i<0?999:i}
 async function ticEnsureDefaultTrackV11(){
- let r=await sb.from('tic_course_tracks').select('*').eq('teacher_id',session.user.id).eq('active',true).order('is_default',{ascending:false}).order('created_at',{ascending:true}).limit(1);
+ const uid=await ticTeacherAuthIdV12();
+ let r=await sb.from('tic_course_tracks').select('*').eq('teacher_id',uid).eq('active',true).order('is_default',{ascending:false}).order('created_at',{ascending:true}).limit(1);
  if(r.error)throw r.error;
  let track=r.data?.[0];
- if(!track){const cr=await sb.from('tic_course_tracks').insert({teacher_id:session.user.id,name:'General English',description:'Sequência pedagógica dos cursos',is_default:true,active:true}).select().single();if(cr.error)throw cr.error;track=cr.data}
- if(!track.is_default){const u=await sb.from('tic_course_tracks').update({is_default:false}).eq('teacher_id',session.user.id);if(u.error)throw u.error;const d=await sb.from('tic_course_tracks').update({is_default:true}).eq('id',track.id).eq('teacher_id',session.user.id);if(d.error)throw d.error;track={...track,is_default:true}}
- const {data:courses,error:ce}=await sb.from('tic_courses').select('id,title,level,created_at').eq('teacher_id',session.user.id).eq('active',true);if(ce)throw ce;
+ if(!track){
+   const cr=await sb.from('tic_course_tracks').insert({teacher_id:uid,name:'General English',description:'Sequência pedagógica dos cursos',is_default:true,active:true}).select().single();
+   if(cr.error)throw cr.error;track=cr.data;
+ }
+ if(!track.is_default){
+   const u=await sb.from('tic_course_tracks').update({is_default:false}).eq('teacher_id',uid);if(u.error)throw u.error;
+   const d=await sb.from('tic_course_tracks').update({is_default:true}).eq('id',track.id).eq('teacher_id',uid);if(d.error)throw d.error;
+   track={...track,is_default:true};
+ }
+ const {data:courses,error:ce}=await sb.from('tic_courses').select('id,title,level,created_at').eq('teacher_id',uid).eq('active',true);if(ce)throw ce;
  const {data:items,error:ie}=await sb.from('tic_course_track_items').select('course_id,position').eq('track_id',track.id);if(ie)throw ie;
- const have=new Set((items||[]).map(x=>x.course_id));const missing=(courses||[]).filter(c=>!have.has(c.id)).sort((a,b)=>ticLevelRankV11(a.level)-ticLevelRankV11(b.level)||new Date(a.created_at)-new Date(b.created_at));
- if(missing.length){let next=Math.max(0,...(items||[]).map(x=>Number(x.position)||0));const rows=missing.map(c=>({track_id:track.id,course_id:c.id,position:++next}));const ins=await sb.from('tic_course_track_items').insert(rows);if(ins.error)throw ins.error}
+ const have=new Set((items||[]).map(x=>x.course_id));
+ const missing=(courses||[]).filter(c=>!have.has(c.id)).sort((a,b)=>ticLevelRankV11(a.level)-ticLevelRankV11(b.level)||new Date(a.created_at)-new Date(b.created_at));
+ if(missing.length){
+   let next=Math.max(0,...(items||[]).map(x=>Number(x.position)||0));
+   const rows=missing.map(c=>({track_id:track.id,course_id:c.id,position:++next}));
+   const ins=await sb.from('tic_course_track_items').insert(rows);if(ins.error)throw ins.error;
+ }
  return track;
 }
+
 async function ticGetOrderedCoursesV11(){
  const track=await ticEnsureDefaultTrackV11();
  const [{data:courses,error:ce},{data:items,error:ie}]=await Promise.all([sb.from('tic_courses').select('*').eq('teacher_id',session.user.id),sb.from('tic_course_track_items').select('course_id,position').eq('track_id',track.id)]);if(ce||ie)throw(ce||ie);
@@ -1890,9 +1904,35 @@ function ticDropCourseV11(e){e.preventDefault();const target=e.currentTarget;if(
 async function ticSaveCourseOrderV11(trackId){const ids=[...document.querySelectorAll('#ticCourseOrderList .tic-order-item')].map(x=>x.dataset.courseId);for(let i=0;i<ids.length;i++){const r=await sb.from('tic_course_track_items').update({position:i+1}).eq('track_id',trackId).eq('course_id',ids[i]);if(r.error)return toast('Erro ao salvar posição: '+r.error.message,'error')}closeModal();toast('Sequência dos cursos salva.','success');coursesPage()}
 function ticCourseOptionsOrderedV11(selected=''){const cs=window.__ticCourses||[];return cs.slice().sort((a,b)=>ticLevelRankV11(a.level)-ticLevelRankV11(b.level)||String(a.title).localeCompare(String(b.title))).map(c=>`<option value="${c.id}" ${c.id===selected?'selected':''}>${esc(c.level||'')} · ${esc(c.title)}</option>`).join('')}
 
+/* v12: always resolve the real Supabase Auth user before course writes. */
+async function ticTeacherAuthIdV12(){
+ const {data,error}=await sb.auth.getUser();
+ if(error||!data?.user?.id) throw new Error('Sessão do Teacher não está autenticada. Atualize a página e entre novamente.');
+ return data.user.id;
+}
+
 /* New course form: preserve fields, append new course to Track. */
 function openCourseFormV11(x=null){openModal(x?'Editar curso':'Novo curso',`<form class="form" onsubmit="saveCourseV11(event,'${x?.id||''}')"><div class="field"><label>Título</label><input id="g1" value="${esc(x?.title||'')}" required></div><div class="form-grid"><div class="field"><label>Nível</label><select id="g2">${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Descrição</label><textarea id="g3">${esc(x?.description||'')}</textarea></div></div><div class="notice">💡 Depois de salvar, o curso entra na sequência do Track. Você poderá reposicioná-lo em <b>Organizar sequência</b>.</div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">💾 Salvar curso</button></div></form>`)}
-async function saveCourseV11(e,id){e.preventDefault();const o={teacher_id:session.user.id,title:$('g1').value.trim(),level:$('g2').value,description:$('g3').value.trim()||null};if(!o.title)return toast('Informe o título.','error');let r;if(id)r=await sb.from('tic_courses').update(o).eq('id',id).eq('teacher_id',session.user.id);else r=await sb.from('tic_courses').insert(o).select().single();if(r.error)return toast('Não foi possível salvar: '+r.error.message,'error');if(!id){const track=await ticEnsureDefaultTrackV11();const {data:last}=await sb.from('tic_course_track_items').select('position').eq('track_id',track.id).order('position',{ascending:false}).limit(1).maybeSingle();const ir=await sb.from('tic_course_track_items').insert({track_id:track.id,course_id:r.data.id,position:Number(last?.position||0)+1});if(ir.error)return toast('Curso criado, mas não foi possível adicioná-lo à sequência: '+ir.error.message,'error')}closeModal();toast(id?'Curso atualizado.':'Curso criado e adicionado à sequência.','success');coursesPage()}
+async function saveCourseV11(e,id){
+ e.preventDefault();
+ try{
+   const uid=await ticTeacherAuthIdV12();
+   const o={teacher_id:uid,title:$('g1').value.trim(),level:$('g2').value,description:$('g3').value.trim()||null};
+   if(!o.title)return toast('Informe o título.','error');
+   let r;
+   if(id) r=await sb.from('tic_courses').update(o).eq('id',id).eq('teacher_id',uid);
+   else r=await sb.from('tic_courses').insert(o).select().single();
+   if(r.error)return toast('Não foi possível salvar: '+r.error.message,'error');
+   if(!id){
+     const track=await ticEnsureDefaultTrackV11();
+     const {data:last}=await sb.from('tic_course_track_items').select('position').eq('track_id',track.id).order('position',{ascending:false}).limit(1).maybeSingle();
+     const ir=await sb.from('tic_course_track_items').insert({track_id:track.id,course_id:r.data.id,position:Number(last?.position||0)+1});
+     if(ir.error)return toast('Curso criado, mas não foi possível adicioná-lo à sequência: '+ir.error.message,'error');
+   }
+   closeModal();toast(id?'Curso atualizado.':'Curso criado e adicionado à sequência.','success');coursesPage();
+ }catch(err){toast(err?.message||'Não foi possível salvar o curso.','error')}
+}
+
 openCourseForm=openCourseFormV11;
 
 /* Teacher Courses page — ordered, no recursion, no dependency on the old wrapper. */
