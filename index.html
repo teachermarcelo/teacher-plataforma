@@ -880,6 +880,7 @@ function ticHtmlBridge(){return `<scr${'ipt'}>(function(){
  document.addEventListener('click',e=>{const b=e.target.closest('button,input[type=submit],[data-tic-submit]');if(!b)return;const t=(b.innerText||b.value||'').toLowerCase();if(b.dataset.ticSubmit!==undefined||/submit|enviar|send|check|finish|concluir|responder|salvar resposta|save answer/.test(t)){e.preventDefault();send()}});
  parent.postMessage({type:'tic-html-ready'},'*');
 })();<\/script>`}
+
 let ticHtmlViewerContext=null;
 function openHtmlViewer(title,htmlContent,mode='preview',refId=''){
  const content=String(htmlContent||'').trim();
@@ -1408,9 +1409,8 @@ function ticResponsiveSrcdoc(content){
  const c=String(content||'').trim();
  if(!c)return '';
  const meta='<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">';
- const css='<style>html,body{margin:0;padding:0;max-width:100%;overflow-x:auto}*{box-sizing:border-box}img,video,iframe,table{max-width:100%;height:auto}body{overflow-wrap:anywhere;font-family:Arial,sans-serif;line-height:1.6}a{overflow-wrap:anywhere}button,input,select,textarea{max-width:100%;box-sizing:border-box}table{display:block;overflow-x:auto}</style>';
- if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}${css}`);
- return '<!doctype html><html><head>'+meta+css+'</head><body>'+c+'</body></html>';
+ if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}`);
+ return '<!doctype html><html><head>'+meta+'</head><body>'+c+'</body></html>';
 }
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
@@ -1530,8 +1530,124 @@ function ticRenderLessonResources(lesson){
 }
 function ticViewerTextFrame(content){
  const c=String(content||'').trim();if(!c)return '';
- if(/<(?:html|body|div|p|h[1-6]|ul|ol|table|span|strong|em|img|a\b|section|article)[\s>]/i.test(c))return ticResponsiveSrcdoc(c);
- return '<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>body{font-family:Arial,sans-serif;margin:0;padding:28px;line-height:1.7;color:#202033}*{box-sizing:border-box}a{overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>'+esc(c).replace(/\n/g,'<br>')+'</body></html>';
+ const looksHtml=/<(?:html|body|div|p|h[1-6]|ul|ol|table|span|strong|em|img|a\b|section|article)[\s>]/i.test(c);
+ if(looksHtml)return ticResponsiveSrcdoc(c);
+ return '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;margin:0;padding:28px;line-height:1.7;color:#202033}*{box-sizing:border-box}a{overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>'+esc(c).replace(/\n/g,'<br>')+'</body></html>';
+}
+
+function ticFrameHtml(content){
+ const c=String(content||'').trim();
+ if(!c)return '';
+ if(/<html[\s>]/i.test(c)) return ticResponsiveSrcdoc(c);
+ return ticResponsiveSrcdoc(c);
+}
+function ticViewerDevices(targetId='ticViewerFrame',wrapId='ticViewerWrap'){
+ const w=$(wrapId); if(!w)return '';
+ return `<div class="tic-viewer-toolbar"><div class="devices"><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('desktop','${wrapId}')">🖥 Desktop</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('tablet','${wrapId}')">▣ Tablet</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('mobile','${wrapId}')">📱 Mobile</button></div></div>`;
+}
+function ticSetViewerDevice(device,wrapId){const w=$(wrapId);if(!w)return;w.className='tic-viewer-content '+(device==='mobile'?'tic-mobile':device==='tablet'?'tic-tablet':'');}
+function ticRenderResourcesFinal(x){
+ const arr=[];
+ if(x?.video_url)arr.push({type:'video',title:'Vídeo principal',url:x.video_url});
+ if(x?.audio_url)arr.push({type:'audio',title:'Áudio principal',url:x.audio_url});
+ if(x?.pdf_url)arr.push({type:'pdf',title:'PDF principal',url:x.pdf_url});
+ if(Array.isArray(x?.resource_items))arr.push(...x.resource_items);
+ const seen=new Set(), list=arr.filter(a=>{const u=ticSafeUrl(a?.url||a?.value||'');if(!u||seen.has(u))return false;seen.add(u);return true});
+ if(!list.length)return '<div class="empty">Nenhum recurso adicional cadastrado.</div>';
+ return `<div style="display:grid;gap:8px">${list.map(a=>{const u=ticSafeUrl(a.url||a.value||'');const type=String(a.type||'link').toLowerCase();const icon=type==='pdf'?'📄':type==='video'?'🎥':type==='audio'?'🎧':type==='file'?'📎':'🔗';return `<div class="tic-resource-card"><div><b>${icon} ${esc(a.title||a.name||'Recurso')}</b>${a.description?`<small>${esc(a.description)}</small>`:''}</div><a class="btn sm secondary" href="${esc(u)}" target="_blank" rel="noopener noreferrer">Abrir →</a></div>`}).join('')}</div>`;
+}
+async function ticMarkLessonOpen(id,s){
+ const now=new Date().toISOString();
+ const {data:lp}=await sb.from('tic_lesson_progress').select('*').eq('lesson_id',id).eq('student_id',s.id).maybeSingle();
+ if(lp){await sb.from('tic_lesson_progress').update({first_opened_at:lp.first_opened_at||now,last_opened_at:now,open_count:Number(lp.open_count||0)+1,updated_at:now}).eq('id',lp.id);return lp;}
+ const {data:n}=await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,first_opened_at:now,last_opened_at:now,open_count:1,response_count:0,progress:0}).select().single();return n;
+}
+async function markLessonCompleted(lessonId){
+ const s=await studentRecord();if(!s)return;
+ const now=new Date().toISOString();
+ const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,completion_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+ let r;
+ if(lp)r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_completed_at:now,completion_count:Number(lp.completion_count||0)+1,progress:100,updated_at:now}).eq('id',lp.id);
+ else r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_completed_at:now,completion_count:1,progress:100,open_count:1,response_count:0});
+ if(r.error)return toast('Não foi possível registrar a conclusão: '+r.error.message,'error');
+ toast('Lesson concluída. Ela continua disponível para você refazer quando quiser.','success');
+ viewStudentLessonInteractive(lessonId);
+}
+async function viewStudentLessonInteractive(id){
+ const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).maybeSingle();
+ if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
+ const s=await studentRecord();if(!s)return;
+ const {data:courseAccess}=l.course_id?await sb.from('tic_course_students').select('id').eq('course_id',l.course_id).eq('student_id',s.id).eq('status','active').maybeSingle():{data:null};
+ const {data:direct}=await sb.from('tic_lesson_assignments').select('id').eq('lesson_id',id).eq('student_id',s.id).eq('active',true).maybeSingle();
+ if(!courseAccess&&!direct)return toast('Esta Lesson não está disponível para sua conta.','error');
+ const lp=await ticMarkLessonOpen(id,s);
+ const {data:resp}=await sb.from('tic_lesson_responses').select('id,attempt,status,score,response_text,teacher_comment,improvement_skill,improvement_link,reviewed_at,created_at').eq('lesson_id',id).eq('student_id',s.id).order('attempt',{ascending:false});
+ const completed=!!lp?.first_completed_at; const latest=resp?.[0];
+ const content=l.content?`<section class="tic-viewer-content" id="ticLessonContentWrap"><iframe id="ticLessonContentFrame" title="Conteúdo da Lesson" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></section>`:'';
+ const html=l.html_enabled&&l.html_content?`<section><div class="tic-viewer-toolbar"><b>🧩 Atividade HTML interativa</b><span class="badge green">Responsiva</span></div><div class="tic-viewer-toolbar"><div class="devices"><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('desktop','ticLessonHtmlWrap')">🖥 Desktop</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('tablet','ticLessonHtmlWrap')">▣ Tablet</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('mobile','ticLessonHtmlWrap')">📱 Mobile</button></div></div><div class="tic-viewer-content" id="ticLessonHtmlWrap"><iframe id="ticLessonHtmlFrame" title="Atividade HTML da Lesson" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div><div id="ticLessonStatus" class="notice">Você pode realizar a atividade e enviar sua resposta dentro do conteúdo.</div></section>`:'';
+ const response=l.allow_student_response?`<section class="viewer-panel"><div class="viewer-panel-head"><b>✍️ Resposta ao Teacher</b><span class="badge blue">Tentativas ilimitadas</span></div><div class="tic-answer-box"><textarea id="lessonExternalResponse" placeholder="Escreva uma resposta para o Teacher..."></textarea><button class="btn primary" onclick="submitLessonExternalResponse('${l.id}')">📤 Enviar resposta</button></div></section>`:'';
+ const feedback=latest&&(latest.teacher_comment||latest.score!=null)?`<section class="tic-feedback-card"><b>👨‍🏫 Feedback do Teacher</b>${latest.score!=null?`<div class="score">${latest.score}/100</div>`:''}${latest.teacher_comment?`<div style="white-space:pre-wrap;line-height:1.6">${esc(latest.teacher_comment)}</div>`:''}${latest.improvement_skill||latest.improvement_link?`<div class="improvement-box"><b>🎯 Como melhorar</b>${latest.improvement_skill?`<div>Habilidade: <b>${esc(latest.improvement_skill)}</b></div>`:''}${latest.improvement_link?`<a class="btn secondary" href="${esc(ticSafeUrl(latest.improvement_link))}" target="_blank" rel="noopener noreferrer">🔗 Abrir material</a>`:''}</div>`:''}</section>`:'';
+ const history=(resp||[]).length?`<section class="viewer-panel"><div class="viewer-panel-head"><b>🔄 Histórico</b></div>${resp.map(r=>`<div class="tic-attempt"><b>Tentativa ${r.attempt}</b><small>${fmtDate(r.created_at)} · ${esc(r.status||'submitted')}</small>${r.score!=null?`<div><b>Nota:</b> ${r.score}</div>`:''}${r.response_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(r.response_text)}</div>`:''}</div>`).join('')}</section>`:'';
+ openModal(`📖 ${esc(l.title)}`,`<div class="tic-full-viewer"><div class="lesson-student-header"><div><span class="badge blue">${esc(l.level||s.current_level||'')}</span><h2>${esc(l.title)}</h2><small>${esc(l.skill||'Lesson')} · ${esc(l.lesson_type||'lesson')}</small></div><div class="tic-task-state"><span class="badge ${completed?'green':'yellow'}">${completed?'✓ Concluída na primeira vez':'Não concluída'}</span><span class="badge green">Acesso ativo</span></div></div>${content}${l.content?'<div class="viewer-status">Conteúdo da Lesson</div>':''}${html}${response}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos e links</b></div>${ticRenderResourcesFinal(l)}</section>${feedback}${history}<div class="viewer-actions"><button class="btn ghost" onclick="closeModal()">Fechar</button>${!completed?`<button class="btn primary" onclick="markLessonCompleted('${l.id}')">✓ Marcar como concluída</button>`:`<span class="badge green" style="padding:10px 13px">✓ Concluída — pode refazer</span>`}</div></div>`);
+ if(content){const f=$('ticLessonContentFrame');if(f)f.srcdoc=ticFrameHtml(l.content)}
+ if(html){const f=$('ticLessonHtmlFrame');if(f)f.srcdoc=ticFrameHtml(l.html_content)+ticHtmlBridge();}
+}
+async function submitLessonExternalResponse(lessonId){
+ const s=await studentRecord();if(!s)return;const el=$('lessonExternalResponse');const text=el?.value.trim()||'';if(!text)return toast('Digite uma resposta antes de enviar.','info');
+ const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
+ const r=await sb.from('tic_lesson_responses').insert({lesson_id:lessonId,student_id:s.id,attempt,response_text:text,response_data:{source:'external_text'},status:'submitted'});if(r.error)return toast('Não foi possível enviar: '+r.error.message,'error');
+ const now=new Date().toISOString();const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,response_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+ if(lp)await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,response_count:Number(lp.response_count||0)+1,last_opened_at:now,progress:100,updated_at:now}).eq('id',lp.id);else await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,response_count:1,progress:100,open_count:1});
+ toast(`Resposta enviada. Tentativa ${attempt}.`,'success');viewStudentLessonInteractive(lessonId);
+}
+async function submitInteractiveLesson(lessonId,payload){
+ const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
+ const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
+ const r=await sb.from('tic_lesson_responses').insert({lesson_id:lessonId,student_id:s.id,attempt,response_data:payload.fields||{},response_text:payload.text||null,status:'submitted'});if(r.error)return toast('Não foi possível enviar sua resposta: '+r.error.message,'error');
+ const now=new Date().toISOString();const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,response_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();if(lp)await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,response_count:Number(lp.response_count||0)+1,last_opened_at:now,progress:100,updated_at:now}).eq('id',lp.id);else await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,response_count:1,progress:100,open_count:1});if($('ticLessonStatus'))$('ticLessonStatus').innerHTML=`<b>✅ Resposta enviada.</b> Tentativa ${attempt}. A Lesson continua disponível para refazer.`;toast('Resposta da Lesson enviada.','success');
+}
+async function submitInteractiveTask(taskAssignmentId,payload){
+ const s=await studentRecord();if(!s)return;const {data:ta,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();if(error||!ta||ta.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');
+ const {data:a}=await sb.from('tic_assignments').select('allow_multiple_attempts,active').eq('id',ta.assignment_id).maybeSingle();if(a?.active===false)return toast('Esta Task foi desativada pelo Teacher.','error');
+ if(a?.allow_multiple_attempts===false){const {data:already}=await sb.from('tic_submissions').select('id').eq('task_assignment_id',ta.id).eq('student_id',s.id).limit(1);if(already?.length)return toast('Esta Task permite apenas uma tentativa.','info');}
+ const {data:last}=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',ta.id).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
+ const r=await sb.from('tic_submissions').insert({task_assignment_id:ta.id,student_id:s.id,attempt,answer_text:payload.text||null,response_data:payload.fields||{},submitted_at:new Date().toISOString(),status:'submitted'});if(r.error)return toast('Não foi possível enviar a Task: '+r.error.message,'error');
+ await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',ta.id).eq('student_id',s.id);toast(`Task enviada. Tentativa ${attempt}.`,'success');if($('htmlViewerStatus'))$('htmlViewerStatus').innerHTML=`<b>✅ Enviada.</b> Tentativa ${attempt} registrada. A atribuição continua ativa.`;
+}
+async function submitTaskViewerText(id){const t=$('taskViewerText')?.value.trim()||'';if(!t)return toast('Digite sua resposta antes de enviar.','info');await submitInteractiveTask(id,{text:t,fields:{source:'external_text'}})}
+async function openStudentTaskViewer(taskAssignmentId){
+ const s=await studentRecord();if(!s)return;const {data:x,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id,status,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,video_url,audio_url,pdf_url,lesson_id)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+ if(error||!x||x.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');const a=x.tic_assignments||{};
+ const {data:subs}=await sb.from('tic_submissions').select('id,attempt,grade,submitted_at,answer_text,file_url,audio_url,video_url,response_data,status').eq('task_assignment_id',x.id).eq('student_id',s.id).order('attempt',{ascending:false});
+ const latest=subs?.[0];const fids=(subs||[]).map(q=>q.id);const {data:fbs}=fids.length?await sb.from('tic_feedback').select('id,submission_id,comment,grade,private_note,improvement_skill,improvement_link,created_at').in('submission_id',fids).order('created_at',{ascending:false}):{data:[]};const fb=latest?fbs?.find(q=>q.submission_id===latest.id):null;
+ const html=a.html_enabled&&a.html_content?`<div class="tic-viewer-toolbar"><b>🧩 Atividade HTML</b><span class="badge green">Interativa</span></div><div class="tic-viewer-toolbar"><div class="devices"><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('desktop','ticTaskHtmlWrap')">🖥 Desktop</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('tablet','ticTaskHtmlWrap')">▣ Tablet</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('mobile','ticTaskHtmlWrap')">📱 Mobile</button></div></div><div class="tic-viewer-content" id="ticTaskHtmlWrap"><iframe id="ticTaskHtmlFrame" title="Task HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div><div id="htmlViewerStatus" class="notice">Responda no conteúdo HTML e use Enviar/Submit.</div>`:'';
+ const plain=`<div class="viewer-panel"><div class="viewer-panel-head"><b>✍️ Sua resposta</b><span class="badge blue">${a.allow_multiple_attempts===false?'1 tentativa':'Tentativas múltiplas'}</span></div>${a.instructions?`<div style="white-space:pre-wrap;line-height:1.6">${esc(a.instructions)}</div>`:''}<textarea id="taskViewerText" placeholder="Escreva sua resposta para o Teacher..."></textarea><button class="btn primary" onclick="submitTaskViewerText('${x.id}')">📤 Enviar para o Teacher</button></div>`;
+ const feedback=fb&&!fb.private_note?`<div class="tic-feedback-card"><b>👨‍🏫 Correção do Teacher</b>${fb.grade!=null?`<div class="score">${fb.grade}/100</div>`:''}<div style="white-space:pre-wrap;line-height:1.6">${esc(fb.comment||'Sem comentário.')}</div>${fb.improvement_skill||fb.improvement_link?`<div class="improvement-box"><b>🎯 Como melhorar</b>${fb.improvement_skill?`<div>Habilidade: <b>${esc(fb.improvement_skill)}</b></div>`:''}${fb.improvement_link?`<a class="btn secondary" href="${esc(ticSafeUrl(fb.improvement_link))}" target="_blank" rel="noopener noreferrer">🔗 Abrir melhoria</a>`:''}</div>`:''}</div>`:'';
+ const hist=(subs||[]).map(z=>{const zf=fbs?.find(q=>q.submission_id===z.id);return `<div class="tic-attempt"><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:(zf?'Corrigida':'Aguardando correção')}</small>${z.answer_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(z.answer_text)}</div>`:''}</div>`}).join('')||'<div class="empty">Nenhuma entrega ainda.</div>';
+ openModal(`📝 ${esc(a.title||'Task')}`,`<div class="tic-full-viewer"><div class="task-view-head"><div class="tic-task-state"><span class="badge green">🔓 Atribuição ativa</span><span class="badge gray">${a.due_at?'Prazo: '+fmtDate(a.due_at):'Sem prazo'}</span><span class="badge blue">${a.points||0} pontos</span></div><h2>${esc(a.title||'Task')}</h2></div>${html}${plain}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderResourcesFinal(a)}</section>${feedback}<section class="viewer-panel"><div class="viewer-panel-head"><b>🔄 Histórico de tentativas</b></div>${hist}</section><div class="notice success">💡 Corrigir a Task não encerra a atribuição. Você pode refazer enquanto o Teacher mantiver o acesso.</div><div class="viewer-actions"><button class="btn ghost" onclick="closeModal()">Fechar</button></div></div>`);
+ if(html){const f=$('ticTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
+}
+async function openStudentTaskTeacherView(taskAssignmentId){
+ const {data:x,error}=await sb.from('tic_task_assignments').select('id,student_id,assignment_id,tic_assignments(id,title,instructions,resource_items,html_enabled,html_content,video_url,audio_url,pdf_url)').eq('id',taskAssignmentId).maybeSingle();if(error||!x)return toast(error?.message||'Task não encontrada.','error');const a=x.tic_assignments||{};
+ const {data:subs}=await sb.from('tic_submissions').select('id,attempt,answer_text,file_url,audio_url,video_url,submitted_at,grade,response_data,status').eq('task_assignment_id',x.id).eq('student_id',x.student_id).order('attempt',{ascending:false});
+ openModal(`👁 ${esc(a.title||'Task')}`,`<div class="tic-full-viewer"><div class="notice"><b>Visualização do Teacher</b><br>${esc(a.instructions||'')}</div>${a.html_enabled&&a.html_content?`<div class="tic-viewer-toolbar"><b>🧩 HTML</b><span class="badge green">Preview</span></div><div class="tic-viewer-content" id="ticTeacherTaskHtmlWrap"><iframe id="ticTeacherTaskHtmlFrame" title="Task HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div>`:''}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderResourcesFinal(a)}</section><section class="viewer-panel"><div class="viewer-panel-head"><b>📨 Entregas</b></div>${(subs||[]).map(z=>`<div class="tic-attempt"><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:'Sem nota'}</small>${z.answer_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(z.answer_text)}</div>`:''}</div>`).join('')||'<div class="empty">Nenhuma entrega.</div>'}</section></div>`);
+ if(a.html_enabled&&a.html_content){const f=$('ticTeacherTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
+}
+async function openFeedbackFromId(submissionId){
+ const {data:x,error}=await sb.from('tic_submissions').select('id,task_assignment_id,student_id,answer_text,file_url,audio_url,video_url,submitted_at,attempt,grade,status,tic_students(display_name,email)').eq('id',submissionId).maybeSingle();if(error||!x)return toast(error?.message||'Entrega não encontrada.','error');
+ const {data:f}=await sb.from('tic_feedback').select('id,comment,grade,private_note,improvement_skill,improvement_link,created_at').eq('submission_id',submissionId).eq('teacher_id',session.user.id).maybeSingle();
+ openFeedbackForm(x,f);
+}
+async function saveFeedback(e,submissionId,taskAssignmentId,studentId){
+ e.preventDefault();const grade=$('fbGrade')?.value.trim();const comment=$('fbComment')?.value.trim()||null;const private_note=$('fbPrivate')?.value==='true';const improvement_skill=$('fbSkill')?.value||null;const improvement_link=$('fbImprovementLink')?.value.trim()||null;
+ if(grade!==''&&(Number(grade)<0||Number(grade)>100))return toast('A nota deve ficar entre 0 e 100.','error');
+ const payload={submission_id:submissionId,teacher_id:session.user.id,comment,grade:grade===''?null:Number(grade),private_note,improvement_skill,improvement_link};
+ const {data:existing}=await sb.from('tic_feedback').select('id').eq('submission_id',submissionId).eq('teacher_id',session.user.id).maybeSingle();const r=existing?await sb.from('tic_feedback').update(payload).eq('id',existing.id):await sb.from('tic_feedback').insert(payload);if(r.error)return toast('Não foi possível salvar o feedback: '+r.error.message,'error');
+ const tr=await sb.from('tic_submissions').update({grade:grade===''?null:Number(grade),status:'reviewed'}).eq('id',submissionId);if(tr.error)return toast('Feedback salvo, mas a entrega não foi atualizada: '+tr.error.message,'error');
+ await sb.from('tic_task_assignments').update({status:'reviewed'}).eq('id',taskAssignmentId).eq('student_id',studentId);closeModal();toast('Correção salva. A atribuição continua ativa.','success');loadView('feedback');
+}
+</script>
+</body></html>`;
 }
 
 /* Student lesson: one real viewer, all resources, response, feedback, first completion. */
@@ -1737,203 +1853,93 @@ async function saveFeedback(e,submissionId,taskAssignmentId,studentId){
  await sb.from('tic_task_assignments').update({status:'reviewed'}).eq('id',taskAssignmentId).eq('student_id',studentId);closeModal();toast('Correção salva. A atribuição continua ativa.','success');loadView('feedback');
 }
 </script>
-
 <style>
-/* ================================================================
-   TIC v10 — COURSE TRACK + MULTI-COURSE ENROLLMENT
-   Additive layer. Existing pages/functions remain available.
-   ================================================================ */
-.tic-track-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:14px}
-.tic-track-panel{margin-bottom:16px}
-.tic-track-list{display:grid;gap:10px}
-.tic-track-card{border:1px solid var(--line);border-radius:16px;padding:15px;background:#fff}
-.tic-track-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-.tic-track-head h3{margin:5px 0 2px;font-size:15px}.tic-track-head small{color:var(--muted)}
-.tic-track-flow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:12px}
-.tic-track-course{display:inline-flex;gap:7px;align-items:center;border:1px solid #e7e1f2;background:#faf8ff;border-radius:999px;padding:7px 10px;font-size:11px}
-.tic-track-course b{width:21px;height:21px;display:grid;place-items:center;border-radius:50%;background:#eee7ff;color:var(--p)}
-.tic-track-arrow{color:#aaa;font-weight:800}
-.tic-track-sort{display:grid;gap:8px;max-height:58vh;overflow:auto;margin-top:12px}
-.tic-track-sort-item{display:grid;grid-template-columns:25px 30px 1fr auto;gap:9px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff;cursor:grab}
-.tic-track-sort-item.dragging{opacity:.45}.tic-track-drag{color:#aaa;font-size:17px}
-.tic-track-position{width:27px;height:27px;border-radius:8px;background:#eee7ff;color:var(--p);display:grid;place-items:center;font-size:11px;font-weight:800}
-.tic-track-copy b{font-size:12px}.tic-track-copy small{display:block;color:var(--muted);font-size:10px;margin-top:2px}
-.tic-course-picker{display:grid;gap:8px;max-height:52vh;overflow:auto;margin:10px 0}
-.tic-course-picker-item{display:grid;grid-template-columns:20px 1fr auto;gap:9px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}
-.tic-course-picker-item input{width:17px;height:17px}.tic-course-picker-item b{font-size:12px}
-.tic-course-picker-item small{display:block;color:var(--muted);font-size:10px}.tic-course-picker-item .enrolled{font-size:10px;color:#15966a}
-.tic-student-track-note{margin-bottom:10px}
-@media(max-width:700px){.tic-track-sort-item{grid-template-columns:22px 28px 1fr}.tic-track-sort-item .badge{grid-column:3;justify-self:start}.tic-track-head{flex-direction:column}}
+/* ===== TIC v11 — ORDERED CURRICULUM ===== */
+.tic-order-panel{margin:0 0 16px}.tic-order-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}.tic-order-list{display:grid;gap:8px;margin-top:12px;max-height:62vh;overflow:auto}.tic-order-item{display:grid;grid-template-columns:28px 38px 1fr auto;gap:9px;align-items:center;border:1px solid var(--line);border-radius:13px;background:#fff;padding:10px;cursor:grab}.tic-order-item.dragging{opacity:.4}.tic-order-handle{color:#aaa;font-size:18px}.tic-order-num{width:30px;height:30px;border-radius:9px;background:#eee8ff;color:var(--p);display:grid;place-items:center;font-weight:900;font-size:11px}.tic-order-copy b{font-size:12px}.tic-order-copy small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.tic-order-actions{display:flex;gap:5px;flex-wrap:wrap}.tic-curriculum-sort{display:grid;gap:10px;margin-top:12px}.tic-module-sort{border:1px solid var(--line);border-radius:15px;background:#fff;overflow:hidden}.tic-module-sort-head{display:grid;grid-template-columns:28px 32px 1fr auto;gap:8px;align-items:center;padding:12px;background:#faf9fd;cursor:grab}.tic-module-sort-head.dragging{opacity:.45}.tic-module-lessons-sort{padding:8px 12px 12px;display:grid;gap:6px;min-height:44px}.tic-lesson-sort{display:grid;grid-template-columns:24px 28px 1fr auto;gap:8px;align-items:center;border:1px solid #eeeaf4;border-radius:10px;padding:8px;background:#fff;cursor:grab}.tic-lesson-sort.dragging{opacity:.45}.tic-drop-zone{outline:2px dashed #a98be9;outline-offset:-3px;background:#faf7ff}.tic-sort-muted{color:var(--muted);font-size:10px}.tic-course-track-badge{margin-top:5px}.tic-student-course-order{display:grid;gap:12px}.tic-student-course-order .student-course-hero{order:initial}.tic-course-order-chip{font-size:10px;color:var(--p);font-weight:800;background:#f0eaff;border-radius:99px;padding:5px 8px;white-space:nowrap}
+@media(max-width:760px){.tic-order-item{grid-template-columns:22px 30px 1fr}.tic-order-item>.badge{grid-column:3}.tic-order-actions{grid-column:3}.tic-module-sort-head{grid-template-columns:22px 28px 1fr}.tic-lesson-sort{grid-template-columns:20px 25px 1fr}.tic-lesson-sort .tic-order-actions{grid-column:3}}
 </style>
-
-<script>
-/* ========================= COURSE TRACK ========================= */
-async function ticGetTracksV10(){
- const r=await sb.from('tic_course_tracks').select('*').eq('teacher_id',session.user.id).eq('active',true).order('is_default',{ascending:false}).order('created_at',{ascending:true});
- if(r.error)throw r.error;return r.data||[];
-}
-async function ticGetTrackItemsV10(trackId){
- const r=await sb.from('tic_course_track_items').select('id,track_id,course_id,position').eq('track_id',trackId).order('position',{ascending:true});
- if(r.error)throw r.error;return r.data||[];
-}
-async function ticGetTrackCoursesV10(trackId){
- const items=await ticGetTrackItemsV10(trackId),ids=items.map(x=>x.course_id).filter(Boolean);if(!ids.length)return [];
- const r=await sb.from('tic_courses').select('id,title,level,description,active').in('id',ids);if(r.error)throw r.error;
- const map=new Map((r.data||[]).map(x=>[x.id,x]));return items.map(i=>({...i,course:map.get(i.course_id)})).filter(x=>x.course);
-}
-function ticTrackFlowV10(items){return items.length?items.map((x,i)=>`<span class="tic-track-course"><b>${i+1}</b>${esc(x.course?.level||'')} · ${esc(x.course?.title||'')}</span>`).join('<span class="tic-track-arrow">→</span>'):'<span class="empty">Nenhum curso neste Track.</span>'}
-async function ticTrackPreviewV10(id){const b=$('tic_track_preview_'+id);if(!b)return;try{b.innerHTML=ticTrackFlowV10(await ticGetTrackCoursesV10(id))}catch(e){b.innerHTML='<span class="empty">Não foi possível carregar a sequência.</span>'}}
-async function ticCreateTrackV10(){
- const name=prompt('Nome da trilha/Track:','General English');if(!name?.trim())return;
- const desc=prompt('Descrição:','A0 → A1 → A2 → B1 → B2 → C1 → C2')||'',def=confirm('Deseja usar este Track como sequência principal?');
- if(def)await sb.from('tic_course_tracks').update({is_default:false}).eq('teacher_id',session.user.id);
- const r=await sb.from('tic_course_tracks').insert({teacher_id:session.user.id,name:name.trim(),description:desc.trim()||null,is_default:def,active:true});
- if(r.error)return toast('Não foi possível criar o Track: '+r.error.message,'error');toast('Track criado.','success');coursesPage();
-}
-async function ticSetDefaultTrackV10(id){await sb.from('tic_course_tracks').update({is_default:false}).eq('teacher_id',session.user.id);const r=await sb.from('tic_course_tracks').update({is_default:true}).eq('id',id).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');toast('Track principal atualizado.','success');coursesPage()}
-async function ticEditTrackV10(id){
- const {data:t,error}=await sb.from('tic_course_tracks').select('*').eq('id',id).eq('teacher_id',session.user.id).maybeSingle();if(error||!t)return toast(error?.message||'Track não encontrado.','error');
- openModal('🛤️ Editar Track',`<form class="form" onsubmit="ticSaveTrackV10(event,'${id}')"><div class="field"><label>Nome</label><input id="ticTrackName" value="${esc(t.name)}" required></div><div class="field"><label>Descrição</label><textarea id="ticTrackDesc" rows="3">${esc(t.description||'')}</textarea></div><label class="check"><input id="ticTrackDefault" type="checkbox" ${t.is_default?'checked':''}> Usar como Track principal</label><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`);
-}
-async function ticSaveTrackV10(e,id){e.preventDefault();const def=$('ticTrackDefault').checked;if(def)await sb.from('tic_course_tracks').update({is_default:false}).eq('teacher_id',session.user.id);const r=await sb.from('tic_course_tracks').update({name:$('ticTrackName').value.trim(),description:$('ticTrackDesc').value.trim()||null,is_default:def}).eq('id',id).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');closeModal();toast('Track atualizado.','success');coursesPage()}
-let ticTrackDragV10=null;
-function ticBeginTrackDragV10(e){ticTrackDragV10=e.currentTarget.dataset.courseId;e.currentTarget.classList.add('dragging')}
-function ticDropTrackV10(e){e.preventDefault();const target=e.currentTarget;if(!ticTrackDragV10||target.dataset.courseId===ticTrackDragV10)return;const list=$('ticTrackSortList'),drag=[...list.children].find(x=>x.dataset.courseId===ticTrackDragV10);if(!drag)return;const rect=target.getBoundingClientRect();target.parentNode.insertBefore(drag,e.clientY<rect.top+rect.height/2?target:target.nextSibling);[...list.children].forEach((x,i)=>{const p=x.querySelector('.tic-track-position');if(p)p.textContent=i+1});document.querySelectorAll('.tic-track-sort-item').forEach(x=>x.classList.remove('dragging'))}
-async function ticSaveTrackOrderV10(trackId){
- const ids=[...document.querySelectorAll('#ticTrackSortList .tic-track-sort-item')].map(x=>x.dataset.courseId),old=await sb.from('tic_course_track_items').select('id,course_id').eq('track_id',trackId);if(old.error)return toast(old.error.message,'error');
- const map=new Map((old.data||[]).map(x=>[x.course_id,x.id])),wanted=new Set(ids),removed=(old.data||[]).filter(x=>!wanted.has(x.course_id)).map(x=>x.id);
- if(removed.length){const r=await sb.from('tic_course_track_items').delete().in('id',removed);if(r.error)return toast(r.error.message,'error')}
- for(let i=0;i<ids.length;i++){const r=map.has(ids[i])?await sb.from('tic_course_track_items').update({position:i+1}).eq('id',map.get(ids[i])):await sb.from('tic_course_track_items').insert({track_id:trackId,course_id:ids[i],position:i+1});if(r.error)return toast(r.error.message,'error')}
- closeModal();toast('Sequência dos cursos salva.','success');coursesPage();
-}
-async function ticOpenTrackV10(id){
- const {data:t,error}=await sb.from('tic_course_tracks').select('*').eq('id',id).eq('teacher_id',session.user.id).maybeSingle();if(error||!t)return toast(error?.message||'Track não encontrado.','error');
- const {data:courses}=await sb.from('tic_courses').select('id,title,level,description,active').eq('teacher_id',session.user.id).order('title'),items=await ticGetTrackItemsV10(id),pos=new Map(items.map(x=>[x.course_id,x.position]));
- const ordered=[...(courses||[])].sort((a,b)=>{const ap=pos.get(a.id),bp=pos.get(b.id);if(ap!=null&&bp!=null)return ap-bp;if(ap!=null)return -1;if(bp!=null)return 1;return String(a.level||'').localeCompare(String(b.level||''))||String(a.title||'').localeCompare(String(b.title||''))});
- openModal(`🛤️ ${esc(t.name)}`,`<div class="notice">Arraste os cursos para definir a ordem. A posição no Track não altera módulos, Lessons ou matrículas.</div><div id="ticTrackSortList" class="tic-track-sort">${ordered.map((c,i)=>`<div class="tic-track-sort-item" draggable="true" data-course-id="${esc(c.id)}" ondragstart="ticBeginTrackDragV10(event)" ondragover="event.preventDefault()" ondrop="ticDropTrackV10(event)"><span class="tic-track-drag">☰</span><span class="tic-track-position">${i+1}</span><div class="tic-track-copy"><b>${esc(c.title)}</b><small>${esc(c.level||'')} · ${c.active===false?'Inativo':'Ativo'}</small></div><span class="badge ${pos.has(c.id)?'green':'gray'}">${pos.has(c.id)?'No Track':'Novo'}</span></div>`).join('')}</div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button type="button" class="btn primary" onclick="ticSaveTrackOrderV10('${id}')">💾 Salvar ordem</button></div>`);
-}
-async function ticRenderTrackPanelV10(host){
- const tracks=await ticGetTracksV10(),panel=document.createElement('section');panel.className='card tic-track-panel';
- panel.innerHTML=`<div class="tic-track-toolbar"><div><span class="badge purple">🛤️ COURSE TRACKS</span><h2 style="margin:5px 0 2px">Trilhas de cursos</h2><small>Organize a sequência pedagógica sem alterar módulos, Lessons ou matrículas.</small></div><div class="actions"><button class="btn primary" onclick="ticCreateTrackV10()">+ Novo Track</button><button class="btn secondary" onclick="ticOpenMultiCourseEnrollmentV10()">👤 Atribuir múltiplos cursos</button></div></div><div class="tic-track-list">${tracks.length?tracks.map(t=>`<article class="tic-track-card"><div class="tic-track-head"><div><span class="badge blue">${t.is_default?'Principal':'Track'}</span><h3>${esc(t.name)}</h3><small>${esc(t.description||'')}</small></div><div class="actions"><button class="btn sm secondary" onclick="ticOpenTrackV10('${t.id}')">⚙️ Organizar</button><button class="btn sm ghost" onclick="ticEditTrackV10('${t.id}')">Editar</button>${!t.is_default?`<button class="btn sm ghost" onclick="ticSetDefaultTrackV10('${t.id}')">★ Principal</button>`:''}</div></div><div id="tic_track_preview_${t.id}" class="tic-track-flow"><span class="empty">Carregando...</span></div></article>`).join(''):'<div class="empty">Nenhuma trilha criada.</div>'}</div>`;
- host.insertBefore(panel,host.firstElementChild);for(const t of tracks)await ticTrackPreviewV10(t.id);
-}
-const ticCoursesPageBaseV10=coursesPage;
-coursesPage=async function(){await ticCoursesPageBaseV10();const host=document.querySelector('.course-dashboard');if(!host||document.querySelector('.tic-track-panel'))return;try{await ticRenderTrackPanelV10(host)}catch(e){console.warn('Course Track:',e)}};
-
-/* ====================== MULTI-COURSE ====================== */
-async function ticOpenMultiCourseEnrollmentV10(studentId=''){
- const [{data:students,error:se},{data:courses,error:ce}]=await Promise.all([sb.from('tic_students').select('id,display_name,email,current_level,status').eq('teacher_id',session.user.id).order('display_name'),sb.from('tic_courses').select('id,title,level,description,active').eq('teacher_id',session.user.id).eq('active',true).order('title')]);
- if(se||ce)return toast((se||ce).message,'error');
- openModal('👤 Atribuir múltiplos cursos',`<form class="form" onsubmit="ticSaveMultiCourseEnrollmentV10(event)"><div class="field"><label>Aluno</label><select id="ticMultiStudent" onchange="ticLoadStudentCourseChecksV10()"><option value="">Selecione...</option>${(students||[]).map(s=>`<option value="${s.id}" ${s.id===studentId?'selected':''}>${esc(s.display_name)} · ${esc(s.current_level||'')}</option>`).join('')}</select></div><div class="notice">Marque os cursos que deseja atribuir. Os já matriculados continuam ativos; esta função adiciona/reativa sem apagar matrículas existentes.</div><div id="ticMultiCourses" class="tic-course-picker"><div class="empty">Selecione um aluno.</div></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">📚 Salvar cursos</button></div></form>`);
- window.__ticMultiCourses=courses||[];if(studentId)ticLoadStudentCourseChecksV10();
-}
-async function ticLoadStudentCourseChecksV10(){
- const sid=$('ticMultiStudent')?.value,box=$('ticMultiCourses');if(!box)return;if(!sid){box.innerHTML='<div class="empty">Selecione um aluno.</div>';return}
- const {data:links,error}=await sb.from('tic_course_students').select('course_id,status').eq('student_id',sid);if(error)return box.innerHTML=`<div class="card attention">${esc(error.message)}</div>`;
- const active=new Set((links||[]).filter(x=>x.status==='active').map(x=>x.course_id));
- box.innerHTML=(window.__ticMultiCourses||[]).map(c=>`<label class="tic-course-picker-item"><input type="checkbox" name="ticMultiCourse" value="${esc(c.id)}" ${active.has(c.id)?'checked':''}><span><b>${esc(c.title)}</b><small>${esc(c.level||'')} · ${esc(c.description||'')}</small></span><span class="${active.has(c.id)?'enrolled':''}">${active.has(c.id)?'✓ Matriculado':'Disponível'}</span></label>`).join('')||'<div class="empty">Nenhum curso ativo.</div>';
-}
-async function ticSaveMultiCourseEnrollmentV10(e){
- e.preventDefault();const sid=$('ticMultiStudent')?.value;if(!sid)return toast('Selecione um aluno.','error');
- const ids=[...document.querySelectorAll('input[name="ticMultiCourse"]:checked')].map(x=>x.value);if(!ids.length)return toast('Selecione pelo menos um curso.','error');
- const {data:old,error}=await sb.from('tic_course_students').select('id,course_id,status').eq('student_id',sid);if(error)return toast(error.message,'error');
- const map=new Map((old||[]).map(x=>[x.course_id,x])),add=ids.filter(id=>!map.has(id)).map(course_id=>({student_id:sid,course_id,status:'active'})),react=ids.filter(id=>map.has(id)&&map.get(id).status!=='active');
- if(add.length){const r=await sb.from('tic_course_students').insert(add);if(r.error)return toast(r.error.message,'error')}
- for(const id of react){const r=await sb.from('tic_course_students').update({status:'active'}).eq('id',map.get(id).id);if(r.error)return toast(r.error.message,'error')}
- closeModal();toast(`${ids.length} curso(s) ativo(s) para o aluno.`,'success');coursesPage();
-}
-
-/* ================== STUDENT COURSE ORDER ================== */
-async function ticReorderStudentCoursesV10(){
- const grid=document.querySelector('.student-course-list-grid');if(!grid)return;const tracks=await (async()=>{const r=await sb.from('tic_course_tracks').select('id,is_default').eq('active',true).order('is_default',{ascending:false}).order('created_at',{ascending:true});return r.data||[]})();const track=tracks[0];if(!track)return;
- const items=await ticGetTrackItemsV10(track.id),pos=new Map(items.map(x=>[x.course_id,x.position])),cards=[...grid.children];if(!cards.length)return;
- const titles=cards.map(card=>card.querySelector('h2')?.textContent?.replace(/^📚\s*/,'').trim()).filter(Boolean);if(!titles.length)return;
- const {data:courses}=await sb.from('tic_courses').select('id,title').in('id',items.map(x=>x.course_id));const byTitle=new Map((courses||[]).map(c=>[c.title,c.id]));
- cards.sort((a,b)=>{const at=a.querySelector('h2')?.textContent?.replace(/^📚\s*/,'').trim()||'',bt=b.querySelector('h2')?.textContent?.replace(/^📚\s*/,'').trim()||'';return (pos.get(byTitle.get(at))??999999)-(pos.get(byTitle.get(bt))??999999)});cards.forEach(c=>grid.appendChild(c));
- if(!document.querySelector('.tic-student-track-note')){const n=document.createElement('div');n.className='notice tic-student-track-note';n.innerHTML=`🛤️ <b>Trilha:</b> cursos organizados pela sequência pedagógica.`;grid.parentNode.insertBefore(n,grid)}
-}
-const ticStudentCoursesPageBaseV10=studentCoursesPage;
-studentCoursesPage=async function(){await ticStudentCoursesPageBaseV10();try{await ticReorderStudentCoursesV10()}catch(e){console.warn('Student course ordering:',e)}};
-</script>
-
-
 <script>
 /* ================================================================
-   TIC v10.1 — visual ordering helpers
-   Keeps the original course cards and only changes their display order.
+   COURSE ORDER: A0 → A1 → A2 → B1... controlled by Teacher.
+   Existing courses are preserved. New courses are appended to the
+   current principal Track automatically.
    ================================================================ */
-async function ticOrderTeacherCourseCardsV10(){
- const host=document.querySelector('.course-dashboard');if(!host)return;
- const grid=host.querySelector(':scope > .grid');if(!grid)return;
- const tracks=await ticGetTracksV10();const track=tracks[0];if(!track)return;
- const items=await ticGetTrackItemsV10(track.id);if(!items.length)return;
- const pos=new Map(items.map(x=>[x.course_id,x.position]));
- const {data:courses}=await sb.from('tic_courses').select('id,title').in('id',items.map(x=>x.course_id));
- const byTitle=new Map((courses||[]).map(x=>[x.title,x.id]));
- const cards=[...grid.children];
- cards.sort((a,b)=>{
-   const at=a.querySelector('h3')?.textContent?.replace(/^📚\s*/,'').trim()||'';
-   const bt=b.querySelector('h3')?.textContent?.replace(/^📚\s*/,'').trim()||'';
-   return (pos.get(byTitle.get(at))??999999)-(pos.get(byTitle.get(bt))??999999);
- });
- cards.forEach(x=>grid.appendChild(x));
- const old=host.querySelector('.tic-teacher-track-order-note');
- if(!old){
-   const n=document.createElement('div');n.className='notice tic-teacher-track-order-note';
-   n.innerHTML=`🛤️ <b>Ordem atual:</b> ${esc(track.name)} · os cursos estão organizados pela sequência do Track principal.`;
-   host.insertBefore(n,host.firstElementChild);
- }
+const TIC_CEFR_ORDER_V11=['A0','A1','A2','B1','B2','C1','C2'];
+let ticCourseDragV11=null, ticModuleDragV11=null, ticLessonDragV11=null;
+function ticLevelRankV11(v){const i=TIC_CEFR_ORDER_V11.indexOf(String(v||'').toUpperCase());return i<0?999:i}
+async function ticEnsureDefaultTrackV11(){
+ let r=await sb.from('tic_course_tracks').select('*').eq('teacher_id',session.user.id).eq('active',true).order('is_default',{ascending:false}).order('created_at',{ascending:true}).limit(1);
+ if(r.error)throw r.error;
+ let track=r.data?.[0];
+ if(!track){const cr=await sb.from('tic_course_tracks').insert({teacher_id:session.user.id,name:'General English',description:'Sequência pedagógica dos cursos',is_default:true,active:true}).select().single();if(cr.error)throw cr.error;track=cr.data}
+ if(!track.is_default){const u=await sb.from('tic_course_tracks').update({is_default:false}).eq('teacher_id',session.user.id);if(u.error)throw u.error;const d=await sb.from('tic_course_tracks').update({is_default:true}).eq('id',track.id).eq('teacher_id',session.user.id);if(d.error)throw d.error;track={...track,is_default:true}}
+ const {data:courses,error:ce}=await sb.from('tic_courses').select('id,title,level,created_at').eq('teacher_id',session.user.id).eq('active',true);if(ce)throw ce;
+ const {data:items,error:ie}=await sb.from('tic_course_track_items').select('course_id,position').eq('track_id',track.id);if(ie)throw ie;
+ const have=new Set((items||[]).map(x=>x.course_id));const missing=(courses||[]).filter(c=>!have.has(c.id)).sort((a,b)=>ticLevelRankV11(a.level)-ticLevelRankV11(b.level)||new Date(a.created_at)-new Date(b.created_at));
+ if(missing.length){let next=Math.max(0,...(items||[]).map(x=>Number(x.position)||0));const rows=missing.map(c=>({track_id:track.id,course_id:c.id,position:++next}));const ins=await sb.from('tic_course_track_items').insert(rows);if(ins.error)throw ins.error}
+ return track;
 }
-const ticCoursesPageWithTrackV101=coursesPage;
-coursesPage=async function(){
- await ticCoursesPageWithTrackV101();
- try{await ticOrderTeacherCourseCardsV10()}catch(e){console.warn('Teacher course order:',e)}
-};
-
-/* Quick summary used by future Student/Teacher views. */
-async function ticGetStudentCourseSummaryV10(studentId){
- const {data:en,error}=await sb.from('tic_course_students').select('course_id,status,enrolled_at').eq('student_id',studentId).eq('status','active');
- if(error)throw error;
- const ids=(en||[]).map(x=>x.course_id).filter(Boolean);if(!ids.length)return [];
- const {data:courses,error:ce}=await sb.from('tic_courses').select('id,title,level,description').in('id',ids);
- if(ce)throw ce;
- const tracks=await (async()=>{const r=await sb.from('tic_course_tracks').select('id,is_default,name').eq('active',true).order('is_default',{ascending:false}).order('created_at',{ascending:true});return r.data||[]})();
- const track=tracks[0],items=track?await ticGetTrackItemsV10(track.id):[];
- const pos=new Map(items.map(x=>[x.course_id,x.position]));
- return (courses||[]).map(c=>({...c,position:pos.get(c.id)??999999})).sort((a,b)=>a.position-b.position);
+async function ticGetOrderedCoursesV11(){
+ const track=await ticEnsureDefaultTrackV11();
+ const [{data:courses,error:ce},{data:items,error:ie}]=await Promise.all([sb.from('tic_courses').select('*').eq('teacher_id',session.user.id),sb.from('tic_course_track_items').select('course_id,position').eq('track_id',track.id)]);if(ce||ie)throw(ce||ie);
+ const pos=new Map((items||[]).map(x=>[x.course_id,Number(x.position)||999999]));
+ return {track,courses:(courses||[]).sort((a,b)=>{const ap=pos.get(a.id)??999999,bp=pos.get(b.id)??999999;return ap-bp||ticLevelRankV11(a.level)-ticLevelRankV11(b.level)||String(a.title||'').localeCompare(String(b.title||''))})};
 }
-function ticRenderStudentCourseSummaryV10(courses){
- if(!courses?.length)return '<div class="empty">Nenhum curso ativo.</div>';
- return `<div class="tic-student-course-summary">${courses.map((c,i)=>`<span class="tic-mini-course"><b>${i+1}.</b> ${esc(c.level||'')} · ${esc(c.title)}</span>`).join('')}</div>`;
+async function ticOpenCourseOrderV11(){
+ const {track,courses}=await ticGetOrderedCoursesV11();
+ openModal('🛤️ Organizar sequência dos cursos',`<div class="notice success"><b>${esc(track.name)}</b><br>Arraste os cursos para a ordem que você quiser. Você pode criar A0, A1, A2... depois voltar aqui e reposicionar quando quiser.</div><div id="ticCourseOrderList" class="tic-order-list">${courses.map((c,i)=>`<div class="tic-order-item" draggable="true" tabindex="0" data-course-id="${esc(c.id)}" ondragstart="ticStartCourseDragV11(event)" ondragover="event.preventDefault()" ondrop="ticDropCourseV11(event)"><span class="tic-order-handle">☰</span><span class="tic-order-num">${i+1}</span><div class="tic-order-copy"><b>${esc(c.title||c.name||'Curso')}</b><small>${esc(c.level||'')} · ${c.active===false?'Inativo':'Ativo'}</small></div><span class="tic-course-order-chip">${c.level||'—'}</span></div>`).join('')}</div><div class="modal-actions"><button class="btn ghost" type="button" onclick="closeModal()">Cancelar</button><button class="btn primary" type="button" onclick="ticSaveCourseOrderV11('${track.id}')">💾 Salvar sequência</button></div>`);
 }
+function ticStartCourseDragV11(e){ticCourseDragV11=e.currentTarget.dataset.courseId;e.currentTarget.classList.add('dragging')}
+function ticDropCourseV11(e){e.preventDefault();const target=e.currentTarget;if(!ticCourseDragV11||target.dataset.courseId===ticCourseDragV11)return;const list=$('ticCourseOrderList'),drag=[...list.children].find(x=>x.dataset.courseId===ticCourseDragV11);if(!drag)return;const rect=target.getBoundingClientRect();list.insertBefore(drag,e.clientY<rect.top+rect.height/2?target:target.nextSibling);[...list.children].forEach((x,i)=>x.querySelector('.tic-order-num').textContent=i+1);document.querySelectorAll('.tic-order-item').forEach(x=>x.classList.remove('dragging'));ticCourseDragV11=null}
+async function ticSaveCourseOrderV11(trackId){const ids=[...document.querySelectorAll('#ticCourseOrderList .tic-order-item')].map(x=>x.dataset.courseId);for(let i=0;i<ids.length;i++){const r=await sb.from('tic_course_track_items').update({position:i+1}).eq('track_id',trackId).eq('course_id',ids[i]);if(r.error)return toast('Erro ao salvar posição: '+r.error.message,'error')}closeModal();toast('Sequência dos cursos salva.','success');coursesPage()}
+function ticCourseOptionsOrderedV11(selected=''){const cs=window.__ticCourses||[];return cs.slice().sort((a,b)=>ticLevelRankV11(a.level)-ticLevelRankV11(b.level)||String(a.title).localeCompare(String(b.title))).map(c=>`<option value="${c.id}" ${c.id===selected?'selected':''}>${esc(c.level||'')} · ${esc(c.title)}</option>`).join('')}
 
-/* Safe additive hook: if a Student View already exists, show course sequence there. */
-async function ticInjectStudentCourseSequenceV10(){
- const root=document.querySelector('.student-view-root');if(!root)return;
- const sid=root.dataset.studentId;if(!sid)return;
- try{
-   const courses=await ticGetStudentCourseSummaryV10(sid);
-   if(root.querySelector('.tic-student-course-sequence'))return;
-   const box=document.createElement('section');box.className='card tic-student-course-sequence';
-   box.innerHTML=`<div class="section-head"><div><h3>📚 Cursos atribuídos</h3><small>Sequência do Track principal</small></div></div>${ticRenderStudentCourseSummaryV10(courses)}`;
-   root.appendChild(box);
- }catch(e){console.warn('Student course sequence:',e)}
+/* New course form: preserve fields, append new course to Track. */
+function openCourseFormV11(x=null){openModal(x?'Editar curso':'Novo curso',`<form class="form" onsubmit="saveCourseV11(event,'${x?.id||''}')"><div class="field"><label>Título</label><input id="g1" value="${esc(x?.title||'')}" required></div><div class="form-grid"><div class="field"><label>Nível</label><select id="g2">${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Descrição</label><textarea id="g3">${esc(x?.description||'')}</textarea></div></div><div class="notice">💡 Depois de salvar, o curso entra na sequência do Track. Você poderá reposicioná-lo em <b>Organizar sequência</b>.</div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">💾 Salvar curso</button></div></form>`)}
+async function saveCourseV11(e,id){e.preventDefault();const o={teacher_id:session.user.id,title:$('g1').value.trim(),level:$('g2').value,description:$('g3').value.trim()||null};if(!o.title)return toast('Informe o título.','error');let r;if(id)r=await sb.from('tic_courses').update(o).eq('id',id).eq('teacher_id',session.user.id);else r=await sb.from('tic_courses').insert(o).select().single();if(r.error)return toast('Não foi possível salvar: '+r.error.message,'error');if(!id){const track=await ticEnsureDefaultTrackV11();const {data:last}=await sb.from('tic_course_track_items').select('position').eq('track_id',track.id).order('position',{ascending:false}).limit(1).maybeSingle();const ir=await sb.from('tic_course_track_items').insert({track_id:track.id,course_id:r.data.id,position:Number(last?.position||0)+1});if(ir.error)return toast('Curso criado, mas não foi possível adicioná-lo à sequência: '+ir.error.message,'error')}closeModal();toast(id?'Curso atualizado.':'Curso criado e adicionado à sequência.','success');coursesPage()}
+openCourseForm=openCourseFormV11;
+
+/* Teacher Courses page — ordered, no recursion, no dependency on the old wrapper. */
+async function coursesPageV11(){
+ try{await __loadCourseData();const {track,courses}=await ticGetOrderedCoursesV11();window.__ticCourses=courses;const ls=window.__ticLessons||[],ms=window.__ticModules||[];const memberCounts={};if(courses.length){const r=await sb.from('tic_course_students').select('course_id,status').in('course_id',courses.map(c=>c.id));if(!r.error)(r.data||[]).forEach(x=>{if(x.status!=='inactive')memberCounts[x.course_id]=(memberCounts[x.course_id]||0)+1})}
+ $('content').innerHTML=`<div class="course-dashboard"><div class="card tic-order-panel"><div class="tic-order-header"><div><span class="badge purple">🛤️ COURSE TRACK</span><h2 style="margin:6px 0 2px">Sequência dos cursos</h2><p style="margin:0;color:var(--muted);font-size:11px">${esc(track.name)} · crie novos cursos e reposicione A0 → A1 → A2 → B1... quando quiser.</p></div><div class="actions"><button class="btn primary" onclick="ticOpenCourseOrderV11()">↕️ Reordenar cursos</button><button class="btn secondary" onclick="ticOpenMultiCourseEnrollmentV11()">👤 Atribuir múltiplos cursos</button><button class="btn ghost" onclick="openCourseFormV11()">+ Novo curso</button></div></div><div class="tic-order-list" style="max-height:none">${courses.map((c,i)=>`<div class="tic-order-item" style="cursor:default"><span class="tic-order-num">${i+1}</span><span class="badge blue">${esc(c.level||'—')}</span><div class="tic-order-copy"><b>${esc(c.title||'Curso')}</b><small>${ls.filter(l=>l.course_id===c.id).length} lessons · ${ms.filter(m=>m.course_id===c.id).length} módulos</small></div><div class="tic-order-actions"><button class="btn sm secondary" onclick="openCourseCurriculum('${c.id}')">📚 Currículo</button><button class="btn sm secondary" onclick="openCourseEnrollment('${c.id}')">👥 Alunos</button><button class="btn sm ghost" onclick='openCourseFormV11(${JSON.stringify(c)})'>Editar</button><button class="btn sm danger" onclick="deleteCourseSafe('${c.id}')">Excluir</button></div></div>`).join('')||'<div class="empty">Nenhum curso criado.</div>'}</div></div></div>`;
+ }catch(e){$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar os cursos.</b><p>${esc(e.message||e)}</p><button class="btn primary" onclick="coursesPageV11()">Tentar novamente</button></div>`}
 }
+coursesPage=coursesPageV11;
 
-/* Accessibility: keyboard-friendly Track ordering controls. */
-document.addEventListener('keydown',e=>{
- const item=document.activeElement?.closest?.('.tic-track-sort-item');
- if(!item)return;
- if(e.key!=='ArrowUp'&&e.key!=='ArrowDown')return;
- e.preventDefault();
- const list=item.parentElement,all=[...list.children],i=all.indexOf(item),j=e.key==='ArrowUp'?i-1:i+1;
- if(j<0||j>=all.length)return;
- list.insertBefore(item,e.key==='ArrowUp'?all[j]:all[j].nextSibling);
- all.forEach((x,k)=>{const p=x.querySelector('.tic-track-position');if(p)p.textContent=k+1});
-});
+/* Multi-course assignment, preserving existing course enrollment behavior. */
+async function ticOpenMultiCourseEnrollmentV11(studentId=''){
+ const [{data:students,error:se},{data:courses,error:ce}]=await Promise.all([sb.from('tic_students').select('id,display_name,email,current_level,status').eq('teacher_id',session.user.id).order('display_name'),sb.from('tic_courses').select('id,title,level,description,active').eq('teacher_id',session.user.id).eq('active',true)]);if(se||ce)return toast((se||ce).message,'error');
+ const ordered=(courses||[]).slice().sort((a,b)=>ticLevelRankV11(a.level)-ticLevelRankV11(b.level)||String(a.title).localeCompare(String(b.title)));
+ openModal('👤 Atribuir múltiplos cursos',`<form class="form" onsubmit="ticSaveMultiCourseEnrollmentV11(event)"><div class="field"><label>Aluno</label><select id="ticMultiStudent" onchange="ticLoadStudentCourseChecksV11()"><option value="">Selecione...</option>${students?.map(s=>`<option value="${s.id}" ${s.id===studentId?'selected':''}>${esc(s.display_name)} · ${esc(s.current_level||'')}</option>`).join('')||''}</select></div><div id="ticMultiCourses" class="tic-course-picker"></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">📚 Salvar matrículas</button></div></form>`);window.__ticMultiCourses=ordered;if(studentId)ticLoadStudentCourseChecksV11()}
+async function ticLoadStudentCourseChecksV11(){const sid=$('ticMultiStudent')?.value,box=$('ticMultiCourses');if(!box)return;if(!sid){box.innerHTML='<div class="empty">Selecione um aluno.</div>';return}const r=await sb.from('tic_course_students').select('course_id,status').eq('student_id',sid);if(r.error)return box.innerHTML=`<div class="card attention">${esc(r.error.message)}</div>`;const active=new Set((r.data||[]).filter(x=>x.status!=='inactive').map(x=>x.course_id));box.innerHTML=(window.__ticMultiCourses||[]).map((c,i)=>`<label class="tic-course-picker-item"><input type="checkbox" name="ticMultiCourseV11" value="${c.id}" ${active.has(c.id)?'checked':''}><span><b>${i+1}. ${esc(c.level||'')} · ${esc(c.title)}</b><small>${esc(c.description||'')}</small></span><span class="${active.has(c.id)?'enrolled':''}">${active.has(c.id)?'✓ Matriculado':'Disponível'}</span></label>`).join('')}
+async function ticSaveMultiCourseEnrollmentV11(e){e.preventDefault();const sid=$('ticMultiStudent')?.value;if(!sid)return toast('Selecione um aluno.','error');const ids=[...document.querySelectorAll('input[name="ticMultiCourseV11"]:checked')].map(x=>x.value);if(!ids.length)return toast('Selecione pelo menos um curso.','error');const old=await sb.from('tic_course_students').select('id,course_id,status').eq('student_id',sid);if(old.error)return toast(old.error.message,'error');const map=new Map((old.data||[]).map(x=>[x.course_id,x]));const add=ids.filter(id=>!map.has(id)).map(course_id=>({student_id:sid,course_id,status:'active'}));const react=ids.filter(id=>map.has(id)&&map.get(id).status==='inactive');if(add.length){const r=await sb.from('tic_course_students').insert(add);if(r.error)return toast(r.error.message,'error')}if(react.length){const r=await sb.from('tic_course_students').update({status:'active'}).eq('student_id',sid).in('course_id',react);if(r.error)return toast(r.error.message,'error')}closeModal();toast(`${ids.length} curso(s) atribuídos/ativos para o aluno.`,'success');coursesPage()}
 
-/* Keep ordering helpers isolated: they never delete or modify existing course data. */
-window.TIC_COURSE_TRACK_VERSION='10.1';
+/* ===== Curriculum order: modules + lessons, all drag-and-drop ===== */
+async function ticLoadCurriculumV11(courseId){const [{data:course,error:ce},{data:mods,error:me},{data:lessons,error:le}]=await Promise.all([sb.from('tic_courses').select('*').eq('id',courseId).eq('teacher_id',session.user.id).maybeSingle(),sb.from('tic_modules').select('*').eq('course_id',courseId).order('position').order('created_at'),sb.from('tic_lessons').select('*').eq('course_id',courseId).eq('active',true).order('position').order('created_at')]);if(ce||me||le)throw(ce||me||le);return {course,mods:mods||[],lessons:lessons||[]}}
+function ticCurriculumHtmlV11(course,mods,lessons){return `<div class="notice success"><b>${esc(course.title)}</b><br>Arraste os <b>módulos</b> para definir a ordem. Dentro de cada módulo, arraste as <b>Lessons</b> para definir a sequência. Também é possível mover uma Lesson para outro módulo.</div><div class="actions section"><button class="btn primary" onclick="openModuleForm('${course.id}')">+ Novo módulo</button><button class="btn secondary" onclick="openLessonForm(null,false,'${course.id}')">+ Nova lesson neste curso</button><button class="btn ghost" onclick="openCourseEnrollment('${course.id}')">👥 Alunos do curso</button></div><div id="ticCurriculumSortList" class="tic-curriculum-sort">${mods.map((m,mi)=>`<section class="tic-module-sort" data-module-id="${m.id}" draggable="true" ondragstart="ticStartModuleDragV11(event)" ondragover="ticAllowModuleDropV11(event)" ondrop="ticDropModuleV11(event)"><div class="tic-module-sort-head"><span class="tic-order-handle">☰</span><span class="tic-order-num">${mi+1}</span><div><b>📁 ${esc(m.title)}</b><small class="tic-sort-muted">${esc(m.description||'')} · ${lessons.filter(l=>l.module_id===m.id).length} lesson(s)</small></div><div class="tic-order-actions"><button class="btn sm ghost" onclick='event.stopPropagation();openModuleForm(${JSON.stringify(m)})'>Editar</button><button class="btn sm danger" onclick='event.stopPropagation();deleteModuleSafeV11("${m.id}","${course.id}")'>Excluir</button></div></div><div class="tic-module-lessons-sort" data-module-id="${m.id}" ondragover="ticAllowLessonDropV11(event)" ondrop="ticDropLessonV11(event)">${lessons.filter(l=>l.module_id===m.id).sort((a,b)=>(a.position||0)-(b.position||0)).map((l,li)=>`<div class="tic-lesson-sort" draggable="true" data-lesson-id="${l.id}" ondragstart="ticStartLessonDragV11(event)" ondragover="ticAllowLessonDropV11(event)" ondrop="ticDropLessonV11(event)"><span class="tic-order-handle">⋮⋮</span><span class="tic-order-num">${li+1}</span><div class="tic-order-copy"><b>${esc(l.title)}</b><small>${esc(l.skill||'')} · ${esc(l.level||'')} ${l.html_enabled?'· 🧩 HTML':''}</small></div><div class="tic-order-actions"><button class="btn sm ghost" onclick='event.stopPropagation();viewTeacherLesson("${l.id}")'>👁</button><button class="btn sm ghost" onclick='event.stopPropagation();openLessonForm(${JSON.stringify(l)})'>✏️</button><button class="btn sm secondary" onclick='event.stopPropagation();openAssignContent("lesson",${JSON.stringify(l)})'>📤</button></div></div>`).join('')||'<div class="tic-sort-muted" style="padding:8px">Solte uma Lesson aqui.</div>'}</div></section>`).join('')||'<div class="card empty">Nenhum módulo. Crie o primeiro.</div>'}</div><div class="notice warning section">Lessons sem módulo: <b>${lessons.filter(l=>!l.module_id).length}</b>. Edite a Lesson para vinculá-la a um módulo ou arraste-a para um módulo.</div>${lessons.filter(l=>!l.module_id).length?`<div id="ticGeneralLessonsV11" class="tic-module-lessons-sort" style="margin-top:8px;border:1px dashed #ddd5ed;border-radius:12px;padding:10px" ondragover="ticAllowLessonDropV11(event)" ondrop="ticDropLessonV11(event)">${lessons.filter(l=>!l.module_id).sort((a,b)=>(a.position||0)-(b.position||0)).map((l,li)=>`<div class="tic-lesson-sort" draggable="true" data-lesson-id="${l.id}" data-general="1" ondragstart="ticStartLessonDragV11(event)" ondragover="ticAllowLessonDropV11(event)" ondrop="ticDropLessonV11(event)"><span class="tic-order-handle">⋮⋮</span><span class="tic-order-num">${li+1}</span><div class="tic-order-copy"><b>${esc(l.title)}</b><small>Sem módulo · ${esc(l.skill||'')}</small></div></div>`).join('')}</div>`:''}`}
+async function openCourseCurriculumV11(courseId){currentTeacherCourseIdV11=courseId;try{const {course,mods,lessons}=await ticLoadCurriculumV11(courseId);if(!course)return toast('Curso não encontrado.','error');openModal(`📚 Currículo · ${esc(course.title)}`,ticCurriculumHtmlV11(course,mods,lessons))}catch(e){toast(e.message||'Erro ao carregar currículo.','error')}}
+function ticStartModuleDragV11(e){ticModuleDragV11=e.currentTarget.dataset.moduleId;e.currentTarget.classList.add('dragging')}
+function ticAllowModuleDropV11(e){e.preventDefault();if(ticLessonDragV11)return;const t=e.currentTarget;t.classList.add('tic-drop-zone')}
+async function ticDropModuleV11(e){e.preventDefault();document.querySelectorAll('.tic-drop-zone').forEach(x=>x.classList.remove('tic-drop-zone'));if(!ticModuleDragV11)return;const target=e.currentTarget;if(target.dataset.moduleId===ticModuleDragV11)return;const list=$('ticCurriculumSortList'),drag=[...list.children].find(x=>x.dataset.moduleId===ticModuleDragV11);if(!drag)return;const rect=target.getBoundingClientRect();list.insertBefore(drag,e.clientY<rect.top+rect.height/2?target:target.nextSibling);[...list.children].forEach((x,i)=>{const n=x.querySelector('.tic-module-sort-head .tic-order-num');if(n)n.textContent=i+1});const ids=[...list.children].map(x=>x.dataset.moduleId);for(let i=0;i<ids.length;i++){const r=await sb.from('tic_modules').update({position:i+1}).eq('id',ids[i]).eq('course_id',currentTeacherCourseIdV11||'');if(r.error)return toast(r.error.message,'error')}ticModuleDragV11=null;toast('Ordem dos módulos salva.','success')}
+let currentTeacherCourseIdV11='';
+async function ticDropLessonV11(e){e.preventDefault();e.stopPropagation();document.querySelectorAll('.tic-drop-zone').forEach(x=>x.classList.remove('tic-drop-zone'));if(!ticLessonDragV11)return;const zone=e.currentTarget.closest('.tic-module-lessons-sort')||e.currentTarget;const target=e.target.closest('.tic-lesson-sort');const lessonId=ticLessonDragV11;const source=document.querySelector(`.tic-lesson-sort[data-lesson-id="${lessonId}"]`);if(!source)return;const targetModuleId=zone.dataset.moduleId||null;if(target&&target.dataset.lessonId!==lessonId){const rect=target.getBoundingClientRect();zone.insertBefore(source,e.clientY<rect.top+rect.height/2?target:target.nextSibling)}else zone.appendChild(source);const lessonNodes=[...zone.querySelectorAll(':scope > .tic-lesson-sort')];for(let i=0;i<lessonNodes.length;i++){const r=await sb.from('tic_lessons').update({module_id:targetModuleId,position:i+1}).eq('id',lessonNodes[i].dataset.lessonId).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');const n=lessonNodes[i].querySelector('.tic-order-num');if(n)n.textContent=i+1}
+ /* Re-number every affected source module after a cross-module move. */
+ const zones=[...document.querySelectorAll('#ticCurriculumSortList .tic-module-lessons-sort'),$('ticGeneralLessonsV11')].filter(Boolean);for(const z of zones){const mid=z.dataset.moduleId||null;const nodes=[...z.querySelectorAll(':scope > .tic-lesson-sort')];for(let i=0;i<nodes.length;i++){const r=await sb.from('tic_lessons').update({module_id:mid,position:i+1}).eq('id',nodes[i].dataset.lessonId).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');const n=nodes[i].querySelector('.tic-order-num');if(n)n.textContent=i+1}}
+ticLessonDragV11=null;toast('Sequência das Lessons salva.','success')}
+function ticStartLessonDragV11(e){e.stopPropagation();ticLessonDragV11=e.currentTarget.dataset.lessonId;e.currentTarget.classList.add('dragging')}
+function ticAllowLessonDropV11(e){e.preventDefault();e.stopPropagation();if(ticLessonDragV11)e.currentTarget.classList.add('tic-drop-zone')}
+async function deleteModuleSafeV11(id,courseId){if(!confirm('Excluir este módulo? As Lessons serão preservadas e ficarão sem módulo.'))return;const r=await sb.from('tic_modules').delete().eq('id',id).eq('course_id',courseId);if(r.error)return toast(r.error.message,'error');toast('Módulo excluído.','success');openCourseCurriculumV11(courseId)}
+const oldOpenCourseCurriculumV11=openCourseCurriculum;openCourseCurriculum=openCourseCurriculumV11;
+
+/* Student sees the same course order and the same module/lesson order. */
+async function ticGetStudentOrderedCoursesV11(studentId){const {data:en,error:ee}=await sb.from('tic_course_students').select('course_id,status,enrolled_at').eq('student_id',studentId).eq('status','active').order('enrolled_at',{ascending:true});if(ee)throw ee;const ids=(en||[]).map(x=>x.course_id);if(!ids.length)return [];const {data:cs,error:ce}=await sb.from('tic_courses').select('*').in('id',ids).eq('active',true);if(ce)throw ce;const {data:tracks,error:te}=await sb.from('tic_course_tracks').select('id,is_default').eq('active',true).order('is_default',{ascending:false}).order('created_at',{ascending:true}).limit(1);if(te)throw te;const track=tracks?.[0];if(!track)return cs||[];const {data:items,error:ie}=await sb.from('tic_course_track_items').select('course_id,position').eq('track_id',track.id);if(ie)throw ie;const pos=new Map((items||[]).map(x=>[x.course_id,Number(x.position)||999999]));return (cs||[]).sort((a,b)=>(pos.get(a.id)??999999)-(pos.get(b.id)??999999)||ticLevelRankV11(a.level)-ticLevelRankV11(b.level))}
+const oldStudentCoursesPageV11=studentCoursesPage;
+studentCoursesPage=async function(){
+ const s=await studentRecord();if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um aluno.</div>';return}try{const courses=await ticGetStudentOrderedCoursesV11(s.id);setPage('My Courses','Seus cursos em ordem pedagógica.');if(!courses.length){$('content').innerHTML='<div class="card empty">Você ainda não está matriculado em nenhum curso.</div>';return}const ids=courses.map(c=>c.id);const [{data:mods},{data:lessons},{data:prog}]=await Promise.all([sb.from('tic_modules').select('*').in('course_id',ids).order('position'),sb.from('tic_lessons').select('*').in('course_id',ids).eq('active',true).order('position').order('created_at'),sb.from('tic_progress').select('level,skill,progress').eq('student_id',s.id)]);const pm=new Map((prog||[]).map(x=>[x.skill+':'+x.level,Number(x.progress||0)]));const cards=courses.map((c,ci)=>{const ms=(mods||[]).filter(m=>m.course_id===c.id).sort((a,b)=>(a.position||0)-(b.position||0));const ls=(lessons||[]).filter(l=>l.course_id===c.id).sort((a,b)=>(a.position||0)-(b.position||0));const done=ls.filter(l=>(pm.get((l.skill||'')+':'+(l.level||c.level))||0)>=100).length;return `<article class="student-course-hero card"><div class="student-course-head"><div><span class="badge blue">${ci+1}. ${esc(c.level||'')}</span><h2>📚 ${esc(c.title)}</h2><p>${esc(c.description||'Curso de inglês')}</p></div><span class="badge green">Acesso ativo</span></div><div class="student-course-metrics"><span><b>${ms.length}</b> módulos</span><span><b>${ls.length}</b> lessons</span><span><b>${done}</b> concluídas</span></div><button class="btn primary" onclick="openStudentCourse('${c.id}')">Abrir currículo →</button></article>`});$('content').innerHTML=`<div class="notice success">🛤️ <b>Sequência pedagógica:</b> os cursos aparecem na ordem definida pelo Teacher.</div><div class="tic-student-course-order section">${cards.join('')}</div>`}catch(e){$('content').innerHTML=`<div class="card attention">${esc(e.message||e)}</div>`}}
+
+/* Ensure new/current curriculum is clickable for Teacher and Student. */
+window.TIC_ORDER_VERSION='11.0';
 </script>
 
 </body>
