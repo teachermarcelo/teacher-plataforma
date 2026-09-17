@@ -1557,16 +1557,16 @@ function ticRenderResourcesFinal(x){
 async function ticMarkLessonOpen(id,s){
  const now=new Date().toISOString();
  const {data:lp}=await sb.from('tic_lesson_progress').select('*').eq('lesson_id',id).eq('student_id',s.id).maybeSingle();
- if(lp){await sb.from('tic_lesson_progress').update({first_opened_at:lp.first_opened_at||now,last_opened_at:now,open_count:Number(lp.open_count||0)+1,updated_at:now}).eq('id',lp.id);return lp;}
- const {data:n}=await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,first_opened_at:now,last_opened_at:now,open_count:1,response_count:0,progress:0}).select().single();return n;
+ if(lp){await sb.from('tic_lesson_progress').update({last_opened_at:now,open_count:Number(lp.open_count||0)+1,updated_at:now}).eq('id',lp.id);return lp;}
+ const {data:n}=await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,last_opened_at:now,open_count:1,response_count:0}).select().single();return n;
 }
 async function markLessonCompleted(lessonId){
  const s=await studentRecord();if(!s)return;
  const now=new Date().toISOString();
- const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,completion_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+ const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
  let r;
- if(lp)r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_completed_at:now,completion_count:Number(lp.completion_count||0)+1,progress:100,updated_at:now}).eq('id',lp.id);
- else r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_completed_at:now,completion_count:1,progress:100,open_count:1,response_count:0});
+ if(lp)r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_opened_at:now,updated_at:now}).eq('id',lp.id);
+ else r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,open_count:1,response_count:0,updated_at:now});
  if(r.error)return toast('Não foi possível registrar a conclusão: '+r.error.message,'error');
  toast('Lesson concluída. Ela continua disponível para você refazer quando quiser.','success');
  viewStudentLessonInteractive(lessonId);
@@ -1761,16 +1761,16 @@ function ticRenderResourcesFinal(x){
 async function ticMarkLessonOpen(id,s){
  const now=new Date().toISOString();
  const {data:lp}=await sb.from('tic_lesson_progress').select('*').eq('lesson_id',id).eq('student_id',s.id).maybeSingle();
- if(lp){await sb.from('tic_lesson_progress').update({first_opened_at:lp.first_opened_at||now,last_opened_at:now,open_count:Number(lp.open_count||0)+1,updated_at:now}).eq('id',lp.id);return lp;}
- const {data:n}=await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,first_opened_at:now,last_opened_at:now,open_count:1,response_count:0,progress:0}).select().single();return n;
+ if(lp){await sb.from('tic_lesson_progress').update({last_opened_at:now,open_count:Number(lp.open_count||0)+1,updated_at:now}).eq('id',lp.id);return lp;}
+ const {data:n}=await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,last_opened_at:now,open_count:1,response_count:0}).select().single();return n;
 }
 async function markLessonCompleted(lessonId){
  const s=await studentRecord();if(!s)return;
  const now=new Date().toISOString();
- const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,completion_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+ const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
  let r;
- if(lp)r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_completed_at:now,completion_count:Number(lp.completion_count||0)+1,progress:100,updated_at:now}).eq('id',lp.id);
- else r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_completed_at:now,completion_count:1,progress:100,open_count:1,response_count:0});
+ if(lp)r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_opened_at:now,updated_at:now}).eq('id',lp.id);
+ else r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,open_count:1,response_count:0,updated_at:now});
  if(r.error)return toast('Não foi possível registrar a conclusão: '+r.error.message,'error');
  toast('Lesson concluída. Ela continua disponível para você refazer quando quiser.','success');
  viewStudentLessonInteractive(lessonId);
