@@ -1458,9 +1458,7 @@ async function saveFeedback(e,submissionId,taskAssignmentId,studentId){
  const tr=await sb.from('tic_submissions').update({grade:grade===''?null:Number(grade),status:'reviewed'}).eq('id',submissionId);if(tr.error)return toast('Feedback salvo, mas a entrega não foi atualizada: '+tr.error.message,'error');
  await sb.from('tic_task_assignments').update({status:'reviewed'}).eq('id',taskAssignmentId).eq('student_id',studentId);closeModal();toast('Correção salva. A atribuição continua ativa.','success');loadView('feedback');
 }
-</script>
-</body></html>`;
-}
+
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return;
  const {data:l,error}=await sb.from('tic_lessons').select('id,title,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
@@ -1646,9 +1644,7 @@ async function saveFeedback(e,submissionId,taskAssignmentId,studentId){
  const tr=await sb.from('tic_submissions').update({grade:grade===''?null:Number(grade),status:'reviewed'}).eq('id',submissionId);if(tr.error)return toast('Feedback salvo, mas a entrega não foi atualizada: '+tr.error.message,'error');
  await sb.from('tic_task_assignments').update({status:'reviewed'}).eq('id',taskAssignmentId).eq('student_id',studentId);closeModal();toast('Correção salva. A atribuição continua ativa.','success');loadView('feedback');
 }
-</script>
-</body></html>`;
-}
+
 
 /* Student lesson: one real viewer, all resources, response, feedback, first completion. */
 async function viewStudentLessonInteractive(id){
