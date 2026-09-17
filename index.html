@@ -1557,16 +1557,16 @@ function ticRenderResourcesFinal(x){
 async function ticMarkLessonOpen(id,s){
  const now=new Date().toISOString();
  const {data:lp}=await sb.from('tic_lesson_progress').select('*').eq('lesson_id',id).eq('student_id',s.id).maybeSingle();
- if(lp){await sb.from('tic_lesson_progress').update({last_opened_at:now,open_count:Number(lp.open_count||0)+1,updated_at:now}).eq('id',lp.id);return lp;}
- const {data:n}=await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,last_opened_at:now,open_count:1,response_count:0}).select().single();return n;
+ if(lp){await sb.from('tic_lesson_progress').update({first_opened_at:lp.first_opened_at||now,last_opened_at:now,open_count:Number(lp.open_count||0)+1,updated_at:now}).eq('id',lp.id);return lp;}
+ const {data:n}=await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,first_opened_at:now,last_opened_at:now,open_count:1,response_count:0,progress:0}).select().single();return n;
 }
 async function markLessonCompleted(lessonId){
  const s=await studentRecord();if(!s)return;
  const now=new Date().toISOString();
- const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+ const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,completion_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
  let r;
- if(lp)r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_opened_at:now,updated_at:now}).eq('id',lp.id);
- else r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,open_count:1,response_count:0,updated_at:now});
+ if(lp)r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_completed_at:now,completion_count:Number(lp.completion_count||0)+1,progress:100,updated_at:now}).eq('id',lp.id);
+ else r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_completed_at:now,completion_count:1,progress:100,open_count:1,response_count:0});
  if(r.error)return toast('Não foi possível registrar a conclusão: '+r.error.message,'error');
  toast('Lesson concluída. Ela continua disponível para você refazer quando quiser.','success');
  viewStudentLessonInteractive(lessonId);
@@ -1761,16 +1761,16 @@ function ticRenderResourcesFinal(x){
 async function ticMarkLessonOpen(id,s){
  const now=new Date().toISOString();
  const {data:lp}=await sb.from('tic_lesson_progress').select('*').eq('lesson_id',id).eq('student_id',s.id).maybeSingle();
- if(lp){await sb.from('tic_lesson_progress').update({last_opened_at:now,open_count:Number(lp.open_count||0)+1,updated_at:now}).eq('id',lp.id);return lp;}
- const {data:n}=await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,last_opened_at:now,open_count:1,response_count:0}).select().single();return n;
+ if(lp){await sb.from('tic_lesson_progress').update({first_opened_at:lp.first_opened_at||now,last_opened_at:now,open_count:Number(lp.open_count||0)+1,updated_at:now}).eq('id',lp.id);return lp;}
+ const {data:n}=await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,first_opened_at:now,last_opened_at:now,open_count:1,response_count:0,progress:0}).select().single();return n;
 }
 async function markLessonCompleted(lessonId){
  const s=await studentRecord();if(!s)return;
  const now=new Date().toISOString();
- const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+ const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,completion_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
  let r;
- if(lp)r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_opened_at:now,updated_at:now}).eq('id',lp.id);
- else r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,open_count:1,response_count:0,updated_at:now});
+ if(lp)r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_completed_at:now,completion_count:Number(lp.completion_count||0)+1,progress:100,updated_at:now}).eq('id',lp.id);
+ else r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_completed_at:now,completion_count:1,progress:100,open_count:1,response_count:0});
  if(r.error)return toast('Não foi possível registrar a conclusão: '+r.error.message,'error');
  toast('Lesson concluída. Ela continua disponível para você refazer quando quiser.','success');
  viewStudentLessonInteractive(lessonId);
@@ -1926,8 +1926,15 @@ async function saveCourseV11(e,id){
    if(!id){
      const track=await ticEnsureDefaultTrackV11();
      const {data:last}=await sb.from('tic_course_track_items').select('position').eq('track_id',track.id).order('position',{ascending:false}).limit(1).maybeSingle();
-     const ir=await sb.from('tic_course_track_items').insert({track_id:track.id,course_id:r.data.id,position:Number(last?.position||0)+1});
-     if(ir.error)return toast('Curso criado, mas não foi possível adicioná-lo à sequência: '+ir.error.message,'error');
+     const nextPosition=Number(last?.position||0)+1;
+     // A relação Track + Curso é UNIQUE. Use upsert para não gerar erro
+     // quando o curso já estiver na sequência (por exemplo, após duplo clique
+     // ou quando o registro foi criado antes e a etapa de vínculo foi repetida).
+     const ir=await sb.from('tic_course_track_items').upsert(
+       {track_id:track.id,course_id:r.data.id,position:nextPosition},
+       {onConflict:'track_id,course_id'}
+     );
+     if(ir.error)return toast('Curso criado, mas não foi possível atualizar a sequência: '+ir.error.message,'error');
    }
    closeModal();toast(id?'Curso atualizado.':'Curso criado e adicionado à sequência.','success');coursesPage();
  }catch(err){toast(err?.message||'Não foi possível salvar o curso.','error')}
