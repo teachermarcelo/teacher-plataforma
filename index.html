@@ -1409,7 +1409,128 @@ function ticResponsiveSrcdoc(content){
  const meta='<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">';
  const base='<style>html,body{margin:0;padding:0;max-width:100%;overflow-x:auto}*{box-sizing:border-box}img,video,iframe,table{max-width:100%}body{overflow-wrap:anywhere}button,input,select,textarea{max-width:100%}</style>';
  if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}${base}`);
- return `<!doctype html><html><head>${meta}${base}</head><body>${c}</body></html>`;
+ return `<!doctype html><html><head>${meta}${base}</head><body>${c}
+<style>
+/* TIC FINAL — connected lesson/task viewer */
+.tic-full-viewer{display:grid;gap:14px}.tic-viewer-content{background:#fff;border:1px solid #e8e3f0;border-radius:16px;overflow:hidden}.tic-viewer-content iframe{display:block;width:100%;height:620px;border:0;background:#fff}.tic-viewer-content.tic-mobile iframe{width:390px;max-width:100%;margin:auto;height:700px}.tic-viewer-content.tic-tablet iframe{width:768px;max-width:100%;margin:auto;height:650px}.tic-viewer-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}.tic-viewer-toolbar .devices{display:flex;gap:7px;flex-wrap:wrap}.tic-resource-card{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border:1px solid #ebe6f2;border-radius:12px;background:#fff}.tic-resource-card small{display:block;color:var(--muted);margin-top:3px}.tic-answer-box{display:grid;gap:10px}.tic-attempt{border:1px solid #ebe6f2;border-radius:12px;padding:12px;background:#faf9fd}.tic-feedback-card{border:1px solid #cfeee0;background:#f2fcf7;border-radius:14px;padding:14px}.tic-feedback-card .score{font:800 25px 'Plus Jakarta Sans';margin:5px 0}.tic-task-state{display:flex;gap:7px;flex-wrap:wrap}.tic-course-link{cursor:pointer}.tic-course-link:hover{transform:translateY(-1px)}
+@media(max-width:700px){.tic-viewer-content iframe{height:520px}.tic-resource-card{align-items:flex-start;flex-direction:column}.tic-viewer-toolbar{align-items:flex-start;flex-direction:column}}
+</style>
+
+<script>
+/* TIC FINAL CONNECTIVITY LAYER — appended intentionally so it overrides broken/legacy viewer versions without removing existing features. */
+function ticFrameHtml(content){
+ const c=String(content||'').trim();
+ if(!c)return '';
+ if(/<html[\s>]/i.test(c)) return ticResponsiveSrcdoc(c);
+ return ticResponsiveSrcdoc(c);
+}
+function ticViewerDevices(targetId='ticViewerFrame',wrapId='ticViewerWrap'){
+ const w=$(wrapId); if(!w)return '';
+ return `<div class="tic-viewer-toolbar"><div class="devices"><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('desktop','${wrapId}')">🖥 Desktop</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('tablet','${wrapId}')">▣ Tablet</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('mobile','${wrapId}')">📱 Mobile</button></div></div>`;
+}
+function ticSetViewerDevice(device,wrapId){const w=$(wrapId);if(!w)return;w.className='tic-viewer-content '+(device==='mobile'?'tic-mobile':device==='tablet'?'tic-tablet':'');}
+function ticRenderResourcesFinal(x){
+ const arr=[];
+ if(x?.video_url)arr.push({type:'video',title:'Vídeo principal',url:x.video_url});
+ if(x?.audio_url)arr.push({type:'audio',title:'Áudio principal',url:x.audio_url});
+ if(x?.pdf_url)arr.push({type:'pdf',title:'PDF principal',url:x.pdf_url});
+ if(Array.isArray(x?.resource_items))arr.push(...x.resource_items);
+ const seen=new Set(), list=arr.filter(a=>{const u=ticSafeUrl(a?.url||a?.value||'');if(!u||seen.has(u))return false;seen.add(u);return true});
+ if(!list.length)return '<div class="empty">Nenhum recurso adicional cadastrado.</div>';
+ return `<div style="display:grid;gap:8px">${list.map(a=>{const u=ticSafeUrl(a.url||a.value||'');const type=String(a.type||'link').toLowerCase();const icon=type==='pdf'?'📄':type==='video'?'🎥':type==='audio'?'🎧':type==='file'?'📎':'🔗';return `<div class="tic-resource-card"><div><b>${icon} ${esc(a.title||a.name||'Recurso')}</b>${a.description?`<small>${esc(a.description)}</small>`:''}</div><a class="btn sm secondary" href="${esc(u)}" target="_blank" rel="noopener noreferrer">Abrir →</a></div>`}).join('')}</div>`;
+}
+async function ticMarkLessonOpen(id,s){
+ const now=new Date().toISOString();
+ const {data:lp}=await sb.from('tic_lesson_progress').select('*').eq('lesson_id',id).eq('student_id',s.id).maybeSingle();
+ if(lp){await sb.from('tic_lesson_progress').update({first_opened_at:lp.first_opened_at||now,last_opened_at:now,open_count:Number(lp.open_count||0)+1,updated_at:now}).eq('id',lp.id);return lp;}
+ const {data:n}=await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,first_opened_at:now,last_opened_at:now,open_count:1,response_count:0,progress:0}).select().single();return n;
+}
+async function markLessonCompleted(lessonId){
+ const s=await studentRecord();if(!s)return;
+ const now=new Date().toISOString();
+ const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,completion_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+ let r;
+ if(lp)r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_completed_at:now,completion_count:Number(lp.completion_count||0)+1,progress:100,updated_at:now}).eq('id',lp.id);
+ else r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_completed_at:now,completion_count:1,progress:100,open_count:1,response_count:0});
+ if(r.error)return toast('Não foi possível registrar a conclusão: '+r.error.message,'error');
+ toast('Lesson concluída. Ela continua disponível para você refazer quando quiser.','success');
+ viewStudentLessonInteractive(lessonId);
+}
+async function viewStudentLessonInteractive(id){
+ const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).maybeSingle();
+ if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
+ const s=await studentRecord();if(!s)return;
+ const {data:courseAccess}=l.course_id?await sb.from('tic_course_students').select('id').eq('course_id',l.course_id).eq('student_id',s.id).eq('status','active').maybeSingle():{data:null};
+ const {data:direct}=await sb.from('tic_lesson_assignments').select('id').eq('lesson_id',id).eq('student_id',s.id).eq('active',true).maybeSingle();
+ if(!courseAccess&&!direct)return toast('Esta Lesson não está disponível para sua conta.','error');
+ const lp=await ticMarkLessonOpen(id,s);
+ const {data:resp}=await sb.from('tic_lesson_responses').select('id,attempt,status,score,response_text,teacher_comment,improvement_skill,improvement_link,reviewed_at,created_at').eq('lesson_id',id).eq('student_id',s.id).order('attempt',{ascending:false});
+ const completed=!!lp?.first_completed_at; const latest=resp?.[0];
+ const content=l.content?`<section class="tic-viewer-content" id="ticLessonContentWrap"><iframe id="ticLessonContentFrame" title="Conteúdo da Lesson" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></section>`:'';
+ const html=l.html_enabled&&l.html_content?`<section><div class="tic-viewer-toolbar"><b>🧩 Atividade HTML interativa</b><span class="badge green">Responsiva</span></div><div class="tic-viewer-toolbar"><div class="devices"><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('desktop','ticLessonHtmlWrap')">🖥 Desktop</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('tablet','ticLessonHtmlWrap')">▣ Tablet</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('mobile','ticLessonHtmlWrap')">📱 Mobile</button></div></div><div class="tic-viewer-content" id="ticLessonHtmlWrap"><iframe id="ticLessonHtmlFrame" title="Atividade HTML da Lesson" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div><div id="ticLessonStatus" class="notice">Você pode realizar a atividade e enviar sua resposta dentro do conteúdo.</div></section>`:'';
+ const response=l.allow_student_response?`<section class="viewer-panel"><div class="viewer-panel-head"><b>✍️ Resposta ao Teacher</b><span class="badge blue">Tentativas ilimitadas</span></div><div class="tic-answer-box"><textarea id="lessonExternalResponse" placeholder="Escreva uma resposta para o Teacher..."></textarea><button class="btn primary" onclick="submitLessonExternalResponse('${l.id}')">📤 Enviar resposta</button></div></section>`:'';
+ const feedback=latest&&(latest.teacher_comment||latest.score!=null)?`<section class="tic-feedback-card"><b>👨‍🏫 Feedback do Teacher</b>${latest.score!=null?`<div class="score">${latest.score}/100</div>`:''}${latest.teacher_comment?`<div style="white-space:pre-wrap;line-height:1.6">${esc(latest.teacher_comment)}</div>`:''}${latest.improvement_skill||latest.improvement_link?`<div class="improvement-box"><b>🎯 Como melhorar</b>${latest.improvement_skill?`<div>Habilidade: <b>${esc(latest.improvement_skill)}</b></div>`:''}${latest.improvement_link?`<a class="btn secondary" href="${esc(ticSafeUrl(latest.improvement_link))}" target="_blank" rel="noopener noreferrer">🔗 Abrir material</a>`:''}</div>`:''}</section>`:'';
+ const history=(resp||[]).length?`<section class="viewer-panel"><div class="viewer-panel-head"><b>🔄 Histórico</b></div>${resp.map(r=>`<div class="tic-attempt"><b>Tentativa ${r.attempt}</b><small>${fmtDate(r.created_at)} · ${esc(r.status||'submitted')}</small>${r.score!=null?`<div><b>Nota:</b> ${r.score}</div>`:''}${r.response_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(r.response_text)}</div>`:''}</div>`).join('')}</section>`:'';
+ openModal(`📖 ${esc(l.title)}`,`<div class="tic-full-viewer"><div class="lesson-student-header"><div><span class="badge blue">${esc(l.level||s.current_level||'')}</span><h2>${esc(l.title)}</h2><small>${esc(l.skill||'Lesson')} · ${esc(l.lesson_type||'lesson')}</small></div><div class="tic-task-state"><span class="badge ${completed?'green':'yellow'}">${completed?'✓ Concluída na primeira vez':'Não concluída'}</span><span class="badge green">Acesso ativo</span></div></div>${content}${l.content?'<div class="viewer-status">Conteúdo da Lesson</div>':''}${html}${response}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos e links</b></div>${ticRenderResourcesFinal(l)}</section>${feedback}${history}<div class="viewer-actions"><button class="btn ghost" onclick="closeModal()">Fechar</button>${!completed?`<button class="btn primary" onclick="markLessonCompleted('${l.id}')">✓ Marcar como concluída</button>`:`<span class="badge green" style="padding:10px 13px">✓ Concluída — pode refazer</span>`}</div></div>`);
+ if(content){const f=$('ticLessonContentFrame');if(f)f.srcdoc=ticFrameHtml(l.content)}
+ if(html){const f=$('ticLessonHtmlFrame');if(f)f.srcdoc=ticFrameHtml(l.html_content)+ticHtmlBridge();}
+}
+async function submitLessonExternalResponse(lessonId){
+ const s=await studentRecord();if(!s)return;const el=$('lessonExternalResponse');const text=el?.value.trim()||'';if(!text)return toast('Digite uma resposta antes de enviar.','info');
+ const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
+ const r=await sb.from('tic_lesson_responses').insert({lesson_id:lessonId,student_id:s.id,attempt,response_text:text,response_data:{source:'external_text'},status:'submitted'});if(r.error)return toast('Não foi possível enviar: '+r.error.message,'error');
+ const now=new Date().toISOString();const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,response_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+ if(lp)await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,response_count:Number(lp.response_count||0)+1,last_opened_at:now,progress:100,updated_at:now}).eq('id',lp.id);else await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,response_count:1,progress:100,open_count:1});
+ toast(`Resposta enviada. Tentativa ${attempt}.`,'success');viewStudentLessonInteractive(lessonId);
+}
+async function submitInteractiveLesson(lessonId,payload){
+ const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
+ const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
+ const r=await sb.from('tic_lesson_responses').insert({lesson_id:lessonId,student_id:s.id,attempt,response_data:payload.fields||{},response_text:payload.text||null,status:'submitted'});if(r.error)return toast('Não foi possível enviar sua resposta: '+r.error.message,'error');
+ const now=new Date().toISOString();const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,response_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();if(lp)await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,response_count:Number(lp.response_count||0)+1,last_opened_at:now,progress:100,updated_at:now}).eq('id',lp.id);else await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,response_count:1,progress:100,open_count:1});if($('ticLessonStatus'))$('ticLessonStatus').innerHTML=`<b>✅ Resposta enviada.</b> Tentativa ${attempt}. A Lesson continua disponível para refazer.`;toast('Resposta da Lesson enviada.','success');
+}
+async function submitInteractiveTask(taskAssignmentId,payload){
+ const s=await studentRecord();if(!s)return;const {data:ta,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();if(error||!ta||ta.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');
+ const {data:a}=await sb.from('tic_assignments').select('allow_multiple_attempts,active').eq('id',ta.assignment_id).maybeSingle();if(a?.active===false)return toast('Esta Task foi desativada pelo Teacher.','error');
+ if(a?.allow_multiple_attempts===false){const {data:already}=await sb.from('tic_submissions').select('id').eq('task_assignment_id',ta.id).eq('student_id',s.id).limit(1);if(already?.length)return toast('Esta Task permite apenas uma tentativa.','info');}
+ const {data:last}=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',ta.id).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
+ const r=await sb.from('tic_submissions').insert({task_assignment_id:ta.id,student_id:s.id,attempt,answer_text:payload.text||null,response_data:payload.fields||{},submitted_at:new Date().toISOString(),status:'submitted'});if(r.error)return toast('Não foi possível enviar a Task: '+r.error.message,'error');
+ await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',ta.id).eq('student_id',s.id);toast(`Task enviada. Tentativa ${attempt}.`,'success');if($('htmlViewerStatus'))$('htmlViewerStatus').innerHTML=`<b>✅ Enviada.</b> Tentativa ${attempt} registrada. A atribuição continua ativa.`;
+}
+async function submitTaskViewerText(id){const t=$('taskViewerText')?.value.trim()||'';if(!t)return toast('Digite sua resposta antes de enviar.','info');await submitInteractiveTask(id,{text:t,fields:{source:'external_text'}})}
+async function openStudentTaskViewer(taskAssignmentId){
+ const s=await studentRecord();if(!s)return;const {data:x,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id,status,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,video_url,audio_url,pdf_url,lesson_id)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+ if(error||!x||x.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');const a=x.tic_assignments||{};
+ const {data:subs}=await sb.from('tic_submissions').select('id,attempt,grade,submitted_at,answer_text,file_url,audio_url,video_url,response_data,status').eq('task_assignment_id',x.id).eq('student_id',s.id).order('attempt',{ascending:false});
+ const latest=subs?.[0];const fids=(subs||[]).map(q=>q.id);const {data:fbs}=fids.length?await sb.from('tic_feedback').select('id,submission_id,comment,grade,private_note,improvement_skill,improvement_link,created_at').in('submission_id',fids).order('created_at',{ascending:false}):{data:[]};const fb=latest?fbs?.find(q=>q.submission_id===latest.id):null;
+ const html=a.html_enabled&&a.html_content?`<div class="tic-viewer-toolbar"><b>🧩 Atividade HTML</b><span class="badge green">Interativa</span></div><div class="tic-viewer-toolbar"><div class="devices"><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('desktop','ticTaskHtmlWrap')">🖥 Desktop</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('tablet','ticTaskHtmlWrap')">▣ Tablet</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('mobile','ticTaskHtmlWrap')">📱 Mobile</button></div></div><div class="tic-viewer-content" id="ticTaskHtmlWrap"><iframe id="ticTaskHtmlFrame" title="Task HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div><div id="htmlViewerStatus" class="notice">Responda no conteúdo HTML e use Enviar/Submit.</div>`:'';
+ const plain=`<div class="viewer-panel"><div class="viewer-panel-head"><b>✍️ Sua resposta</b><span class="badge blue">${a.allow_multiple_attempts===false?'1 tentativa':'Tentativas múltiplas'}</span></div>${a.instructions?`<div style="white-space:pre-wrap;line-height:1.6">${esc(a.instructions)}</div>`:''}<textarea id="taskViewerText" placeholder="Escreva sua resposta para o Teacher..."></textarea><button class="btn primary" onclick="submitTaskViewerText('${x.id}')">📤 Enviar para o Teacher</button></div>`;
+ const feedback=fb&&!fb.private_note?`<div class="tic-feedback-card"><b>👨‍🏫 Correção do Teacher</b>${fb.grade!=null?`<div class="score">${fb.grade}/100</div>`:''}<div style="white-space:pre-wrap;line-height:1.6">${esc(fb.comment||'Sem comentário.')}</div>${fb.improvement_skill||fb.improvement_link?`<div class="improvement-box"><b>🎯 Como melhorar</b>${fb.improvement_skill?`<div>Habilidade: <b>${esc(fb.improvement_skill)}</b></div>`:''}${fb.improvement_link?`<a class="btn secondary" href="${esc(ticSafeUrl(fb.improvement_link))}" target="_blank" rel="noopener noreferrer">🔗 Abrir melhoria</a>`:''}</div>`:''}</div>`:'';
+ const hist=(subs||[]).map(z=>{const zf=fbs?.find(q=>q.submission_id===z.id);return `<div class="tic-attempt"><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:(zf?'Corrigida':'Aguardando correção')}</small>${z.answer_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(z.answer_text)}</div>`:''}</div>`}).join('')||'<div class="empty">Nenhuma entrega ainda.</div>';
+ openModal(`📝 ${esc(a.title||'Task')}`,`<div class="tic-full-viewer"><div class="task-view-head"><div class="tic-task-state"><span class="badge green">🔓 Atribuição ativa</span><span class="badge gray">${a.due_at?'Prazo: '+fmtDate(a.due_at):'Sem prazo'}</span><span class="badge blue">${a.points||0} pontos</span></div><h2>${esc(a.title||'Task')}</h2></div>${html}${plain}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderResourcesFinal(a)}</section>${feedback}<section class="viewer-panel"><div class="viewer-panel-head"><b>🔄 Histórico de tentativas</b></div>${hist}</section><div class="notice success">💡 Corrigir a Task não encerra a atribuição. Você pode refazer enquanto o Teacher mantiver o acesso.</div><div class="viewer-actions"><button class="btn ghost" onclick="closeModal()">Fechar</button></div></div>`);
+ if(html){const f=$('ticTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
+}
+async function openStudentTaskTeacherView(taskAssignmentId){
+ const {data:x,error}=await sb.from('tic_task_assignments').select('id,student_id,assignment_id,tic_assignments(id,title,instructions,resource_items,html_enabled,html_content,video_url,audio_url,pdf_url)').eq('id',taskAssignmentId).maybeSingle();if(error||!x)return toast(error?.message||'Task não encontrada.','error');const a=x.tic_assignments||{};
+ const {data:subs}=await sb.from('tic_submissions').select('id,attempt,answer_text,file_url,audio_url,video_url,submitted_at,grade,response_data,status').eq('task_assignment_id',x.id).eq('student_id',x.student_id).order('attempt',{ascending:false});
+ openModal(`👁 ${esc(a.title||'Task')}`,`<div class="tic-full-viewer"><div class="notice"><b>Visualização do Teacher</b><br>${esc(a.instructions||'')}</div>${a.html_enabled&&a.html_content?`<div class="tic-viewer-toolbar"><b>🧩 HTML</b><span class="badge green">Preview</span></div><div class="tic-viewer-content" id="ticTeacherTaskHtmlWrap"><iframe id="ticTeacherTaskHtmlFrame" title="Task HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div>`:''}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderResourcesFinal(a)}</section><section class="viewer-panel"><div class="viewer-panel-head"><b>📨 Entregas</b></div>${(subs||[]).map(z=>`<div class="tic-attempt"><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:'Sem nota'}</small>${z.answer_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(z.answer_text)}</div>`:''}</div>`).join('')||'<div class="empty">Nenhuma entrega.</div>'}</section></div>`);
+ if(a.html_enabled&&a.html_content){const f=$('ticTeacherTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
+}
+async function openFeedbackFromId(submissionId){
+ const {data:x,error}=await sb.from('tic_submissions').select('id,task_assignment_id,student_id,answer_text,file_url,audio_url,video_url,submitted_at,attempt,grade,status,tic_students(display_name,email)').eq('id',submissionId).maybeSingle();if(error||!x)return toast(error?.message||'Entrega não encontrada.','error');
+ const {data:f}=await sb.from('tic_feedback').select('id,comment,grade,private_note,improvement_skill,improvement_link,created_at').eq('submission_id',submissionId).eq('teacher_id',session.user.id).maybeSingle();
+ openFeedbackForm(x,f);
+}
+async function saveFeedback(e,submissionId,taskAssignmentId,studentId){
+ e.preventDefault();const grade=$('fbGrade')?.value.trim();const comment=$('fbComment')?.value.trim()||null;const private_note=$('fbPrivate')?.value==='true';const improvement_skill=$('fbSkill')?.value||null;const improvement_link=$('fbImprovementLink')?.value.trim()||null;
+ if(grade!==''&&(Number(grade)<0||Number(grade)>100))return toast('A nota deve ficar entre 0 e 100.','error');
+ const payload={submission_id:submissionId,teacher_id:session.user.id,comment,grade:grade===''?null:Number(grade),private_note,improvement_skill,improvement_link};
+ const {data:existing}=await sb.from('tic_feedback').select('id').eq('submission_id',submissionId).eq('teacher_id',session.user.id).maybeSingle();const r=existing?await sb.from('tic_feedback').update(payload).eq('id',existing.id):await sb.from('tic_feedback').insert(payload);if(r.error)return toast('Não foi possível salvar o feedback: '+r.error.message,'error');
+ const tr=await sb.from('tic_submissions').update({grade:grade===''?null:Number(grade),status:'reviewed'}).eq('id',submissionId);if(tr.error)return toast('Feedback salvo, mas a entrega não foi atualizada: '+tr.error.message,'error');
+ await sb.from('tic_task_assignments').update({status:'reviewed'}).eq('id',taskAssignmentId).eq('student_id',studentId);closeModal();toast('Correção salva. A atribuição continua ativa.','success');loadView('feedback');
+}
+</script>
+</body></html>`;
 }
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return;
@@ -1482,7 +1603,128 @@ function ticViewerTextFrame(content){
  const c=String(content||'').trim();if(!c)return '';
  const looksHtml=/<(?:html|body|div|p|h[1-6]|ul|ol|table|span|strong|em|img|a\b|section|article)[\s>]/i.test(c);
  if(looksHtml)return ticResponsiveSrcdoc(c);
- return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;margin:0;padding:28px;line-height:1.7;color:#202033}*{box-sizing:border-box}a{overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>${esc(c).replace(/\n/g,'<br>')}</body></html>`;
+ return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;margin:0;padding:28px;line-height:1.7;color:#202033}*{box-sizing:border-box}a{overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>${esc(c).replace(/\n/g,'<br>')}
+<style>
+/* TIC FINAL — connected lesson/task viewer */
+.tic-full-viewer{display:grid;gap:14px}.tic-viewer-content{background:#fff;border:1px solid #e8e3f0;border-radius:16px;overflow:hidden}.tic-viewer-content iframe{display:block;width:100%;height:620px;border:0;background:#fff}.tic-viewer-content.tic-mobile iframe{width:390px;max-width:100%;margin:auto;height:700px}.tic-viewer-content.tic-tablet iframe{width:768px;max-width:100%;margin:auto;height:650px}.tic-viewer-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}.tic-viewer-toolbar .devices{display:flex;gap:7px;flex-wrap:wrap}.tic-resource-card{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border:1px solid #ebe6f2;border-radius:12px;background:#fff}.tic-resource-card small{display:block;color:var(--muted);margin-top:3px}.tic-answer-box{display:grid;gap:10px}.tic-attempt{border:1px solid #ebe6f2;border-radius:12px;padding:12px;background:#faf9fd}.tic-feedback-card{border:1px solid #cfeee0;background:#f2fcf7;border-radius:14px;padding:14px}.tic-feedback-card .score{font:800 25px 'Plus Jakarta Sans';margin:5px 0}.tic-task-state{display:flex;gap:7px;flex-wrap:wrap}.tic-course-link{cursor:pointer}.tic-course-link:hover{transform:translateY(-1px)}
+@media(max-width:700px){.tic-viewer-content iframe{height:520px}.tic-resource-card{align-items:flex-start;flex-direction:column}.tic-viewer-toolbar{align-items:flex-start;flex-direction:column}}
+</style>
+
+<script>
+/* TIC FINAL CONNECTIVITY LAYER — appended intentionally so it overrides broken/legacy viewer versions without removing existing features. */
+function ticFrameHtml(content){
+ const c=String(content||'').trim();
+ if(!c)return '';
+ if(/<html[\s>]/i.test(c)) return ticResponsiveSrcdoc(c);
+ return ticResponsiveSrcdoc(c);
+}
+function ticViewerDevices(targetId='ticViewerFrame',wrapId='ticViewerWrap'){
+ const w=$(wrapId); if(!w)return '';
+ return `<div class="tic-viewer-toolbar"><div class="devices"><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('desktop','${wrapId}')">🖥 Desktop</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('tablet','${wrapId}')">▣ Tablet</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('mobile','${wrapId}')">📱 Mobile</button></div></div>`;
+}
+function ticSetViewerDevice(device,wrapId){const w=$(wrapId);if(!w)return;w.className='tic-viewer-content '+(device==='mobile'?'tic-mobile':device==='tablet'?'tic-tablet':'');}
+function ticRenderResourcesFinal(x){
+ const arr=[];
+ if(x?.video_url)arr.push({type:'video',title:'Vídeo principal',url:x.video_url});
+ if(x?.audio_url)arr.push({type:'audio',title:'Áudio principal',url:x.audio_url});
+ if(x?.pdf_url)arr.push({type:'pdf',title:'PDF principal',url:x.pdf_url});
+ if(Array.isArray(x?.resource_items))arr.push(...x.resource_items);
+ const seen=new Set(), list=arr.filter(a=>{const u=ticSafeUrl(a?.url||a?.value||'');if(!u||seen.has(u))return false;seen.add(u);return true});
+ if(!list.length)return '<div class="empty">Nenhum recurso adicional cadastrado.</div>';
+ return `<div style="display:grid;gap:8px">${list.map(a=>{const u=ticSafeUrl(a.url||a.value||'');const type=String(a.type||'link').toLowerCase();const icon=type==='pdf'?'📄':type==='video'?'🎥':type==='audio'?'🎧':type==='file'?'📎':'🔗';return `<div class="tic-resource-card"><div><b>${icon} ${esc(a.title||a.name||'Recurso')}</b>${a.description?`<small>${esc(a.description)}</small>`:''}</div><a class="btn sm secondary" href="${esc(u)}" target="_blank" rel="noopener noreferrer">Abrir →</a></div>`}).join('')}</div>`;
+}
+async function ticMarkLessonOpen(id,s){
+ const now=new Date().toISOString();
+ const {data:lp}=await sb.from('tic_lesson_progress').select('*').eq('lesson_id',id).eq('student_id',s.id).maybeSingle();
+ if(lp){await sb.from('tic_lesson_progress').update({first_opened_at:lp.first_opened_at||now,last_opened_at:now,open_count:Number(lp.open_count||0)+1,updated_at:now}).eq('id',lp.id);return lp;}
+ const {data:n}=await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,first_opened_at:now,last_opened_at:now,open_count:1,response_count:0,progress:0}).select().single();return n;
+}
+async function markLessonCompleted(lessonId){
+ const s=await studentRecord();if(!s)return;
+ const now=new Date().toISOString();
+ const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,completion_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+ let r;
+ if(lp)r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_completed_at:now,completion_count:Number(lp.completion_count||0)+1,progress:100,updated_at:now}).eq('id',lp.id);
+ else r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_completed_at:now,completion_count:1,progress:100,open_count:1,response_count:0});
+ if(r.error)return toast('Não foi possível registrar a conclusão: '+r.error.message,'error');
+ toast('Lesson concluída. Ela continua disponível para você refazer quando quiser.','success');
+ viewStudentLessonInteractive(lessonId);
+}
+async function viewStudentLessonInteractive(id){
+ const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).maybeSingle();
+ if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
+ const s=await studentRecord();if(!s)return;
+ const {data:courseAccess}=l.course_id?await sb.from('tic_course_students').select('id').eq('course_id',l.course_id).eq('student_id',s.id).eq('status','active').maybeSingle():{data:null};
+ const {data:direct}=await sb.from('tic_lesson_assignments').select('id').eq('lesson_id',id).eq('student_id',s.id).eq('active',true).maybeSingle();
+ if(!courseAccess&&!direct)return toast('Esta Lesson não está disponível para sua conta.','error');
+ const lp=await ticMarkLessonOpen(id,s);
+ const {data:resp}=await sb.from('tic_lesson_responses').select('id,attempt,status,score,response_text,teacher_comment,improvement_skill,improvement_link,reviewed_at,created_at').eq('lesson_id',id).eq('student_id',s.id).order('attempt',{ascending:false});
+ const completed=!!lp?.first_completed_at; const latest=resp?.[0];
+ const content=l.content?`<section class="tic-viewer-content" id="ticLessonContentWrap"><iframe id="ticLessonContentFrame" title="Conteúdo da Lesson" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></section>`:'';
+ const html=l.html_enabled&&l.html_content?`<section><div class="tic-viewer-toolbar"><b>🧩 Atividade HTML interativa</b><span class="badge green">Responsiva</span></div><div class="tic-viewer-toolbar"><div class="devices"><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('desktop','ticLessonHtmlWrap')">🖥 Desktop</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('tablet','ticLessonHtmlWrap')">▣ Tablet</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('mobile','ticLessonHtmlWrap')">📱 Mobile</button></div></div><div class="tic-viewer-content" id="ticLessonHtmlWrap"><iframe id="ticLessonHtmlFrame" title="Atividade HTML da Lesson" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div><div id="ticLessonStatus" class="notice">Você pode realizar a atividade e enviar sua resposta dentro do conteúdo.</div></section>`:'';
+ const response=l.allow_student_response?`<section class="viewer-panel"><div class="viewer-panel-head"><b>✍️ Resposta ao Teacher</b><span class="badge blue">Tentativas ilimitadas</span></div><div class="tic-answer-box"><textarea id="lessonExternalResponse" placeholder="Escreva uma resposta para o Teacher..."></textarea><button class="btn primary" onclick="submitLessonExternalResponse('${l.id}')">📤 Enviar resposta</button></div></section>`:'';
+ const feedback=latest&&(latest.teacher_comment||latest.score!=null)?`<section class="tic-feedback-card"><b>👨‍🏫 Feedback do Teacher</b>${latest.score!=null?`<div class="score">${latest.score}/100</div>`:''}${latest.teacher_comment?`<div style="white-space:pre-wrap;line-height:1.6">${esc(latest.teacher_comment)}</div>`:''}${latest.improvement_skill||latest.improvement_link?`<div class="improvement-box"><b>🎯 Como melhorar</b>${latest.improvement_skill?`<div>Habilidade: <b>${esc(latest.improvement_skill)}</b></div>`:''}${latest.improvement_link?`<a class="btn secondary" href="${esc(ticSafeUrl(latest.improvement_link))}" target="_blank" rel="noopener noreferrer">🔗 Abrir material</a>`:''}</div>`:''}</section>`:'';
+ const history=(resp||[]).length?`<section class="viewer-panel"><div class="viewer-panel-head"><b>🔄 Histórico</b></div>${resp.map(r=>`<div class="tic-attempt"><b>Tentativa ${r.attempt}</b><small>${fmtDate(r.created_at)} · ${esc(r.status||'submitted')}</small>${r.score!=null?`<div><b>Nota:</b> ${r.score}</div>`:''}${r.response_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(r.response_text)}</div>`:''}</div>`).join('')}</section>`:'';
+ openModal(`📖 ${esc(l.title)}`,`<div class="tic-full-viewer"><div class="lesson-student-header"><div><span class="badge blue">${esc(l.level||s.current_level||'')}</span><h2>${esc(l.title)}</h2><small>${esc(l.skill||'Lesson')} · ${esc(l.lesson_type||'lesson')}</small></div><div class="tic-task-state"><span class="badge ${completed?'green':'yellow'}">${completed?'✓ Concluída na primeira vez':'Não concluída'}</span><span class="badge green">Acesso ativo</span></div></div>${content}${l.content?'<div class="viewer-status">Conteúdo da Lesson</div>':''}${html}${response}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos e links</b></div>${ticRenderResourcesFinal(l)}</section>${feedback}${history}<div class="viewer-actions"><button class="btn ghost" onclick="closeModal()">Fechar</button>${!completed?`<button class="btn primary" onclick="markLessonCompleted('${l.id}')">✓ Marcar como concluída</button>`:`<span class="badge green" style="padding:10px 13px">✓ Concluída — pode refazer</span>`}</div></div>`);
+ if(content){const f=$('ticLessonContentFrame');if(f)f.srcdoc=ticFrameHtml(l.content)}
+ if(html){const f=$('ticLessonHtmlFrame');if(f)f.srcdoc=ticFrameHtml(l.html_content)+ticHtmlBridge();}
+}
+async function submitLessonExternalResponse(lessonId){
+ const s=await studentRecord();if(!s)return;const el=$('lessonExternalResponse');const text=el?.value.trim()||'';if(!text)return toast('Digite uma resposta antes de enviar.','info');
+ const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
+ const r=await sb.from('tic_lesson_responses').insert({lesson_id:lessonId,student_id:s.id,attempt,response_text:text,response_data:{source:'external_text'},status:'submitted'});if(r.error)return toast('Não foi possível enviar: '+r.error.message,'error');
+ const now=new Date().toISOString();const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,response_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+ if(lp)await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,response_count:Number(lp.response_count||0)+1,last_opened_at:now,progress:100,updated_at:now}).eq('id',lp.id);else await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,response_count:1,progress:100,open_count:1});
+ toast(`Resposta enviada. Tentativa ${attempt}.`,'success');viewStudentLessonInteractive(lessonId);
+}
+async function submitInteractiveLesson(lessonId,payload){
+ const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
+ const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
+ const r=await sb.from('tic_lesson_responses').insert({lesson_id:lessonId,student_id:s.id,attempt,response_data:payload.fields||{},response_text:payload.text||null,status:'submitted'});if(r.error)return toast('Não foi possível enviar sua resposta: '+r.error.message,'error');
+ const now=new Date().toISOString();const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,response_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();if(lp)await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,response_count:Number(lp.response_count||0)+1,last_opened_at:now,progress:100,updated_at:now}).eq('id',lp.id);else await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,response_count:1,progress:100,open_count:1});if($('ticLessonStatus'))$('ticLessonStatus').innerHTML=`<b>✅ Resposta enviada.</b> Tentativa ${attempt}. A Lesson continua disponível para refazer.`;toast('Resposta da Lesson enviada.','success');
+}
+async function submitInteractiveTask(taskAssignmentId,payload){
+ const s=await studentRecord();if(!s)return;const {data:ta,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();if(error||!ta||ta.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');
+ const {data:a}=await sb.from('tic_assignments').select('allow_multiple_attempts,active').eq('id',ta.assignment_id).maybeSingle();if(a?.active===false)return toast('Esta Task foi desativada pelo Teacher.','error');
+ if(a?.allow_multiple_attempts===false){const {data:already}=await sb.from('tic_submissions').select('id').eq('task_assignment_id',ta.id).eq('student_id',s.id).limit(1);if(already?.length)return toast('Esta Task permite apenas uma tentativa.','info');}
+ const {data:last}=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',ta.id).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
+ const r=await sb.from('tic_submissions').insert({task_assignment_id:ta.id,student_id:s.id,attempt,answer_text:payload.text||null,response_data:payload.fields||{},submitted_at:new Date().toISOString(),status:'submitted'});if(r.error)return toast('Não foi possível enviar a Task: '+r.error.message,'error');
+ await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',ta.id).eq('student_id',s.id);toast(`Task enviada. Tentativa ${attempt}.`,'success');if($('htmlViewerStatus'))$('htmlViewerStatus').innerHTML=`<b>✅ Enviada.</b> Tentativa ${attempt} registrada. A atribuição continua ativa.`;
+}
+async function submitTaskViewerText(id){const t=$('taskViewerText')?.value.trim()||'';if(!t)return toast('Digite sua resposta antes de enviar.','info');await submitInteractiveTask(id,{text:t,fields:{source:'external_text'}})}
+async function openStudentTaskViewer(taskAssignmentId){
+ const s=await studentRecord();if(!s)return;const {data:x,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id,status,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,video_url,audio_url,pdf_url,lesson_id)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+ if(error||!x||x.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');const a=x.tic_assignments||{};
+ const {data:subs}=await sb.from('tic_submissions').select('id,attempt,grade,submitted_at,answer_text,file_url,audio_url,video_url,response_data,status').eq('task_assignment_id',x.id).eq('student_id',s.id).order('attempt',{ascending:false});
+ const latest=subs?.[0];const fids=(subs||[]).map(q=>q.id);const {data:fbs}=fids.length?await sb.from('tic_feedback').select('id,submission_id,comment,grade,private_note,improvement_skill,improvement_link,created_at').in('submission_id',fids).order('created_at',{ascending:false}):{data:[]};const fb=latest?fbs?.find(q=>q.submission_id===latest.id):null;
+ const html=a.html_enabled&&a.html_content?`<div class="tic-viewer-toolbar"><b>🧩 Atividade HTML</b><span class="badge green">Interativa</span></div><div class="tic-viewer-toolbar"><div class="devices"><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('desktop','ticTaskHtmlWrap')">🖥 Desktop</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('tablet','ticTaskHtmlWrap')">▣ Tablet</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('mobile','ticTaskHtmlWrap')">📱 Mobile</button></div></div><div class="tic-viewer-content" id="ticTaskHtmlWrap"><iframe id="ticTaskHtmlFrame" title="Task HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div><div id="htmlViewerStatus" class="notice">Responda no conteúdo HTML e use Enviar/Submit.</div>`:'';
+ const plain=`<div class="viewer-panel"><div class="viewer-panel-head"><b>✍️ Sua resposta</b><span class="badge blue">${a.allow_multiple_attempts===false?'1 tentativa':'Tentativas múltiplas'}</span></div>${a.instructions?`<div style="white-space:pre-wrap;line-height:1.6">${esc(a.instructions)}</div>`:''}<textarea id="taskViewerText" placeholder="Escreva sua resposta para o Teacher..."></textarea><button class="btn primary" onclick="submitTaskViewerText('${x.id}')">📤 Enviar para o Teacher</button></div>`;
+ const feedback=fb&&!fb.private_note?`<div class="tic-feedback-card"><b>👨‍🏫 Correção do Teacher</b>${fb.grade!=null?`<div class="score">${fb.grade}/100</div>`:''}<div style="white-space:pre-wrap;line-height:1.6">${esc(fb.comment||'Sem comentário.')}</div>${fb.improvement_skill||fb.improvement_link?`<div class="improvement-box"><b>🎯 Como melhorar</b>${fb.improvement_skill?`<div>Habilidade: <b>${esc(fb.improvement_skill)}</b></div>`:''}${fb.improvement_link?`<a class="btn secondary" href="${esc(ticSafeUrl(fb.improvement_link))}" target="_blank" rel="noopener noreferrer">🔗 Abrir melhoria</a>`:''}</div>`:''}</div>`:'';
+ const hist=(subs||[]).map(z=>{const zf=fbs?.find(q=>q.submission_id===z.id);return `<div class="tic-attempt"><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:(zf?'Corrigida':'Aguardando correção')}</small>${z.answer_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(z.answer_text)}</div>`:''}</div>`}).join('')||'<div class="empty">Nenhuma entrega ainda.</div>';
+ openModal(`📝 ${esc(a.title||'Task')}`,`<div class="tic-full-viewer"><div class="task-view-head"><div class="tic-task-state"><span class="badge green">🔓 Atribuição ativa</span><span class="badge gray">${a.due_at?'Prazo: '+fmtDate(a.due_at):'Sem prazo'}</span><span class="badge blue">${a.points||0} pontos</span></div><h2>${esc(a.title||'Task')}</h2></div>${html}${plain}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderResourcesFinal(a)}</section>${feedback}<section class="viewer-panel"><div class="viewer-panel-head"><b>🔄 Histórico de tentativas</b></div>${hist}</section><div class="notice success">💡 Corrigir a Task não encerra a atribuição. Você pode refazer enquanto o Teacher mantiver o acesso.</div><div class="viewer-actions"><button class="btn ghost" onclick="closeModal()">Fechar</button></div></div>`);
+ if(html){const f=$('ticTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
+}
+async function openStudentTaskTeacherView(taskAssignmentId){
+ const {data:x,error}=await sb.from('tic_task_assignments').select('id,student_id,assignment_id,tic_assignments(id,title,instructions,resource_items,html_enabled,html_content,video_url,audio_url,pdf_url)').eq('id',taskAssignmentId).maybeSingle();if(error||!x)return toast(error?.message||'Task não encontrada.','error');const a=x.tic_assignments||{};
+ const {data:subs}=await sb.from('tic_submissions').select('id,attempt,answer_text,file_url,audio_url,video_url,submitted_at,grade,response_data,status').eq('task_assignment_id',x.id).eq('student_id',x.student_id).order('attempt',{ascending:false});
+ openModal(`👁 ${esc(a.title||'Task')}`,`<div class="tic-full-viewer"><div class="notice"><b>Visualização do Teacher</b><br>${esc(a.instructions||'')}</div>${a.html_enabled&&a.html_content?`<div class="tic-viewer-toolbar"><b>🧩 HTML</b><span class="badge green">Preview</span></div><div class="tic-viewer-content" id="ticTeacherTaskHtmlWrap"><iframe id="ticTeacherTaskHtmlFrame" title="Task HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div>`:''}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderResourcesFinal(a)}</section><section class="viewer-panel"><div class="viewer-panel-head"><b>📨 Entregas</b></div>${(subs||[]).map(z=>`<div class="tic-attempt"><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:'Sem nota'}</small>${z.answer_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(z.answer_text)}</div>`:''}</div>`).join('')||'<div class="empty">Nenhuma entrega.</div>'}</section></div>`);
+ if(a.html_enabled&&a.html_content){const f=$('ticTeacherTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
+}
+async function openFeedbackFromId(submissionId){
+ const {data:x,error}=await sb.from('tic_submissions').select('id,task_assignment_id,student_id,answer_text,file_url,audio_url,video_url,submitted_at,attempt,grade,status,tic_students(display_name,email)').eq('id',submissionId).maybeSingle();if(error||!x)return toast(error?.message||'Entrega não encontrada.','error');
+ const {data:f}=await sb.from('tic_feedback').select('id,comment,grade,private_note,improvement_skill,improvement_link,created_at').eq('submission_id',submissionId).eq('teacher_id',session.user.id).maybeSingle();
+ openFeedbackForm(x,f);
+}
+async function saveFeedback(e,submissionId,taskAssignmentId,studentId){
+ e.preventDefault();const grade=$('fbGrade')?.value.trim();const comment=$('fbComment')?.value.trim()||null;const private_note=$('fbPrivate')?.value==='true';const improvement_skill=$('fbSkill')?.value||null;const improvement_link=$('fbImprovementLink')?.value.trim()||null;
+ if(grade!==''&&(Number(grade)<0||Number(grade)>100))return toast('A nota deve ficar entre 0 e 100.','error');
+ const payload={submission_id:submissionId,teacher_id:session.user.id,comment,grade:grade===''?null:Number(grade),private_note,improvement_skill,improvement_link};
+ const {data:existing}=await sb.from('tic_feedback').select('id').eq('submission_id',submissionId).eq('teacher_id',session.user.id).maybeSingle();const r=existing?await sb.from('tic_feedback').update(payload).eq('id',existing.id):await sb.from('tic_feedback').insert(payload);if(r.error)return toast('Não foi possível salvar o feedback: '+r.error.message,'error');
+ const tr=await sb.from('tic_submissions').update({grade:grade===''?null:Number(grade),status:'reviewed'}).eq('id',submissionId);if(tr.error)return toast('Feedback salvo, mas a entrega não foi atualizada: '+tr.error.message,'error');
+ await sb.from('tic_task_assignments').update({status:'reviewed'}).eq('id',taskAssignmentId).eq('student_id',studentId);closeModal();toast('Correção salva. A atribuição continua ativa.','success');loadView('feedback');
+}
+</script>
+</body></html>`;
 }
 
 /* Student lesson: one real viewer, all resources, response, feedback, first completion. */
@@ -1566,6 +1808,147 @@ async function feedbackPage(){
 }
 async function openStudentTaskTeacherView(taskAssignmentId){
  const {data:x,error}=await sb.from('tic_task_assignments').select('id,student_id,assignment_id,tic_assignments(id,title,instructions,resource_items,html_enabled,html_content)').eq('id',taskAssignmentId).maybeSingle();if(error||!x)return toast(error?.message||'Task não encontrada.','error');const a=x.tic_assignments||{};openModal(`👁 ${esc(a.title||'Task')}`,`<div class="task-viewer-shell"><div class="notice"><b>Visualização do Teacher</b><br>${esc(a.instructions||'')}</div>${a.html_enabled&&a.html_content?`<div class="viewer-panel"><div class="viewer-panel-head"><b>🧩 HTML</b></div><iframe id="htmlViewerFrame" class="viewer-html-frame" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div>`:''}<div class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderLessonResources(a)}</div></div>`);if(a.html_enabled&&a.html_content){ticHtmlViewerContext={mode:'preview',refId:x.id,html:a.html_content};const f=$('htmlViewerFrame');if(f)f.srcdoc=ticResponsiveSrcdoc(a.html_content)+ticHtmlBridge()}}
+</script>
+
+<style>
+/* TIC FINAL — connected lesson/task viewer */
+.tic-full-viewer{display:grid;gap:14px}.tic-viewer-content{background:#fff;border:1px solid #e8e3f0;border-radius:16px;overflow:hidden}.tic-viewer-content iframe{display:block;width:100%;height:620px;border:0;background:#fff}.tic-viewer-content.tic-mobile iframe{width:390px;max-width:100%;margin:auto;height:700px}.tic-viewer-content.tic-tablet iframe{width:768px;max-width:100%;margin:auto;height:650px}.tic-viewer-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}.tic-viewer-toolbar .devices{display:flex;gap:7px;flex-wrap:wrap}.tic-resource-card{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border:1px solid #ebe6f2;border-radius:12px;background:#fff}.tic-resource-card small{display:block;color:var(--muted);margin-top:3px}.tic-answer-box{display:grid;gap:10px}.tic-attempt{border:1px solid #ebe6f2;border-radius:12px;padding:12px;background:#faf9fd}.tic-feedback-card{border:1px solid #cfeee0;background:#f2fcf7;border-radius:14px;padding:14px}.tic-feedback-card .score{font:800 25px 'Plus Jakarta Sans';margin:5px 0}.tic-task-state{display:flex;gap:7px;flex-wrap:wrap}.tic-course-link{cursor:pointer}.tic-course-link:hover{transform:translateY(-1px)}
+@media(max-width:700px){.tic-viewer-content iframe{height:520px}.tic-resource-card{align-items:flex-start;flex-direction:column}.tic-viewer-toolbar{align-items:flex-start;flex-direction:column}}
+</style>
+
+<script>
+/* TIC FINAL CONNECTIVITY LAYER — appended intentionally so it overrides broken/legacy viewer versions without removing existing features. */
+function ticFrameHtml(content){
+ const c=String(content||'').trim();
+ if(!c)return '';
+ if(/<html[\s>]/i.test(c)) return ticResponsiveSrcdoc(c);
+ return ticResponsiveSrcdoc(c);
+}
+function ticViewerDevices(targetId='ticViewerFrame',wrapId='ticViewerWrap'){
+ const w=$(wrapId); if(!w)return '';
+ return `<div class="tic-viewer-toolbar"><div class="devices"><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('desktop','${wrapId}')">🖥 Desktop</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('tablet','${wrapId}')">▣ Tablet</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('mobile','${wrapId}')">📱 Mobile</button></div></div>`;
+}
+function ticSetViewerDevice(device,wrapId){const w=$(wrapId);if(!w)return;w.className='tic-viewer-content '+(device==='mobile'?'tic-mobile':device==='tablet'?'tic-tablet':'');}
+function ticRenderResourcesFinal(x){
+ const arr=[];
+ if(x?.video_url)arr.push({type:'video',title:'Vídeo principal',url:x.video_url});
+ if(x?.audio_url)arr.push({type:'audio',title:'Áudio principal',url:x.audio_url});
+ if(x?.pdf_url)arr.push({type:'pdf',title:'PDF principal',url:x.pdf_url});
+ if(Array.isArray(x?.resource_items))arr.push(...x.resource_items);
+ const seen=new Set(), list=arr.filter(a=>{const u=ticSafeUrl(a?.url||a?.value||'');if(!u||seen.has(u))return false;seen.add(u);return true});
+ if(!list.length)return '<div class="empty">Nenhum recurso adicional cadastrado.</div>';
+ return `<div style="display:grid;gap:8px">${list.map(a=>{const u=ticSafeUrl(a.url||a.value||'');const type=String(a.type||'link').toLowerCase();const icon=type==='pdf'?'📄':type==='video'?'🎥':type==='audio'?'🎧':type==='file'?'📎':'🔗';return `<div class="tic-resource-card"><div><b>${icon} ${esc(a.title||a.name||'Recurso')}</b>${a.description?`<small>${esc(a.description)}</small>`:''}</div><a class="btn sm secondary" href="${esc(u)}" target="_blank" rel="noopener noreferrer">Abrir →</a></div>`}).join('')}</div>`;
+}
+async function ticMarkLessonOpen(id,s){
+ const now=new Date().toISOString();
+ const {data:lp}=await sb.from('tic_lesson_progress').select('*').eq('lesson_id',id).eq('student_id',s.id).maybeSingle();
+ if(lp){await sb.from('tic_lesson_progress').update({first_opened_at:lp.first_opened_at||now,last_opened_at:now,open_count:Number(lp.open_count||0)+1,updated_at:now}).eq('id',lp.id);return lp;}
+ const {data:n}=await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,first_opened_at:now,last_opened_at:now,open_count:1,response_count:0,progress:0}).select().single();return n;
+}
+async function markLessonCompleted(lessonId){
+ const s=await studentRecord();if(!s)return;
+ const now=new Date().toISOString();
+ const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,completion_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+ let r;
+ if(lp)r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_completed_at:now,completion_count:Number(lp.completion_count||0)+1,progress:100,updated_at:now}).eq('id',lp.id);
+ else r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_completed_at:now,completion_count:1,progress:100,open_count:1,response_count:0});
+ if(r.error)return toast('Não foi possível registrar a conclusão: '+r.error.message,'error');
+ toast('Lesson concluída. Ela continua disponível para você refazer quando quiser.','success');
+ viewStudentLessonInteractive(lessonId);
+}
+async function viewStudentLessonInteractive(id){
+ const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).maybeSingle();
+ if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
+ const s=await studentRecord();if(!s)return;
+ const {data:courseAccess}=l.course_id?await sb.from('tic_course_students').select('id').eq('course_id',l.course_id).eq('student_id',s.id).eq('status','active').maybeSingle():{data:null};
+ const {data:direct}=await sb.from('tic_lesson_assignments').select('id').eq('lesson_id',id).eq('student_id',s.id).eq('active',true).maybeSingle();
+ if(!courseAccess&&!direct)return toast('Esta Lesson não está disponível para sua conta.','error');
+ const lp=await ticMarkLessonOpen(id,s);
+ const {data:resp}=await sb.from('tic_lesson_responses').select('id,attempt,status,score,response_text,teacher_comment,improvement_skill,improvement_link,reviewed_at,created_at').eq('lesson_id',id).eq('student_id',s.id).order('attempt',{ascending:false});
+ const completed=!!lp?.first_completed_at; const latest=resp?.[0];
+ const content=l.content?`<section class="tic-viewer-content" id="ticLessonContentWrap"><iframe id="ticLessonContentFrame" title="Conteúdo da Lesson" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></section>`:'';
+ const html=l.html_enabled&&l.html_content?`<section><div class="tic-viewer-toolbar"><b>🧩 Atividade HTML interativa</b><span class="badge green">Responsiva</span></div><div class="tic-viewer-toolbar"><div class="devices"><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('desktop','ticLessonHtmlWrap')">🖥 Desktop</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('tablet','ticLessonHtmlWrap')">▣ Tablet</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('mobile','ticLessonHtmlWrap')">📱 Mobile</button></div></div><div class="tic-viewer-content" id="ticLessonHtmlWrap"><iframe id="ticLessonHtmlFrame" title="Atividade HTML da Lesson" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div><div id="ticLessonStatus" class="notice">Você pode realizar a atividade e enviar sua resposta dentro do conteúdo.</div></section>`:'';
+ const response=l.allow_student_response?`<section class="viewer-panel"><div class="viewer-panel-head"><b>✍️ Resposta ao Teacher</b><span class="badge blue">Tentativas ilimitadas</span></div><div class="tic-answer-box"><textarea id="lessonExternalResponse" placeholder="Escreva uma resposta para o Teacher..."></textarea><button class="btn primary" onclick="submitLessonExternalResponse('${l.id}')">📤 Enviar resposta</button></div></section>`:'';
+ const feedback=latest&&(latest.teacher_comment||latest.score!=null)?`<section class="tic-feedback-card"><b>👨‍🏫 Feedback do Teacher</b>${latest.score!=null?`<div class="score">${latest.score}/100</div>`:''}${latest.teacher_comment?`<div style="white-space:pre-wrap;line-height:1.6">${esc(latest.teacher_comment)}</div>`:''}${latest.improvement_skill||latest.improvement_link?`<div class="improvement-box"><b>🎯 Como melhorar</b>${latest.improvement_skill?`<div>Habilidade: <b>${esc(latest.improvement_skill)}</b></div>`:''}${latest.improvement_link?`<a class="btn secondary" href="${esc(ticSafeUrl(latest.improvement_link))}" target="_blank" rel="noopener noreferrer">🔗 Abrir material</a>`:''}</div>`:''}</section>`:'';
+ const history=(resp||[]).length?`<section class="viewer-panel"><div class="viewer-panel-head"><b>🔄 Histórico</b></div>${resp.map(r=>`<div class="tic-attempt"><b>Tentativa ${r.attempt}</b><small>${fmtDate(r.created_at)} · ${esc(r.status||'submitted')}</small>${r.score!=null?`<div><b>Nota:</b> ${r.score}</div>`:''}${r.response_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(r.response_text)}</div>`:''}</div>`).join('')}</section>`:'';
+ openModal(`📖 ${esc(l.title)}`,`<div class="tic-full-viewer"><div class="lesson-student-header"><div><span class="badge blue">${esc(l.level||s.current_level||'')}</span><h2>${esc(l.title)}</h2><small>${esc(l.skill||'Lesson')} · ${esc(l.lesson_type||'lesson')}</small></div><div class="tic-task-state"><span class="badge ${completed?'green':'yellow'}">${completed?'✓ Concluída na primeira vez':'Não concluída'}</span><span class="badge green">Acesso ativo</span></div></div>${content}${l.content?'<div class="viewer-status">Conteúdo da Lesson</div>':''}${html}${response}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos e links</b></div>${ticRenderResourcesFinal(l)}</section>${feedback}${history}<div class="viewer-actions"><button class="btn ghost" onclick="closeModal()">Fechar</button>${!completed?`<button class="btn primary" onclick="markLessonCompleted('${l.id}')">✓ Marcar como concluída</button>`:`<span class="badge green" style="padding:10px 13px">✓ Concluída — pode refazer</span>`}</div></div>`);
+ if(content){const f=$('ticLessonContentFrame');if(f)f.srcdoc=ticFrameHtml(l.content)}
+ if(html){const f=$('ticLessonHtmlFrame');if(f)f.srcdoc=ticFrameHtml(l.html_content)+ticHtmlBridge();}
+}
+async function submitLessonExternalResponse(lessonId){
+ const s=await studentRecord();if(!s)return;const el=$('lessonExternalResponse');const text=el?.value.trim()||'';if(!text)return toast('Digite uma resposta antes de enviar.','info');
+ const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
+ const r=await sb.from('tic_lesson_responses').insert({lesson_id:lessonId,student_id:s.id,attempt,response_text:text,response_data:{source:'external_text'},status:'submitted'});if(r.error)return toast('Não foi possível enviar: '+r.error.message,'error');
+ const now=new Date().toISOString();const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,response_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+ if(lp)await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,response_count:Number(lp.response_count||0)+1,last_opened_at:now,progress:100,updated_at:now}).eq('id',lp.id);else await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,response_count:1,progress:100,open_count:1});
+ toast(`Resposta enviada. Tentativa ${attempt}.`,'success');viewStudentLessonInteractive(lessonId);
+}
+async function submitInteractiveLesson(lessonId,payload){
+ const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
+ const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
+ const r=await sb.from('tic_lesson_responses').insert({lesson_id:lessonId,student_id:s.id,attempt,response_data:payload.fields||{},response_text:payload.text||null,status:'submitted'});if(r.error)return toast('Não foi possível enviar sua resposta: '+r.error.message,'error');
+ const now=new Date().toISOString();const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,response_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();if(lp)await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,response_count:Number(lp.response_count||0)+1,last_opened_at:now,progress:100,updated_at:now}).eq('id',lp.id);else await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,response_count:1,progress:100,open_count:1});if($('ticLessonStatus'))$('ticLessonStatus').innerHTML=`<b>✅ Resposta enviada.</b> Tentativa ${attempt}. A Lesson continua disponível para refazer.`;toast('Resposta da Lesson enviada.','success');
+}
+async function submitInteractiveTask(taskAssignmentId,payload){
+ const s=await studentRecord();if(!s)return;const {data:ta,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();if(error||!ta||ta.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');
+ const {data:a}=await sb.from('tic_assignments').select('allow_multiple_attempts,active').eq('id',ta.assignment_id).maybeSingle();if(a?.active===false)return toast('Esta Task foi desativada pelo Teacher.','error');
+ if(a?.allow_multiple_attempts===false){const {data:already}=await sb.from('tic_submissions').select('id').eq('task_assignment_id',ta.id).eq('student_id',s.id).limit(1);if(already?.length)return toast('Esta Task permite apenas uma tentativa.','info');}
+ const {data:last}=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',ta.id).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
+ const r=await sb.from('tic_submissions').insert({task_assignment_id:ta.id,student_id:s.id,attempt,answer_text:payload.text||null,response_data:payload.fields||{},submitted_at:new Date().toISOString(),status:'submitted'});if(r.error)return toast('Não foi possível enviar a Task: '+r.error.message,'error');
+ await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',ta.id).eq('student_id',s.id);toast(`Task enviada. Tentativa ${attempt}.`,'success');if($('htmlViewerStatus'))$('htmlViewerStatus').innerHTML=`<b>✅ Enviada.</b> Tentativa ${attempt} registrada. A atribuição continua ativa.`;
+}
+async function submitTaskViewerText(id){const t=$('taskViewerText')?.value.trim()||'';if(!t)return toast('Digite sua resposta antes de enviar.','info');await submitInteractiveTask(id,{text:t,fields:{source:'external_text'}})}
+async function openStudentTaskViewer(taskAssignmentId){
+ const s=await studentRecord();if(!s)return;const {data:x,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id,status,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,video_url,audio_url,pdf_url,lesson_id)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+ if(error||!x||x.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');const a=x.tic_assignments||{};
+ const {data:subs}=await sb.from('tic_submissions').select('id,attempt,grade,submitted_at,answer_text,file_url,audio_url,video_url,response_data,status').eq('task_assignment_id',x.id).eq('student_id',s.id).order('attempt',{ascending:false});
+ const latest=subs?.[0];const fids=(subs||[]).map(q=>q.id);const {data:fbs}=fids.length?await sb.from('tic_feedback').select('id,submission_id,comment,grade,private_note,improvement_skill,improvement_link,created_at').in('submission_id',fids).order('created_at',{ascending:false}):{data:[]};const fb=latest?fbs?.find(q=>q.submission_id===latest.id):null;
+ const html=a.html_enabled&&a.html_content?`<div class="tic-viewer-toolbar"><b>🧩 Atividade HTML</b><span class="badge green">Interativa</span></div><div class="tic-viewer-toolbar"><div class="devices"><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('desktop','ticTaskHtmlWrap')">🖥 Desktop</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('tablet','ticTaskHtmlWrap')">▣ Tablet</button><button type="button" class="btn sm secondary" onclick="ticSetViewerDevice('mobile','ticTaskHtmlWrap')">📱 Mobile</button></div></div><div class="tic-viewer-content" id="ticTaskHtmlWrap"><iframe id="ticTaskHtmlFrame" title="Task HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div><div id="htmlViewerStatus" class="notice">Responda no conteúdo HTML e use Enviar/Submit.</div>`:'';
+ const plain=`<div class="viewer-panel"><div class="viewer-panel-head"><b>✍️ Sua resposta</b><span class="badge blue">${a.allow_multiple_attempts===false?'1 tentativa':'Tentativas múltiplas'}</span></div>${a.instructions?`<div style="white-space:pre-wrap;line-height:1.6">${esc(a.instructions)}</div>`:''}<textarea id="taskViewerText" placeholder="Escreva sua resposta para o Teacher..."></textarea><button class="btn primary" onclick="submitTaskViewerText('${x.id}')">📤 Enviar para o Teacher</button></div>`;
+ const feedback=fb&&!fb.private_note?`<div class="tic-feedback-card"><b>👨‍🏫 Correção do Teacher</b>${fb.grade!=null?`<div class="score">${fb.grade}/100</div>`:''}<div style="white-space:pre-wrap;line-height:1.6">${esc(fb.comment||'Sem comentário.')}</div>${fb.improvement_skill||fb.improvement_link?`<div class="improvement-box"><b>🎯 Como melhorar</b>${fb.improvement_skill?`<div>Habilidade: <b>${esc(fb.improvement_skill)}</b></div>`:''}${fb.improvement_link?`<a class="btn secondary" href="${esc(ticSafeUrl(fb.improvement_link))}" target="_blank" rel="noopener noreferrer">🔗 Abrir melhoria</a>`:''}</div>`:''}</div>`:'';
+ const hist=(subs||[]).map(z=>{const zf=fbs?.find(q=>q.submission_id===z.id);return `<div class="tic-attempt"><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:(zf?'Corrigida':'Aguardando correção')}</small>${z.answer_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(z.answer_text)}</div>`:''}</div>`}).join('')||'<div class="empty">Nenhuma entrega ainda.</div>';
+ openModal(`📝 ${esc(a.title||'Task')}`,`<div class="tic-full-viewer"><div class="task-view-head"><div class="tic-task-state"><span class="badge green">🔓 Atribuição ativa</span><span class="badge gray">${a.due_at?'Prazo: '+fmtDate(a.due_at):'Sem prazo'}</span><span class="badge blue">${a.points||0} pontos</span></div><h2>${esc(a.title||'Task')}</h2></div>${html}${plain}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderResourcesFinal(a)}</section>${feedback}<section class="viewer-panel"><div class="viewer-panel-head"><b>🔄 Histórico de tentativas</b></div>${hist}</section><div class="notice success">💡 Corrigir a Task não encerra a atribuição. Você pode refazer enquanto o Teacher mantiver o acesso.</div><div class="viewer-actions"><button class="btn ghost" onclick="closeModal()">Fechar</button></div></div>`);
+ if(html){const f=$('ticTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
+}
+async function openStudentTaskTeacherView(taskAssignmentId){
+ const {data:x,error}=await sb.from('tic_task_assignments').select('id,student_id,assignment_id,tic_assignments(id,title,instructions,resource_items,html_enabled,html_content,video_url,audio_url,pdf_url)').eq('id',taskAssignmentId).maybeSingle();if(error||!x)return toast(error?.message||'Task não encontrada.','error');const a=x.tic_assignments||{};
+ const {data:subs}=await sb.from('tic_submissions').select('id,attempt,answer_text,file_url,audio_url,video_url,submitted_at,grade,response_data,status').eq('task_assignment_id',x.id).eq('student_id',x.student_id).order('attempt',{ascending:false});
+ openModal(`👁 ${esc(a.title||'Task')}`,`<div class="tic-full-viewer"><div class="notice"><b>Visualização do Teacher</b><br>${esc(a.instructions||'')}</div>${a.html_enabled&&a.html_content?`<div class="tic-viewer-toolbar"><b>🧩 HTML</b><span class="badge green">Preview</span></div><div class="tic-viewer-content" id="ticTeacherTaskHtmlWrap"><iframe id="ticTeacherTaskHtmlFrame" title="Task HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div>`:''}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderResourcesFinal(a)}</section><section class="viewer-panel"><div class="viewer-panel-head"><b>📨 Entregas</b></div>${(subs||[]).map(z=>`<div class="tic-attempt"><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:'Sem nota'}</small>${z.answer_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(z.answer_text)}</div>`:''}</div>`).join('')||'<div class="empty">Nenhuma entrega.</div>'}</section></div>`);
+ if(a.html_enabled&&a.html_content){const f=$('ticTeacherTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
+}
+async function openFeedbackFromId(submissionId){
+ const {data:x,error}=await sb.from('tic_submissions').select('id,task_assignment_id,student_id,answer_text,file_url,audio_url,video_url,submitted_at,attempt,grade,status,tic_students(display_name,email)').eq('id',submissionId).maybeSingle();if(error||!x)return toast(error?.message||'Entrega não encontrada.','error');
+ const {data:f}=await sb.from('tic_feedback').select('id,comment,grade,private_note,improvement_skill,improvement_link,created_at').eq('submission_id',submissionId).eq('teacher_id',session.user.id).maybeSingle();
+ openFeedbackForm(x,f);
+}
+async function saveFeedback(e,submissionId,taskAssignmentId,studentId){
+ e.preventDefault();const grade=$('fbGrade')?.value.trim();const comment=$('fbComment')?.value.trim()||null;const private_note=$('fbPrivate')?.value==='true';const improvement_skill=$('fbSkill')?.value||null;const improvement_link=$('fbImprovementLink')?.value.trim()||null;
+ if(grade!==''&&(Number(grade)<0||Number(grade)>100))return toast('A nota deve ficar entre 0 e 100.','error');
+ const payload={submission_id:submissionId,teacher_id:session.user.id,comment,grade:grade===''?null:Number(grade),private_note,improvement_skill,improvement_link};
+ const {data:existing}=await sb.from('tic_feedback').select('id').eq('submission_id',submissionId).eq('teacher_id',session.user.id).maybeSingle();const r=existing?await sb.from('tic_feedback').update(payload).eq('id',existing.id):await sb.from('tic_feedback').insert(payload);if(r.error)return toast('Não foi possível salvar o feedback: '+r.error.message,'error');
+ const tr=await sb.from('tic_submissions').update({grade:grade===''?null:Number(grade),status:'reviewed'}).eq('id',submissionId);if(tr.error)return toast('Feedback salvo, mas a entrega não foi atualizada: '+tr.error.message,'error');
+ await sb.from('tic_task_assignments').update({status:'reviewed'}).eq('id',taskAssignmentId).eq('student_id',studentId);closeModal();toast('Correção salva. A atribuição continua ativa.','success');loadView('feedback');
+}
+
+/* Final Teacher Lessons list: preserve existing page and add direct Viewer access. */
+const __ticLessonsPageBase = lessonsPage;
+lessonsPage = async function(plan=false){
+  if(plan) return __ticLessonsPageBase(plan);
+  await __ticLessonsPageBase(false);
+  const rows = document.querySelectorAll('#content .table tbody tr');
+  rows.forEach(tr=>{
+    const edit = tr.querySelector('button[onclick*="openLessonForm"]');
+    if(!edit || tr.dataset.ticViewerAdded) return;
+    const onclick = edit.getAttribute('onclick') || '';
+    const match = onclick.match(/openLessonForm\((\{.*\})\)/);
+    if(!match) return;
+    try{
+      const lesson = JSON.parse(match[1].replace(/&quot;/g,'"'));
+      const group = tr.querySelector('.action-group') || tr.lastElementChild;
+      if(group){ const b=document.createElement('button'); b.className='btn sm secondary'; b.textContent='📖 Abrir'; b.onclick=()=>viewTeacherLesson(lesson.id); group.prepend(b); tr.dataset.ticViewerAdded='1'; }
+    }catch(_e){}
+  });
+};
 </script>
 </body>
 </html>
