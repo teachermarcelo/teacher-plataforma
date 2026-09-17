@@ -53,6 +53,31 @@ html{scroll-behavior:smooth}body{overflow-x:hidden}button:disabled{opacity:.6;cu
 @media(max-width:900px){.student-action-grid{grid-template-columns:repeat(2,1fr)}.student-welcome{display:block}.welcome-level{width:100%;max-width:none;margin-top:18px}.next-lesson-box{grid-template-columns:42px 1fr}.next-lesson-box .btn{grid-column:1/-1;justify-self:start}}
 @media(max-width:600px){.student-action-grid{grid-template-columns:1fr}.student-welcome h2{font-size:21px}.student-action-card{padding:13px}}
 </style>
+
+<style>
+/* TIC v6 — Lesson/Task viewer and feedback polish */
+.lesson-viewer-shell,.task-viewer-shell{display:grid;gap:14px}
+.lesson-viewer-head,.task-viewer-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.lesson-viewer-meta,.task-viewer-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.viewer-panel{border:1px solid #e8e5f2;border-radius:16px;background:#fff;overflow:hidden}
+.viewer-panel-head{padding:13px 15px;background:#faf9fd;border-bottom:1px solid #ece9f4;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.viewer-content-frame{width:100%;height:460px;border:0;display:block;background:#fff}
+.viewer-html-frame{width:100%;height:560px;border:0;display:block;background:#fff}
+.viewer-resource-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;padding:14px}
+.viewer-resource{border:1px solid #e8e5f2;border-radius:12px;padding:12px;background:#fff;display:grid;gap:7px}
+.viewer-resource b{font-size:13px}.viewer-resource small{color:var(--muted);line-height:1.45}
+.viewer-response{padding:15px;border-top:1px solid #ece9f4;background:#faf9fd}
+.viewer-response textarea{width:100%;min-height:110px;resize:vertical}
+.viewer-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:14px}
+.viewer-status{font-size:12px;color:var(--muted);padding:0 14px 14px}
+.feedback-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.feedback-stat{border:1px solid #e8e5f2;background:#fff;border-radius:14px;padding:13px}.feedback-stat b{display:block;font-size:22px}.feedback-stat small{color:var(--muted)}
+.correction-card{border:1px solid #e7e3f0;border-radius:16px;background:#fff;padding:16px;margin-bottom:12px}
+.correction-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.correction-answer{margin-top:12px;padding:13px;border-radius:12px;background:#faf9fd;border:1px solid #ece9f4;white-space:pre-wrap;line-height:1.65}
+.correction-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media(max-width:800px){.feedback-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.viewer-content-frame{height:360px}.viewer-html-frame{height:500px}}
+@media(max-width:520px){.feedback-grid{grid-template-columns:1fr}.viewer-content-frame{height:300px}.viewer-html-frame{height:430px}.viewer-actions .btn{width:100%}}
+</style>
 </head>
 <body>
 
@@ -1432,6 +1457,115 @@ function syncLessonRich(){const r=$('lRich'),src=$('l6');if(!r||!src)return;src.
 function toggleLessonSource(){const rich=$('lRich'),src=$('l6');if(!rich||!src)return;if(rich.dataset.source==='1'){src.value=rich.textContent;rich.innerHTML=src.value;rich.dataset.source='0';rich.contentEditable='true'}else{src.value=rich.innerHTML;rich.textContent=src.value;rich.dataset.source='1';rich.contentEditable='true'}rich.focus()}
 
 /* ---------- Visual system ---------- */
+</script>
+
+<script>
+/* ================================================================
+   TIC v6 — final connected Lesson / Task / Feedback layer
+   This layer intentionally overrides only the affected functions,
+   preserving the rest of the platform.
+   ================================================================ */
+function ticResourceUrl(item){return ticSafeUrl(item?.url||item?.value||'')}
+function ticResourceLabel(item){return String(item?.title||item?.name||'Recurso')}
+function ticRenderLessonResources(lesson){
+ const list=[];
+ if(lesson?.video_url)list.push({type:'video',title:'Vídeo principal',url:lesson.video_url});
+ if(lesson?.audio_url)list.push({type:'audio',title:'Áudio principal',url:lesson.audio_url});
+ if(lesson?.pdf_url)list.push({type:'pdf',title:'PDF principal',url:lesson.pdf_url});
+ if(Array.isArray(lesson?.resource_items))list.push(...lesson.resource_items);
+ const seen=new Set();
+ const unique=list.filter(x=>{const u=ticResourceUrl(x);if(!u||seen.has(u))return false;seen.add(u);return true});
+ if(!unique.length)return '<div class="empty" style="padding:14px">Nenhum recurso adicional cadastrado.</div>';
+ return `<div class="viewer-resource-grid">${unique.map(x=>{const u=ticResourceUrl(x),type=String(x.type||'link').toLowerCase();const icon=type==='pdf'?'📄':type==='video'?'🎥':type==='audio'?'🎧':type==='file'?'📎':'🔗';return `<div class="viewer-resource"><b>${icon} ${esc(ticResourceLabel(x))}</b>${x.description?`<small>${esc(x.description)}</small>`:''}<a class="btn sm secondary" href="${esc(u)}" target="_blank" rel="noopener noreferrer">Abrir recurso →</a></div>`}).join('')}</div>`;
+}
+function ticViewerTextFrame(content){
+ const c=String(content||'').trim();if(!c)return '';
+ const looksHtml=/<(?:html|body|div|p|h[1-6]|ul|ol|table|span|strong|em|img|a\b|section|article)[\s>]/i.test(c);
+ if(looksHtml)return ticResponsiveSrcdoc(c);
+ return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;margin:0;padding:28px;line-height:1.7;color:#202033}*{box-sizing:border-box}a{overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>${esc(c).replace(/\n/g,'<br>')}</body></html>`;
+}
+
+/* Student lesson: one real viewer, all resources, response, feedback, first completion. */
+async function viewStudentLessonInteractive(id){
+ const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).maybeSingle();
+ if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
+ const s=await studentRecord();if(!s)return;
+ const {data:access}=await sb.from('tic_course_students').select('id').eq('student_id',s.id).eq('course_id',l.course_id).eq('status','active').maybeSingle();
+ const {data:direct}=await sb.from('tic_lesson_assignments').select('id').eq('lesson_id',id).eq('student_id',s.id).eq('active',true).maybeSingle();
+ if(!access&&!direct)return toast('Esta Lesson não está disponível para sua conta.','error');
+ const {data:lp}=await sb.from('tic_lesson_progress').select('*').eq('lesson_id',id).eq('student_id',s.id).maybeSingle();
+ const now=new Date().toISOString();
+ if(lp)await sb.from('tic_lesson_progress').update({last_opened_at:now,open_count:Number(lp.open_count||0)+1,updated_at:now}).eq('id',lp.id);
+ else await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,last_opened_at:now,open_count:1,response_count:0});
+ const {data:resp}=await sb.from('tic_lesson_responses').select('id,attempt,status,score,teacher_comment,improvement_skill,improvement_link,reviewed_at,response_text,created_at').eq('lesson_id',id).eq('student_id',s.id).order('attempt',{ascending:false});
+ const latest=resp?.[0],completed=!!lp?.first_completed_at;
+ const feedback=latest?.teacher_comment||latest?.score!=null?`<div class="notice success"><b>👨‍🏫 Feedback do Teacher</b>${latest.score!=null?`<div style="font-size:18px;font-weight:800;margin-top:5px">Nota: ${latest.score}</div>`:''}${latest.teacher_comment?`<div style="margin-top:7px;white-space:pre-wrap">${esc(latest.teacher_comment)}</div>`:''}${latest.improvement_skill||latest.improvement_link?`<div class="improvement-box" style="margin-top:10px"><b>🎯 Como melhorar</b>${latest.improvement_skill?`<div>Habilidade: <b>${esc(latest.improvement_skill)}</b></div>`:''}${latest.improvement_link?`<a class="btn secondary" style="margin-top:8px" href="${esc(ticSafeUrl(latest.improvement_link))}" target="_blank" rel="noopener noreferrer">🔗 Abrir material de melhoria</a>`:''}</div>`:''}</div>`:'';
+ const content=l.content?`<div class="viewer-panel"><div class="viewer-panel-head"><b>📖 Conteúdo da Lesson</b><span class="badge blue">${completed?'Concluída':'Em estudo'}</span></div><iframe class="viewer-content-frame" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox" title="Conteúdo da Lesson"></iframe></div>`:'';
+ const html=l.html_enabled&&l.html_content?`<div class="viewer-panel"><div class="viewer-panel-head"><b>🧩 Atividade HTML</b><span class="badge green">Interativa</span></div><div class="html-devicebar" style="padding:10px 14px"><button class="btn sm secondary" onclick="ticResizeViewer('desktop')">🖥 Desktop</button><button class="btn sm secondary" onclick="ticResizeViewer('tablet')">▣ Tablet</button><button class="btn sm secondary" onclick="ticResizeViewer('mobile')">📱 Mobile</button></div><div id="htmlViewerWrap" class="html-viewer-wrap desktop"><iframe id="htmlViewerFrame" class="viewer-html-frame" title="Atividade HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div><div id="htmlViewerStatus" class="viewer-status">Conteúdo carregado. Você pode realizar a atividade.</div>${l.allow_student_response?`<div class="viewer-response"><label><b>✍️ Resposta adicional</b></label><textarea id="lessonExternalResponse" placeholder="Você também pode enviar uma resposta escrita aqui."></textarea><div class="viewer-actions" style="padding:10px 0 0"><button class="btn primary" onclick="submitLessonExternalResponse('${l.id}')">📤 Enviar resposta</button></div></div>`:''}</div>`:'';
+ const responseBox=l.allow_student_response&&!html?`<div class="viewer-response"><label><b>✍️ Sua resposta</b></label><textarea id="lessonExternalResponse" placeholder="Escreva sua resposta para o Teacher..."></textarea><div class="viewer-actions" style="padding:10px 0 0"><button class="btn primary" onclick="submitLessonExternalResponse('${l.id}')">📤 Enviar resposta</button></div></div>`:'';
+ openModal(`📖 ${esc(l.title)}`,`<div class="lesson-viewer-shell"><div class="lesson-viewer-head"><div><span class="badge blue">${esc(l.level||s.current_level||'')}</span><h2>${esc(l.title)}</h2><small>${esc(l.skill||'Lesson')} · ${esc(l.lesson_type||'lesson')}</small><div class="lesson-viewer-meta"><span class="badge ${completed?'green':'yellow'}">${completed?'✓ Concluída na primeira realização':'Ainda não concluída'}</span>${latest?`<span class="badge gray">${resp.length} tentativa(s)</span>`:''}</div></div><span class="badge green">Acesso ativo</span></div>${content}${l.content?'<div class="viewer-status">O conteúdo acima é exibido em um viewer responsivo.</div>':''}${html}${responseBox}<div class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos e links</b><span class="badge blue">Acesso direto</span></div>${ticRenderLessonResources(l)}</div>${feedback}<div class="viewer-actions"><button class="btn ghost" onclick="closeModal()">Fechar</button>${completed?`<span class="badge green" style="padding:10px 13px">✓ Já concluída</span>`:`<button class="btn primary" onclick="markLessonCompleted('${l.id}')">✓ Marcar Lesson como concluída</button>`}</div></div>`);
+ if(content){const f=document.querySelector('.modal-body iframe.viewer-content-frame');if(f)f.srcdoc=ticViewerTextFrame(l.content)}
+ if(html){ticHtmlViewerContext={mode:'studentLesson',refId:l.id,html:l.html_content};const f=$('htmlViewerFrame');if(f)f.srcdoc=ticResponsiveSrcdoc(l.html_content)+ticHtmlBridge();}
+}
+
+async function submitLessonExternalResponse(lessonId){
+ const s=await studentRecord();if(!s)return;const text=$('lessonExternalResponse')?.value.trim()||'';if(!text)return toast('Digite uma resposta antes de enviar.','info');
+ const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();
+ const attempt=Number(last?.attempt||0)+1;const now=new Date().toISOString();const r=await sb.from('tic_lesson_responses').insert({lesson_id:lessonId,student_id:s.id,attempt,response_text:text,response_data:{source:'external_text'},status:'submitted'});if(r.error)return toast('Não foi possível enviar: '+r.error.message,'error');
+ const {data:lp}=await sb.from('tic_lesson_progress').select('id,first_completed_at,response_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();if(lp)await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,response_count:Number(lp.response_count||0)+1,last_opened_at:now,updated_at:now}).eq('id',lp.id);else await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,response_count:1,last_opened_at:now,open_count:1,updated_at:now});
+ toast(`Resposta enviada. Tentativa ${attempt}.`,'success');viewStudentLessonInteractive(lessonId);
+}
+
+/* Interactive HTML messages: supports both Lesson and Task contexts. */
+window.addEventListener('message',async e=>{
+ const frame=$('htmlViewerFrame');if(!frame||e.source!==frame.contentWindow||e.data?.type!=='tic-html-submit')return;
+ const ctx=window.ticHtmlViewerContext||ticHtmlViewerContext;if(!ctx)return;
+ if(ctx.mode==='studentLesson'){await submitInteractiveLesson(ctx.refId,e.data.payload||{});return;}
+ if(ctx.mode==='studentTask'){await submitInteractiveTask(ctx.refId,e.data.payload||{});return;}
+});
+async function submitInteractiveTask(taskAssignmentId,payload){
+ const s=await studentRecord();if(!s)return;const {data:ta,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();if(error||!ta||ta.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');
+ const {data:last}=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',taskAssignmentId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
+ const r=await sb.from('tic_submissions').insert({task_assignment_id:taskAssignmentId,student_id:s.id,attempt,answer_text:payload.text||null,response_data:payload.fields||{},submitted_at:new Date().toISOString()});if(r.error)return toast('Não foi possível enviar a Task: '+r.error.message,'error');
+ await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',taskAssignmentId).eq('student_id',s.id);if($('htmlViewerStatus'))$('htmlViewerStatus').innerHTML=`<b>✅ Enviado.</b> Tentativa ${attempt} registrada. A Task continua ativa.`;toast(`Task enviada. Tentativa ${attempt}.`,'success');
+}
+async function submitTaskViewerText(taskAssignmentId){
+ const text=$('taskViewerText')?.value.trim()||'';if(!text)return toast('Digite sua resposta antes de enviar.','info');await submitInteractiveTask(taskAssignmentId,{text,fields:{source:'external_text'}});
+}
+async function openStudentTaskViewer(taskAssignmentId){
+ const s=await studentRecord();if(!s)return;const {data:x,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id,status,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,lesson_id)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+ if(error||!x||x.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');const a=x.tic_assignments||{};
+ const {data:subs}=await sb.from('tic_submissions').select('id,attempt,grade,submitted_at,answer_text,file_url').eq('task_assignment_id',x.id).eq('student_id',s.id).order('attempt',{ascending:false});
+ const {data:fbs}=subs?.length?await sb.from('tic_feedback').select('id,submission_id,comment,grade,private_note,improvement_skill,improvement_link,created_at').in('submission_id',subs.map(q=>q.id)).order('created_at',{ascending:false}):{data:[]};const latest=subs?.[0],fb=latest?fbs?.find(q=>q.submission_id===latest.id):null;
+ const html=a.html_enabled&&a.html_content?`<div class="viewer-panel"><div class="viewer-panel-head"><b>🧩 Task interativa</b><span class="badge green">Responsiva</span></div><div class="html-devicebar" style="padding:10px 14px"><button class="btn sm secondary" onclick="ticResizeViewer('desktop')">🖥 Desktop</button><button class="btn sm secondary" onclick="ticResizeViewer('tablet')">▣ Tablet</button><button class="btn sm secondary" onclick="ticResizeViewer('mobile')">📱 Mobile</button></div><div id="htmlViewerWrap" class="html-viewer-wrap desktop"><iframe id="htmlViewerFrame" class="viewer-html-frame" title="Task HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div><div id="htmlViewerStatus" class="viewer-status">Realize a atividade e use Enviar/Submit.</div><div class="viewer-response"><label><b>✍️ Resposta adicional</b></label><textarea id="taskViewerText" placeholder="Se quiser, complemente sua entrega aqui."></textarea><div class="viewer-actions" style="padding:10px 0 0"><button class="btn primary" onclick="submitTaskViewerText('${x.id}')">📤 Enviar resposta</button></div></div></div>`:'';
+ const plain=!html?`<div class="viewer-response"><label><b>✍️ Sua resposta</b></label><textarea id="taskViewerText" placeholder="Digite sua resposta..."></textarea><div class="viewer-actions" style="padding:10px 0 0"><button class="btn primary" onclick="submitTaskViewerText('${x.id}')">📤 Enviar para o Teacher</button></div></div>`:'';
+ const feedback=fb&&!fb.private_note?`<div class="notice success"><b>👨‍🏫 Correção do Teacher</b>${fb.grade!=null?`<div style="font-size:19px;font-weight:800;margin-top:4px">Nota: ${fb.grade}</div>`:''}<div style="margin-top:6px;white-space:pre-wrap">${esc(fb.comment||'Sem comentário.')}</div>${fb.improvement_skill||fb.improvement_link?`<div class="improvement-box" style="margin-top:10px"><b>🎯 Como melhorar</b>${fb.improvement_skill?`<div>Habilidade: <b>${esc(fb.improvement_skill)}</b></div>`:''}${fb.improvement_link?`<a class="btn secondary" style="margin-top:8px" href="${esc(ticSafeUrl(fb.improvement_link))}" target="_blank" rel="noopener noreferrer">🔗 Abrir melhoria</a>`:''}</div>`:''}</div>`:'';
+ openModal(`📝 ${esc(a.title||'Task')}`,`<div class="task-viewer-shell"><div class="task-viewer-head"><div><span class="badge green">🔓 Atribuição ativa</span><h2>${esc(a.title||'Task')}</h2><small>${esc(a.instructions||'Realize a atividade e envie sua resposta.')}</small><div class="task-viewer-meta"><span class="badge gray">${a.due_at?'Prazo informativo: '+fmtDate(a.due_at):'Sem prazo'}</span><span class="badge blue">${a.points||0} pontos</span><span class="badge gray">${subs?.length||0} tentativa(s)</span></div></div></div>${html}${plain}<div class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderLessonResources(a)}</div>${feedback}<div class="viewer-panel"><div class="viewer-panel-head"><b>📚 Histórico de tentativas</b></div><div style="padding:14px;display:grid;gap:8px">${(subs||[]).map(z=>{const zf=fbs?.find(q=>q.submission_id===z.id);return `<div class="row" style="align-items:flex-start"><div><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)}${z.grade!=null?' · Nota '+z.grade:''}</small></div><span class="badge ${zf?'green':'yellow'}">${zf?'Corrigida':'Aguardando correção'}</span></div>`}).join('')||'<div class="empty">Nenhuma entrega ainda.</div>'}</div></div><div class="notice success">💡 A correção não encerra a atribuição. Você pode refazer enquanto o Teacher mantiver o acesso.</div><div class="viewer-actions"><button class="btn ghost" onclick="closeModal()">Fechar</button></div></div>`);
+ if(html){ticHtmlViewerContext={mode:'studentTask',refId:x.id,html:a.html_content};const f=$('htmlViewerFrame');if(f)f.srcdoc=ticResponsiveSrcdoc(a.html_content)+ticHtmlBridge()}
+}
+
+/* Teacher Lesson viewer: same viewer model, with all content/resources and direct assign/edit. */
+async function viewTeacherLesson(id){
+ const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('teacher_id',session.user.id).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
+ const content=l.content?`<div class="viewer-panel"><div class="viewer-panel-head"><b>📖 Conteúdo</b><span class="badge blue">Preview Teacher</span></div><iframe id="teacherLessonContentFrame" class="viewer-content-frame" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox" title="Preview da Lesson"></iframe></div>`:'';
+ const html=l.html_enabled&&l.html_content?`<div class="viewer-panel"><div class="viewer-panel-head"><b>🧩 HTML interativo</b><span class="badge green">Preview</span></div><div class="html-devicebar" style="padding:10px 14px"><button class="btn sm secondary" onclick="ticResizeViewer('desktop')">🖥</button><button class="btn sm secondary" onclick="ticResizeViewer('tablet')">▣</button><button class="btn sm secondary" onclick="ticResizeViewer('mobile')">📱</button></div><div id="htmlViewerWrap" class="html-viewer-wrap desktop"><iframe id="htmlViewerFrame" class="viewer-html-frame" title="Preview HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div><div class="viewer-status">Preview do Teacher: a atividade é exibida exatamente no mesmo viewer do aluno.</div></div>`:'';
+ openModal(`📖 ${esc(l.title)}`,`<div class="lesson-viewer-shell"><div class="lesson-viewer-head"><div><span class="badge blue">${esc(l.level||'')}</span><h2>${esc(l.title)}</h2><small>${esc(l.skill||'')} · ${esc(l.lesson_type||'lesson')}</small></div><span class="badge ${l.html_enabled?'green':'gray'}">${l.html_enabled?'🧩 HTML ativo':'Lesson'}</span></div>${content}${html}<div class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos e links</b></div>${ticRenderLessonResources(l)}</div><div class="viewer-actions"><button class="btn secondary" onclick='openAssignContent("lesson",${JSON.stringify(l)})'>📤 Atribuir Lesson</button><button class="btn ghost" onclick='openLessonForm(${JSON.stringify(l)})'>✏️ Editar</button><button class="btn ghost" onclick="closeModal()">Fechar</button></div></div>`);
+ if(content){const f=$('teacherLessonContentFrame');if(f)f.srcdoc=ticViewerTextFrame(l.content)}
+ if(html){ticHtmlViewerContext={mode:'preview',refId:l.id,html:l.html_content};const f=$('htmlViewerFrame');if(f)f.srcdoc=ticResponsiveSrcdoc(l.html_content)+ticHtmlBridge()}
+}
+
+/* Teacher feedback: latest submission per active assignment, quick filtering and complete correction. */
+async function feedbackPage(){
+ const {data:tas,error}=await sb.from('tic_task_assignments').select('id,assignment_id,student_id,status,active,removed_at,assigned_at,completed_at,tic_assignments(id,title,due_at,assignment_type,points),tic_students(display_name,email)').order('assigned_at',{ascending:false});
+ if(error){$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar as atividades.</b><p>${esc(error.message)}</p></div>`;return}
+ const ids=(tas||[]).map(x=>x.id);let subs=[];if(ids.length){const r=await sb.from('tic_submissions').select('id,task_assignment_id,student_id,answer_text,file_url,audio_url,video_url,submitted_at,attempt,grade,response_data').in('task_assignment_id',ids).order('submitted_at',{ascending:false});if(r.error)return $('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar as entregas.</b><p>${esc(r.error.message)}</p></div>`;subs=r.data||[]}
+ const latestMap=new Map();subs.forEach(x=>{if(!latestMap.has(x.task_assignment_id))latestMap.set(x.task_assignment_id,x)});
+ const latest=[...latestMap.values()];const awaiting=latest.filter(x=>x.grade==null).length;const corrected=latest.filter(x=>x.grade!=null).length;const active=(tas||[]).filter(x=>x.active!==false).length;const noDelivery=(tas||[]).filter(x=>!latestMap.has(x.id)&&x.active!==false).length;
+ const rows=(tas||[]).map(t=>{const sub=latestMap.get(t.id),status=!sub?'Aguardando entrega':sub.grade!=null?'Corrigida':'Aguardando correção';const cls=!sub?'gray':sub.grade!=null?'green':'yellow';return `<article class="correction-card"><div class="correction-top"><div><b>👤 ${esc(t.tic_students?.display_name||'Aluno')}</b><small style="display:block">${esc(t.tic_assignments?.title||'Task')} · atribuição ${t.active===false?'removida':'ativa'}</small>${sub?`<small style="display:block">Tentativa ${sub.attempt||1} · ${fmtDate(sub.submitted_at)}</small>`:''}</div><span class="badge ${cls}">${status}</span></div>${sub?.answer_text?`<div class="correction-answer"><b>Resposta:</b><br>${esc(sub.answer_text)}</div>`:''}${sub?.file_url?`<div class="correction-actions"><a class="btn secondary" href="${esc(ticSafeUrl(sub.file_url))}" target="_blank" rel="noopener noreferrer">📎 Abrir arquivo/link</a></div>`:''}<div class="correction-actions">${sub?`<button class="btn primary" onclick="openFeedbackFromId('${sub.id}')">📝 ${sub.grade!=null?'Editar correção':'Corrigir e dar nota'}</button>`:'<span class="badge gray">Aluno ainda não enviou</span>'}${t.active!==false?`<button class="btn ghost" onclick="removeTaskAssignment('${t.id}','${t.student_id}','${esc(t.tic_students?.display_name||'Aluno')}')">🗑 Remover atribuição</button>`:''}<button class="btn secondary" onclick="openStudentTaskTeacherView('${t.id}')">👁 Ver Task</button></div></article>`}).join('');
+ setPage('Feedback & Corrections','Corrija entregas, dê nota e envie orientações individuais.');$('content').innerHTML=`<div class="feedback-grid"><div class="feedback-stat"><b>${active}</b><small>Atribuições ativas</small></div><div class="feedback-stat"><b>${awaiting}</b><small>Aguardando correção</small></div><div class="feedback-stat"><b>${corrected}</b><small>Com nota</small></div><div class="feedback-stat"><b>${noDelivery}</b><small>Aguardando entrega</small></div></div><div class="card"><div class="notice">📌 <b>Fluxo:</b> aluno envia → Teacher corrige → nota + comentário + habilidade + link de melhoria → aluno visualiza. Corrigir a entrega <b>não remove a atribuição</b>.</div><div class="section-head"><div><h2>Entregas</h2><span>O histórico de tentativas permanece disponível.</span></div></div>${rows||'<div class="empty">Nenhuma atribuição encontrada.</div>'}</div>`;
+}
+async function openStudentTaskTeacherView(taskAssignmentId){
+ const {data:x,error}=await sb.from('tic_task_assignments').select('id,student_id,assignment_id,tic_assignments(id,title,instructions,resource_items,html_enabled,html_content)').eq('id',taskAssignmentId).maybeSingle();if(error||!x)return toast(error?.message||'Task não encontrada.','error');const a=x.tic_assignments||{};openModal(`👁 ${esc(a.title||'Task')}`,`<div class="task-viewer-shell"><div class="notice"><b>Visualização do Teacher</b><br>${esc(a.instructions||'')}</div>${a.html_enabled&&a.html_content?`<div class="viewer-panel"><div class="viewer-panel-head"><b>🧩 HTML</b></div><iframe id="htmlViewerFrame" class="viewer-html-frame" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div>`:''}<div class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderLessonResources(a)}</div></div>`);if(a.html_enabled&&a.html_content){ticHtmlViewerContext={mode:'preview',refId:x.id,html:a.html_content};const f=$('htmlViewerFrame');if(f)f.srcdoc=ticResponsiveSrcdoc(a.html_content)+ticHtmlBridge()}}
 </script>
 </body>
 </html>
