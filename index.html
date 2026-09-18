@@ -2014,6 +2014,122 @@ studentCoursesPage=async function(){
 window.TIC_ORDER_VERSION='11.0';
 </script>
 
+
+<script>
+/* V18 — unified Student progress, Teacher-defined course order, and Student ↔ Teacher messages. */
+async function ticRecalculateStudentProgressV18(studentId){
+  try{
+    const {data:student,error:se}=await sb.from('tic_students').select('id,current_level').eq('id',studentId).maybeSingle();
+    if(se||!student)return;
+    const {data:enroll}=await sb.from('tic_course_students').select('course_id').eq('student_id',studentId).eq('status','active');
+    const ids=(enroll||[]).map(x=>x.course_id).filter(Boolean);
+    if(!ids.length)return;
+    const [{data:lessons,error:le},{data:done,error:pe}]=await Promise.all([
+      sb.from('tic_lessons').select('id,level,skill,course_id').in('course_id',ids).eq('active',true),
+      sb.from('tic_lesson_progress').select('lesson_id,first_completed_at').eq('student_id',studentId)
+    ]);
+    if(le||pe)return;
+    const completed=new Set((done||[]).filter(x=>x.first_completed_at).map(x=>x.lesson_id));
+    const current=(lessons||[]).filter(l=>(l.level||student.current_level)===(student.current_level));
+    const up=[];
+    const overall=current.length?Math.round(current.filter(l=>completed.has(l.id)).length/current.length*100):0;
+    up.push({student_id:studentId,level:student.current_level,skill:'overall',progress:overall,updated_at:new Date().toISOString()});
+    const skills=['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'];
+    for(const skill of skills){
+      const arr=current.filter(l=>(l.skill||'').toLowerCase()===skill);
+      const value=arr.length?Math.round(arr.filter(l=>completed.has(l.id)).length/arr.length*100):0;
+      up.push({student_id:studentId,level:student.current_level,skill,progress:value,updated_at:new Date().toISOString()});
+    }
+    const r=await sb.from('tic_progress').upsert(up,{onConflict:'student_id,level,skill'});
+    if(r.error)console.warn('tic_progress:',r.error.message);
+  }catch(e){console.warn('Progress V18:',e)}
+}
+
+window.markLessonCompleted=async function(lessonId){
+  const s=await studentRecord();if(!s)return;
+  const now=new Date().toISOString();
+  const {data:lp,error:findError}=await sb.from('tic_lesson_progress').select('id,first_completed_at,response_count,open_count,last_opened_at').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+  if(findError)return toast('Não foi possível verificar o progresso: '+findError.message,'error');
+  let r;
+  if(lp){
+    r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_opened_at:now,open_count:Math.max(1,Number(lp.open_count||0)),response_count:Number(lp.response_count||0),updated_at:now}).eq('id',lp.id);
+  }else{
+    r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,open_count:1,response_count:0});
+  }
+  if(r.error)return toast('Não foi possível registrar a conclusão: '+r.error.message,'error');
+  await ticRecalculateStudentProgressV18(s.id);
+  toast('Lesson concluída e progresso atualizado.','success');
+  await viewStudentLessonInteractive(lessonId);
+};
+
+async function studentLessons(){
+  const s=await studentRecord();
+  if(!s){$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}
+  try{
+    const courses=await ticGetStudentOrderedCoursesV11(s.id);
+    const ids=courses.map(c=>c.id);
+    const [{data:ms,error:me},{data:ls,error:le},{data:lp,error:pe},{data:direct,error:de}]=await Promise.all([
+      ids.length?sb.from('tic_modules').select('*').in('course_id',ids).order('position',{ascending:true}):Promise.resolve({data:[],error:null}),
+      ids.length?sb.from('tic_lessons').select('*').in('course_id',ids).eq('active',true).order('position',{ascending:true}).order('created_at',{ascending:true}):Promise.resolve({data:[],error:null}),
+      sb.from('tic_lesson_progress').select('lesson_id,first_completed_at').eq('student_id',s.id),
+      sb.from('tic_lesson_assignments').select('lesson_id,assigned_at,note,tic_lessons(*)').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false})
+    ]);
+    if(me||le||pe||de)throw(me||le||pe||de);
+    const pmap=new Map((lp||[]).map(x=>[x.lesson_id,x]));
+    const item=(l,i)=>{const done=!!pmap.get(l.id)?.first_completed_at;return `<button class="student-curriculum-item" onclick="viewStudentLessonInteractive('${l.id}')"><span class="lesson-number">${i+1}</span><span class="lesson-copy"><b>${esc(l.title)}</b><small>${esc(l.skill||'Lesson')} · ${done?'✓ Concluída':'Não iniciada'}${l.html_enabled?' · 🧩 HTML':''}</small></span><span class="btn sm secondary">Abrir →</span></button>`};
+    const courseHtml=courses.map(c=>{
+      const cl=(ls||[]).filter(l=>l.course_id===c.id).sort((a,b)=>(Number(a.position)||999999)-(Number(b.position)||999999));
+      const mods=(ms||[]).filter(m=>m.course_id===c.id).sort((a,b)=>(Number(a.position)||999999)-(Number(b.position)||999999));
+      const modHtml=mods.map(m=>{const ml=cl.filter(l=>l.module_id===m.id);return `<section class="student-module"><div class="student-module-head"><div><span>📁</span><div><h3>${esc(m.title)}</h3><small>${ml.length} lesson(s)</small></div></div><span class="badge blue">${ml.length}</span></div>${ml.map(item).join('')||'<div class="course-empty">Nenhuma lesson neste módulo.</div>'}</section>`}).join('');
+      const general=cl.filter(l=>!l.module_id);
+      const done=cl.filter(l=>pmap.get(l.id)?.first_completed_at).length;
+      return `<article class="student-course-hero card"><div class="student-course-head"><div><span class="badge blue">${esc(c.level||'')}</span><h2>📚 ${esc(c.title)}</h2><p>${esc(c.description||'')}</p></div><span class="badge green">Acesso ativo</span></div><div class="student-course-metrics"><span><b>${mods.length}</b> módulos</span><span><b>${cl.length}</b> lessons</span><span><b>${done}</b> concluídas</span></div><div class="student-module-stack">${modHtml}${general.length?`<section class="student-module"><div class="student-module-head"><div><span>📖</span><div><h3>Lessons gerais</h3><small>Lessons sem módulo específico.</small></div></div><span class="badge yellow">${general.length}</span></div>${general.map(item).join('')}</section>`:''}</div></article>`;
+    }).join('');
+    const courseLessonIds=new Set((ls||[]).map(l=>l.id));
+    const extra=(direct||[]).map(x=>x.tic_lessons).filter(Boolean).filter(l=>!courseLessonIds.has(l.id));
+    const directHtml=extra.length?`<article class="card section"><div class="section-head"><div><h2>📌 Lessons atribuídas diretamente</h2><span>Enviadas pelo Teacher fora do currículo.</span></div><span class="badge blue">${extra.length}</span></div>${extra.sort((a,b)=>(Number(a.position)||999999)-(Number(b.position)||999999)).map(item).join('')}</article>`:'';
+    setPage('My Lessons','Aulas na mesma ordem definida pelo Teacher.');
+    $('content').innerHTML=`<div class="notice success">🛤️ <b>Ordem pedagógica:</b> os cursos seguem a sequência definida pelo Teacher. As Lessons seguem a posição definida dentro de cada curso/módulo.</div>${courseHtml||'<div class="card empty">Nenhum curso ativo.</div>'}${directHtml}`;
+  }catch(e){$('content').innerHTML=`<div class="card attention">${esc(e.message||e)}</div>`}
+}
+
+async function progressPage(student=false){
+  let students=[];
+  if(student){const {data:s}=await sb.from('tic_students').select('*').eq('auth_user_id',session.user.id).maybeSingle();if(!s){$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}students=[s]}
+  else{const {data:s}=await sb.from('tic_students').select('*').eq('teacher_id',session.user.id).eq('status','active');students=s||[]}
+  for(const s of students)await ticRecalculateStudentProgressV18(s.id);
+  const ids=students.map(s=>s.id);const {data:p}=ids.length?await sb.from('tic_progress').select('*').in('student_id',ids):{data:[]};
+  $('content').innerHTML=`<div class="grid cols3">${students.map(s=>{const overall=Number(p?.find(x=>x.student_id===s.id&&x.skill==='overall'&&x.level===s.current_level)?.progress||0);return `<div class="card"><div class="section-head"><h2>${esc(s.display_name)}</h2><span>${esc(s.current_level)}</span></div><div style="font:800 27px 'Plus Jakarta Sans'">${overall}%</div><div class="progress"><i style="width:${overall}%"></i></div><div style="margin-top:15px">${['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'].map(k=>{const v=Number(p?.find(x=>x.student_id===s.id&&x.skill===k&&x.level===s.current_level)?.progress||0);return `<div class="mini"><span>${k}</span><b>${v}%</b></div><div class="progress" style="height:5px;margin-bottom:8px"><i style="width:${v}%"></i></div>`}).join('')}</div></div>`}).join('')||'<div class="card empty">Nenhum aluno.</div>'}</div>`;
+}
+
+async function studentDashboard(){
+  const s=await studentRecord();if(!s){$('content').innerHTML='<div class="card empty">Sua conta não está vinculada a um cadastro de aluno.</div>';return}
+  await ticRecalculateStudentProgressV18(s.id);
+  const [{data:p},{data:ta},{data:pay}]=await Promise.all([sb.from('tic_progress').select('*').eq('student_id',s.id),sb.from('tic_task_assignments').select('*,tic_assignments(title,due_at)').eq('student_id',s.id).eq('active',true).limit(8),sb.from('tic_monthly_payments').select('*').eq('student_id',s.id).order('reference_month',{ascending:false}).limit(3)]);
+  const overall=Number(p?.find(x=>x.skill==='overall'&&x.level===s.current_level)?.progress||0);
+  setPage(`Hello, ${s.display_name?.split(' ')[0]||'Student'} 👋`,'Seu espaço de aprendizagem.');
+  $('content').innerHTML=`<div class="student-banner"><div style="font-size:9px;letter-spacing:1.5px;color:#aaa1bd">CURRENT LEVEL</div><h2>${esc(s.current_level)} → ${esc(s.target_level||'—')}</h2><p>Progresso geral: <b>${overall}%</b></p><div class="progress" style="margin-top:10px;background:#ffffff22"><i style="width:${overall}%;background:#fff"></i></div></div><div class="grid cols2 section"><div class="card"><div class="section-head"><h2>✅ My Tasks</h2></div>${(ta||[]).map(x=>`<div class="row task-row" style="cursor:pointer" onclick="openStudentTask('${x.id}')"><div><b>${esc(x.tic_assignments?.title||'Task')}</b><small>${x.tic_assignments?.due_at?'Prazo '+fmtDate(x.tic_assignments.due_at):'Sem prazo'}</small></div><div style="display:flex;align-items:center;gap:8px"><span onclick="event.stopPropagation()">${badge(x.status)}</span><button class="btn sm secondary" onclick="event.stopPropagation();openStudentTask('${x.id}')">Abrir</button></div></div>`).join('')||'<div class="empty">Nenhuma tarefa.</div>'}</div><div class="card"><div class="section-head"><h2>📊 My Progress</h2></div>${['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'].map(k=>{let v=Number(p?.find(x=>x.skill===k&&x.level===s.current_level)?.progress||0);return `<div class="mini"><span>${k}</span><b>${v}%</b></div><div class="progress" style="margin-bottom:10px"><i style="width:${v}%"></i></div>`}).join('')}</div></div><div class="card section"><div class="section-head"><h2>💰 My Payments</h2></div>${(pay||[]).map(x=>`<div class="row"><div><b>${monthLabel(x.reference_month)}</b><small>${x.payment_date?'Pago em '+fmtDate(x.payment_date):'Vencimento '+fmtDate(x.due_date)}</small></div><b>${money(x.amount)} ${badge(x.status)}</b></div>`).join('')||'<div class="empty">Nenhum registro.</div>'}</div>`;
+}
+
+async function messagesPage(student=false){
+  let sid=null, teacherId=null;
+  if(student){const {data:s}=await sb.from('tic_students').select('id,teacher_id,display_name').eq('auth_user_id',session.user.id).maybeSingle();if(!s){$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}sid=s.id;teacherId=s.teacher_id}
+  let q=sb.from('tic_messages').select('*').order('created_at',{ascending:true});
+  if(student)q=q.eq('student_id',sid);else q=q.eq('teacher_id',session.user.id);
+  const {data,error}=await q;if(error){$('content').innerHTML=`<div class="card attention">${esc(error.message)}</div>`;return}
+  const rows=(data||[]).map(m=>`<div class="row"><div style="flex:1"><b>${m.sender_id===session.user.id?'Você':student?'Teacher':'Aluno'}</b><small style="display:block;white-space:pre-wrap">${esc(m.body)}</small><small>${new Date(m.created_at).toLocaleString('pt-BR')}</small></div>${m.sender_id===session.user.id?'<span class="badge green">Enviada</span>':'<span class="badge blue">Nova</span>'}</div>`).join('');
+  const composer=student?`<form class="form" onsubmit="sendStudentMessageV18(event)"><div class="field"><label>Responder ao Teacher</label><textarea id="studentMessageBody" rows="5" placeholder="Escreva sua mensagem..." required></textarea></div><div class="modal-actions"><button class="btn primary">📤 Enviar mensagem</button></div></form>`:'';
+  setPage('Messages','Converse com seu Teacher.');
+  $('content').innerHTML=`<div class="card"><div class="section-head"><h2>${student?'Conversa com seu Teacher':'Mensagens'}</h2>${student?'':'<button class="btn primary" onclick="openMessageForm()">+ Mensagem</button>'}</div>${rows||'<div class="empty">Nenhuma mensagem.</div>'}${student?`<div class="section" style="margin-top:16px">${composer}</div>`:''}</div>`;
+}
+async function sendStudentMessageV18(e){
+  e.preventDefault();const s=await studentRecord();if(!s)return;
+  const body=$('studentMessageBody')?.value.trim();if(!body)return;
+  const r=await sb.from('tic_messages').insert({teacher_id:s.teacher_id,student_id:s.id,sender_id:session.user.id,body});
+  if(r.error)return toast('Não foi possível enviar: '+r.error.message,'error');
+  toast('Mensagem enviada ao Teacher.','success');messagesPage(true);
+}
+</script>
 </body>
 </html>
 
