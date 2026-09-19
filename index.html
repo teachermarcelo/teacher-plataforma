@@ -2183,3 +2183,176 @@ window.markLessonCompleted = async function(lessonId){
   }
 };
 </script>
+
+
+<style id="tic-v19-visual">
+/* V19 — readability upgrade: larger typography while preserving framed/card layout */
+:root{--tic-scale:1.08}
+body{font-size:14px}
+.brand{font-size:21px}
+.nav button{font-size:14px;padding:11px 12px}
+.nav button span{font-size:14px}
+.nav-label{font-size:10px!important;letter-spacing:1.5px!important}
+.topbar{height:74px;padding:0 30px}
+.crumb{font-size:13px}
+.container{max-width:1500px;padding:30px 32px 70px}
+.page-head{margin-bottom:24px}
+.page-head h1{font-size:29px}
+.page-head p{font-size:14px}
+.card{padding:22px;border-radius:18px}
+.section-head h2{font-size:18px}
+.section-head span{font-size:12px}
+.btn{font-size:13px;padding:11px 15px}
+.btn.sm{font-size:11px;padding:8px 11px}
+.row{padding:13px;margin-bottom:9px}
+.row b{font-size:14px}
+.row small{font-size:12px}
+.badge{font-size:11px;padding:6px 10px}
+.table th,.table td{font-size:13px;padding:13px}
+.table th{font-size:11px}
+.stat-label{font-size:13px}.stat-value{font-size:28px}.stat-note{font-size:12px}
+.notice{font-size:12px;padding:13px}
+.field label{font-size:13px}.field input,.field select,.field textarea{font-size:16px;padding:13px 14px}
+.modal-card{width:min(760px,calc(100vw - 32px));padding:24px}
+.modal-head h3{font-size:20px}
+.lesson-student-header h2,.student-course-head h2{font-size:22px}
+.student-action-grid{gap:14px}.student-action-card{padding:19px}.student-action-card b{font-size:14px}.student-action-card small{font-size:11px}
+.student-welcome{padding:28px}.student-welcome h2{font-size:29px}.student-welcome p{font-size:14px}.welcome-level b{font-size:24px}
+.student-module-head h3{font-size:16px}.student-module-head small{font-size:12px}
+.student-curriculum-item{padding:15px 16px!important}.student-curriculum-item .lesson-copy b{font-size:14px}.student-curriculum-item .lesson-copy small{font-size:12px}
+.quick b{font-size:12px}.quick small{font-size:10px}
+.metric{font-size:13px}
+@media(max-width:1100px){.sidebar{width:235px}.main{margin-left:235px}.container{padding-left:22px;padding-right:22px}.quick-grid,.stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.sidebar{width:275px}.main{margin-left:0}.container{padding:20px 14px 55px}.page-head h1{font-size:24px}.card{padding:17px}.student-action-grid{grid-template-columns:1fr 1fr}.student-welcome h2{font-size:24px}.modal-card{padding:18px}}
+</style>
+<script>
+/* V19 — canonical data layer fixes. Existing data is preserved; no destructive migration. */
+async function ticGetStudentOrderedCoursesV19(studentId){
+  const {data:student,error:se}=await sb.from('tic_students').select('id,teacher_id').eq('id',studentId).maybeSingle();
+  if(se)throw se;if(!student)return [];
+  const {data:enroll,error:ee}=await sb.from('tic_course_students').select('course_id,enrolled_at').eq('student_id',studentId).eq('status','active').order('enrolled_at',{ascending:true});
+  if(ee)throw ee;
+  const ids=(enroll||[]).map(x=>x.course_id).filter(Boolean);if(!ids.length)return [];
+  const [{data:courses,error:ce},{data:tracks,error:te}]=await Promise.all([
+    sb.from('tic_courses').select('*').in('id',ids).eq('active',true),
+    sb.from('tic_course_tracks').select('id,is_default,created_at').eq('teacher_id',student.teacher_id).eq('active',true).order('is_default',{ascending:false}).order('created_at',{ascending:true}).limit(1)
+  ]);
+  if(ce)throw ce;if(te)throw te;
+  const track=tracks?.[0];if(!track)return (courses||[]).sort((a,b)=>ticLevelRankV11(a.level)-ticLevelRankV11(b.level));
+  const {data:items,error:ie}=await sb.from('tic_course_track_items').select('course_id,position').eq('track_id',track.id);
+  if(ie)throw ie;
+  const pos=new Map((items||[]).map(x=>[x.course_id,Number(x.position)||999999]));
+  return (courses||[]).sort((a,b)=>(pos.get(a.id)??999999)-(pos.get(b.id)??999999)||ticLevelRankV11(a.level)-ticLevelRankV11(b.level));
+}
+window.ticGetStudentOrderedCoursesV11=ticGetStudentOrderedCoursesV19;
+
+async function ticRecalculateStudentProgressV19(studentId){
+  try{
+    const {data:student,error:se}=await sb.from('tic_students').select('id,current_level').eq('id',studentId).maybeSingle();
+    if(se||!student)return null;
+    const {data:enroll,error:ee}=await sb.from('tic_course_students').select('course_id').eq('student_id',studentId).eq('status','active');
+    if(ee)throw ee;
+    const ids=(enroll||[]).map(x=>x.course_id).filter(Boolean);
+    if(!ids.length)return {overall:0,total:0,done:0,currentLevel:0};
+    const [{data:lessons,error:le},{data:done,error:pe}]=await Promise.all([
+      sb.from('tic_lessons').select('id,level,skill,course_id').in('course_id',ids).eq('active',true),
+      sb.from('tic_lesson_progress').select('lesson_id,first_completed_at').eq('student_id',studentId)
+    ]);
+    if(le)throw le;if(pe)throw pe;
+    const completed=new Set((done||[]).filter(x=>x.first_completed_at).map(x=>x.lesson_id));
+    const all=lessons||[];
+    const overall=all.length?Math.round(all.filter(l=>completed.has(l.id)).length/all.length*100):0;
+    const current=all.filter(l=>(l.level||student.current_level)===(student.current_level));
+    const up=[];
+    up.push({student_id:studentId,level:student.current_level,skill:'overall',progress:overall,updated_at:new Date().toISOString()});
+    const skills=['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'];
+    for(const skill of skills){
+      const arr=current.filter(l=>(l.skill||'').toLowerCase()===skill);
+      const value=arr.length?Math.round(arr.filter(l=>completed.has(l.id)).length/arr.length*100):0;
+      up.push({student_id:studentId,level:student.current_level,skill,progress:value,updated_at:new Date().toISOString()});
+    }
+    const {error:ue}=await sb.from('tic_progress').upsert(up,{onConflict:'student_id,level,skill'});
+    if(ue)console.warn('tic_progress V19:',ue.message);
+    return {overall,total:all.length,done:all.filter(l=>completed.has(l.id)).length,currentLevel:current.length?Math.round(current.filter(l=>completed.has(l.id)).length/current.length*100):0};
+  }catch(e){console.warn('Progress V19:',e);return null}
+}
+window.ticRecalculateStudentProgressV18=ticRecalculateStudentProgressV19;
+
+window.markLessonCompleted=async function(lessonId){
+  try{
+    const s=await studentRecord();if(!s)return;
+    const now=new Date().toISOString();
+    const {data:lp,error:findError}=await sb.from('tic_lesson_progress').select('id,first_completed_at,response_count,open_count').eq('lesson_id',lessonId).eq('student_id',s.id).maybeSingle();
+    if(findError)return toast('Não foi possível verificar o progresso: '+findError.message,'error');
+    let error=null;
+    if(lp){
+      const r=await sb.from('tic_lesson_progress').update({first_completed_at:lp.first_completed_at||now,last_opened_at:now,open_count:Math.max(1,Number(lp.open_count||0)),response_count:Number(lp.response_count||0),updated_at:now}).eq('id',lp.id);error=r.error;
+    }else{
+      const r=await sb.from('tic_lesson_progress').insert({lesson_id:lessonId,student_id:s.id,first_completed_at:now,last_opened_at:now,open_count:1,response_count:0,updated_at:now});error=r.error;
+    }
+    if(error)return toast('Não foi possível registrar a conclusão: '+error.message,'error');
+    const snap=await ticRecalculateStudentProgressV19(s.id);
+    toast(`Lesson concluída. Progresso geral: ${snap?.overall??0}%.`,'success');
+    if(typeof viewStudentLessonInteractive==='function')await viewStudentLessonInteractive(lessonId);else if(typeof loadView==='function')await loadView('studentLessons');
+  }catch(e){toast('Não foi possível registrar a conclusão: '+(e?.message||e),'error')}
+};
+
+/* My Lessons: course order comes only from the Teacher's Track; lesson order from position. */
+window.studentLessons=async function(){
+  const s=await studentRecord();if(!s){$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}
+  try{
+    const courses=await ticGetStudentOrderedCoursesV19(s.id),ids=courses.map(c=>c.id);
+    const [{data:ms,error:me},{data:ls,error:le},{data:lp,error:pe},{data:direct,error:de}]=await Promise.all([
+      ids.length?sb.from('tic_modules').select('*').in('course_id',ids).order('position',{ascending:true}):Promise.resolve({data:[],error:null}),
+      ids.length?sb.from('tic_lessons').select('*').in('course_id',ids).eq('active',true).order('position',{ascending:true}).order('created_at',{ascending:true}):Promise.resolve({data:[],error:null}),
+      sb.from('tic_lesson_progress').select('lesson_id,first_completed_at').eq('student_id',s.id),
+      sb.from('tic_lesson_assignments').select('lesson_id,assigned_at,note,tic_lessons(*)').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false})
+    ]);
+    if(me||le||pe||de)throw(me||le||pe||de);
+    const pmap=new Map((lp||[]).map(x=>[x.lesson_id,x]));
+    const item=(l,i)=>{const done=!!pmap.get(l.id)?.first_completed_at;return `<button class="student-curriculum-item" onclick="viewStudentLessonInteractive('${l.id}')"><span class="lesson-number">${i+1}</span><span class="lesson-copy"><b>${esc(l.title)}</b><small>${esc(l.skill||'Lesson')} · ${done?'✓ Concluída':'Não iniciada'}${l.html_enabled?' · 🧩 HTML':''}</small></span><span class="btn sm secondary">Abrir →</span></button>`};
+    const courseHtml=courses.map(c=>{
+      const cl=(ls||[]).filter(l=>l.course_id===c.id).sort((a,b)=>(Number(a.position)||999999)-(Number(b.position)||999999));
+      const mods=(ms||[]).filter(m=>m.course_id===c.id).sort((a,b)=>(Number(a.position)||999999)-(Number(b.position)||999999));
+      const modHtml=mods.map(m=>{const ml=cl.filter(l=>l.module_id===m.id);return `<section class="student-module"><div class="student-module-head"><div><span>📁</span><div><h3>${esc(m.title)}</h3><small>${ml.length} lesson(s)</small></div></div><span class="badge blue">${ml.length}</span></div>${ml.map(item).join('')||'<div class="course-empty">Nenhuma lesson neste módulo.</div>'}</section>`}).join('');
+      const general=cl.filter(l=>!l.module_id),done=cl.filter(l=>pmap.get(l.id)?.first_completed_at).length;
+      return `<article class="student-course-hero card"><div class="student-course-head"><div><span class="badge blue">${esc(c.level||'')}</span><h2>📚 ${esc(c.title)}</h2><p>${esc(c.description||'')}</p></div><span class="badge green">Acesso ativo</span></div><div class="student-course-metrics"><span><b>${mods.length}</b> módulos</span><span><b>${cl.length}</b> lessons</span><span><b>${done}</b> concluídas</span></div><div class="student-module-stack">${modHtml}${general.length?`<section class="student-module"><div class="student-module-head"><div><span>📖</span><div><h3>Lessons gerais</h3><small>Lessons sem módulo específico.</small></div></div><span class="badge yellow">${general.length}</span></div>${general.map(item).join('')}</section>`:''}</div></article>`;
+    }).join('');
+    const courseLessonIds=new Set((ls||[]).map(l=>l.id));const extra=(direct||[]).map(x=>x.tic_lessons).filter(Boolean).filter(l=>!courseLessonIds.has(l.id));
+    const directHtml=extra.length?`<article class="card section"><div class="section-head"><div><h2>📌 Lessons atribuídas diretamente</h2><span>Enviadas pelo Teacher fora do currículo.</span></div><span class="badge blue">${extra.length}</span></div>${extra.sort((a,b)=>(Number(a.position)||999999)-(Number(b.position)||999999)).map(item).join('')}</article>`:'';
+    setPage('My Lessons','Aulas na mesma ordem definida pelo Teacher.');$('content').innerHTML=`<div class="notice success">🛤️ <b>Ordem pedagógica:</b> os cursos seguem a sequência definida pelo Teacher. As Lessons seguem a posição definida dentro de cada curso/módulo.</div>${courseHtml||'<div class="card empty">Nenhum curso ativo.</div>'}${directHtml}`;
+  }catch(e){$('content').innerHTML=`<div class="card attention">${esc(e.message||e)}</div>`}
+};
+
+/* Dashboard uses the same source of truth as My Lessons: completed lessons. */
+window.studentDashboard=async function(){
+  const s=await studentRecord();if(!s){$('content').innerHTML='<div class="card empty">Sua conta não está vinculada a um cadastro de aluno.</div>';return}
+  const snap=await ticRecalculateStudentProgressV19(s.id);
+  const [{data:ta},{data:pay}]=await Promise.all([sb.from('tic_task_assignments').select('*,tic_assignments(title,due_at)').eq('student_id',s.id).eq('active',true).limit(8),sb.from('tic_monthly_payments').select('*').eq('student_id',s.id).order('reference_month',{ascending:false}).limit(3)]);
+  const overall=Number(snap?.overall||0);
+  setPage(`Hello, ${s.display_name?.split(' ')[0]||'Student'} 👋`,'Seu espaço de aprendizagem.');
+  $('content').innerHTML=`<div class="student-banner"><div style="font-size:11px;letter-spacing:1.5px;color:#aaa1bd">CURRENT LEVEL</div><h2>${esc(s.current_level)} → ${esc(s.target_level||'—')}</h2><p>Progresso geral: <b>${overall}%</b> · ${snap?.done||0}/${snap?.total||0} Lessons concluídas</p><div class="progress" style="margin-top:10px;background:#ffffff22"><i style="width:${overall}%;background:#fff"></i></div></div><div class="grid cols2 section"><div class="card"><div class="section-head"><h2>✅ My Tasks</h2></div>${(ta||[]).map(x=>`<div class="row task-row" style="cursor:pointer" onclick="openStudentTask('${x.id}')"><div><b>${esc(x.tic_assignments?.title||'Task')}</b><small>${x.tic_assignments?.due_at?'Prazo '+fmtDate(x.tic_assignments.due_at):'Sem prazo'}</small></div><div style="display:flex;align-items:center;gap:8px"><span onclick="event.stopPropagation()">${badge(x.status)}</span><button class="btn sm secondary" onclick="event.stopPropagation();openStudentTask('${x.id}')">Abrir</button></div></div>`).join('')||'<div class="empty">Nenhuma tarefa.</div>'}</div><div class="card"><div class="section-head"><h2>📊 My Progress</h2><span>${overall}% do currículo</span></div><div class="metric"><span>Lessons concluídas</span><b>${snap?.done||0} / ${snap?.total||0}</b></div><div class="progress" style="margin:8px 0 16px"><i style="width:${overall}%"></i></div>${['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'].map(k=>`<div class="mini"><span>${k}</span><b>nível ${esc(s.current_level)}</b></div>`).join('')}</div></div><div class="card section"><div class="section-head"><h2>💰 My Payments</h2></div>${(pay||[]).map(x=>`<div class="row"><div><b>${monthLabel(x.reference_month)}</b><small>${x.payment_date?'Pago em '+fmtDate(x.payment_date):'Vencimento '+fmtDate(x.due_date)}</small></div><b>${money(x.amount)} ${badge(x.status)}</b></div>`).join('')||'<div class="empty">Nenhum registro.</div>'}</div>`;
+};
+
+/* My Courses also uses the teacher-defined order through V19 resolver. */
+window.studentCoursesPage=async function(){
+  const s=await studentRecord();if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um aluno.</div>';return}
+  try{
+    const courses=await ticGetStudentOrderedCoursesV19(s.id);setPage('My Courses','Seus cursos em ordem pedagógica.');
+    if(!courses.length){$('content').innerHTML='<div class="card empty">Você ainda não está matriculado em nenhum curso.</div>';return}
+    const ids=courses.map(c=>c.id);const [{data:mods},{data:lessons},{data:lp}]=await Promise.all([sb.from('tic_modules').select('*').in('course_id',ids).order('position'),sb.from('tic_lessons').select('*').in('course_id',ids).eq('active',true).order('position').order('created_at'),sb.from('tic_lesson_progress').select('lesson_id,first_completed_at').eq('student_id',s.id)]);const doneSet=new Set((lp||[]).filter(x=>x.first_completed_at).map(x=>x.lesson_id));
+    const cards=courses.map((c,ci)=>{const ms=(mods||[]).filter(m=>m.course_id===c.id).sort((a,b)=>(a.position||0)-(b.position||0));const ls=(lessons||[]).filter(l=>l.course_id===c.id).sort((a,b)=>(a.position||0)-(b.position||0));const done=ls.filter(l=>doneSet.has(l.id)).length;return `<article class="student-course-hero card"><div class="student-course-head"><div><span class="badge blue">${ci+1}. ${esc(c.level||'')}</span><h2>📚 ${esc(c.title)}</h2><p>${esc(c.description||'Curso de inglês')}</p></div><span class="badge green">Acesso ativo</span></div><div class="student-course-metrics"><span><b>${ms.length}</b> módulos</span><span><b>${ls.length}</b> lessons</span><span><b>${done}</b> concluídas</span></div><button class="btn primary" onclick="openStudentCourse('${c.id}')">Abrir currículo →</button></article>`}).join('');
+    $('content').innerHTML=`<div class="notice success">🛤️ <b>Sequência pedagógica:</b> os cursos aparecem na ordem definida pelo Teacher.</div><div class="tic-student-course-order section">${cards}</div>`;
+  }catch(e){$('content').innerHTML=`<div class="card attention">${esc(e.message||e)}</div>`}
+};
+
+/* Teacher progress cards read the recalculated data; student view remains consistent. */
+window.progressPage=async function(student=false){
+  let students=[];
+  if(student){const {data:s}=await sb.from('tic_students').select('*').eq('auth_user_id',session.user.id).maybeSingle();if(!s){$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}students=[s]}
+  else{const {data:s}=await sb.from('tic_students').select('*').eq('teacher_id',session.user.id).eq('status','active');students=s||[]}
+  for(const s of students)await ticRecalculateStudentProgressV19(s.id);
+  const ids=students.map(s=>s.id);const {data:p}=ids.length?await sb.from('tic_progress').select('*').in('student_id',ids):{data:[]};
+  $('content').innerHTML=`<div class="grid cols3">${students.map(s=>{const overall=Number(p?.find(x=>x.student_id===s.id&&x.skill==='overall'&&x.level===s.current_level)?.progress||0);return `<div class="card"><div class="section-head"><h2>${esc(s.display_name)}</h2><span>${esc(s.current_level)}</span></div><div style="font:800 30px 'Plus Jakarta Sans'">${overall}%</div><div class="progress"><i style="width:${overall}%"></i></div><div style="margin-top:15px">${['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'].map(k=>{const v=Number(p?.find(x=>x.student_id===s.id&&x.skill===k&&x.level===s.current_level)?.progress||0);return `<div class="mini"><span>${k}</span><b>${v}%</b></div><div class="progress" style="height:6px;margin-bottom:9px"><i style="width:${v}%"></i></div>`}).join('')}</div></div>`}).join('')||'<div class="card empty">Nenhum aluno.</div>'}</div>`;
+};
+</script>
