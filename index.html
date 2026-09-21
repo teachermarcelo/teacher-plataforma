@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- TEACHER PLATFORM BUILD: 2026-09-21-no-localstorage-course-fix-v1 -->
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -89,7 +90,6 @@ html{scroll-behavior:smooth}body{overflow-x:hidden}button:disabled{opacity:.6;cu
   <form id="loginForm" class="form">
    <div class="field"><label>E-mail</label><input id="email" type="email" autocomplete="username" required></div>
    <div class="field"><label>Senha</label><input id="password" type="password" autocomplete="current-password" required></div>
-   <label class="remember"><input id="remember" type="checkbox" checked> Lembrar e-mail</label>
    <button id="loginBtn" class="btn primary">Entrar</button>
    <button type="button" class="btn ghost" onclick="showForgot()">Esqueci minha senha</button>
    <button type="button" class="btn secondary" onclick="showRegister()">Criar conta de aluno</button>
@@ -233,7 +233,6 @@ $('loginForm').onsubmit=async e=>{
  const {data,error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
  if(error){ diag('Autenticação',false,error.message+' | código: '+(error.code||'sem código')); msg(error.message,true); btn.disabled=false;btn.textContent='Entrar'; $('diagModal').classList.remove('hidden'); return; }
  diag('Autenticação',true,'Sessão criada. ID: '+data.user.id);
- if($('remember').checked)localStorage.setItem('tic_email',$('email').value.trim());else localStorage.removeItem('tic_email');
  btn.disabled=false;btn.textContent='Entrar';
 };
 $('forgotForm').onsubmit=async e=>{
@@ -266,7 +265,6 @@ $('registerForm').onsubmit=async e=>{
  showLogin();msg(data.session?'Cadastro criado e você já pode entrar.':'Cadastro criado. Confirme o e-mail se a confirmação estiver ativa e depois entre.');
 };
 (async()=>{
- $('email').value=localStorage.getItem('tic_email')||'';
  startDiag();
  const {data,error}=await sb.auth.getSession();
  if(error)diag('Leitura da sessão',false,error.message);else diag('Leitura da sessão',true,data.session?'sessão existente':'nenhuma sessão ativa');
@@ -497,7 +495,7 @@ async function assignExistingTaskToClass(classId){
 
 function editGeneric(type,x){if(type==='classes')openClassForm(x);else if(type==='courses')openCourseForm(x);else openMaterialForm(x)}
 function openClassForm(x=null){openModal(x?'Editar turma':'Nova turma',`<form class="form" onsubmit="saveGeneric(event,'tic_classes','${x?.id||''}','classes')"><div class="field"><label>Nome</label><input id="g1" value="${esc(x?.name||'')}" required></div><div class="form-grid"><div class="field"><label>Nível</label><select id="g2">${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Horário</label><input id="g3" value="${esc(x?.schedule_text||'')}"></div></div><div class="field"><label>Link da aula</label><input id="g4" value="${esc(x?.meeting_url||'')}"></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`)}
-function openCourseForm(x=null){openModal(x?'Editar curso':'Novo curso',`<form class="form" onsubmit="saveGeneric(event,'tic_courses','${x?.id||''}','courses')"><div class="field"><label>Título</label><input id="g1" value="${esc(x?.title||'')}" required></div><div class="field"><label>Nível</label><select id="g2">${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Descrição</label><textarea id="g3">${esc(x?.description||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`)}
+/* Course form is defined once below by openCourseFormV11. */
 function openMaterialForm(x=null){openModal(x?'Editar material':'Novo material',`<form class="form" onsubmit="saveMaterial(event,'${x?.id||''}')"><div class="field"><label>Título</label><input id="g1" value="${esc(x?.title||'')}" required></div><div class="form-grid"><div class="field"><label>Tipo principal</label><select id="g2">${['pdf','video','audio','link','file','worksheet','other'].map(l=>`<option ${l===x?.material_type?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Nível</label><select id="g3"><option value="">—</option>${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div></div><div class="field"><label>Imagem de capa (opcional)</label><div class="cover-upload"><input id="gCover" value="${esc(x?.cover_image_url||'')}" placeholder="URL da imagem ou upload"><input type="file" accept="image/*" onchange="uploadCover(this,'gCover')"></div></div><div class="field"><label>Descrição</label><textarea id="g5" rows="3">${esc(x?.description||'')}</textarea></div><div class="resource-box"><div class="resource-head"><b>📚 Recursos deste material</b><button type="button" class="btn secondary" onclick="addResourceRow('gResources')">+ Adicionar recurso</button></div><div id="gResources"></div><div class="resource-help">Um material pode conter quantos links, PDFs, vídeos, áudios ou atividades manuais você quiser.</div></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar material</button></div></form>`);renderResourceRows('gResources',x?.resource_items||((x?.external_url||x?.file_url)?[{type:x?.material_type||'link',title:x?.title||'Recurso',url:x?.external_url||x?.file_url}]:[]))}
 async function saveMaterial(e,id){e.preventDefault();const o={teacher_id:session.user.id,title:$('g1').value.trim(),material_type:$('g2').value,level:$('g3').value||null,description:$('g5').value.trim()||null,resource_items:collectResources('gResources'),cover_image_url:$('gCover').value.trim()||null};const first=o.resource_items[0];if(first?.url){if(o.material_type==='pdf')o.file_url=first.url;else o.external_url=first.url}const r=id?await sb.from('tic_materials').update(o).eq('id',id):await sb.from('tic_materials').insert(o);if(r.error)return toast('Não foi possível salvar o material: '+r.error.message,'error');closeModal();toast(id?'Material atualizado.':'Material criado.','success');loadView('materials')}
 async function saveGeneric(e,table,id,type){e.preventDefault();let o={teacher_id:session.user.id};if(table==='tic_classes')Object.assign(o,{name:$('g1').value,level:$('g2').value,schedule_text:$('g3').value,meeting_url:$('g4').value||null});if(table==='tic_courses')Object.assign(o,{title:$('g1').value,level:$('g2').value,description:$('g3').value});const r=id?await sb.from(table).update(o).eq('id',id):await sb.from(table).insert(o);if(r.error)return toast('Não foi possível salvar: '+r.error.message,'error');closeModal();toast('Registro salvo.','success');loadView(type)}
@@ -1946,27 +1944,80 @@ async function saveCourseV11(e,id){
  e.preventDefault();
  try{
    const uid=await ticTeacherAuthIdV12();
-   const o={teacher_id:uid,title:$('g1').value.trim(),level:$('g2').value,description:$('g3').value.trim()||null};
+
+   const {data:teacherProfile,error:teacherError}=await sb
+     .from('tic_profiles')
+     .select('id,role,active')
+     .eq('id',uid)
+     .maybeSingle();
+
+   if(teacherError)throw teacherError;
+   if(!teacherProfile)throw new Error('Perfil do Teacher não foi encontrado no Supabase.');
+   if(!['teacher','admin'].includes(teacherProfile.role))throw new Error('Esta conta não possui permissão de Teacher.');
+   if(teacherProfile.active===false)throw new Error('A conta do Teacher está inativa.');
+
+   const o={
+     teacher_id:uid,
+     title:$('g1').value.trim(),
+     level:$('g2').value,
+     description:$('g3').value.trim()||null
+   };
+
    if(!o.title)return toast('Informe o título.','error');
-   let r;
-   if(id) r=await sb.from('tic_courses').update(o).eq('id',id).eq('teacher_id',uid);
-   else r=await sb.from('tic_courses').insert(o).select().single();
-   if(r.error)return toast('Não foi possível salvar: '+r.error.message,'error');
-   if(!id){
+
+   let courseId=id;
+
+   if(id){
+     const r=await sb.from('tic_courses')
+       .update(o)
+       .eq('id',id)
+       .eq('teacher_id',uid);
+
+     if(r.error)throw r.error;
+   }else{
+     courseId=crypto.randomUUID();
+
+     const r=await sb.from('tic_courses').insert({
+       id:courseId,
+       ...o
+     });
+
+     if(r.error)throw r.error;
+
      const track=await ticEnsureDefaultTrackV11();
-     const {data:last}=await sb.from('tic_course_track_items').select('position').eq('track_id',track.id).order('position',{ascending:false}).limit(1).maybeSingle();
+
+     const {data:last,error:lastError}=await sb
+       .from('tic_course_track_items')
+       .select('position')
+       .eq('track_id',track.id)
+       .order('position',{ascending:false})
+       .limit(1)
+       .maybeSingle();
+
+     if(lastError)throw lastError;
+
      const nextPosition=Number(last?.position||0)+1;
-     // A relação Track + Curso é UNIQUE. Use upsert para não gerar erro
-     // quando o curso já estiver na sequência (por exemplo, após duplo clique
-     // ou quando o registro foi criado antes e a etapa de vínculo foi repetida).
+
      const ir=await sb.from('tic_course_track_items').upsert(
-       {track_id:track.id,course_id:r.data.id,position:nextPosition},
+       {
+         track_id:track.id,
+         course_id:courseId,
+         position:nextPosition
+       },
        {onConflict:'track_id,course_id'}
      );
-     if(ir.error)return toast('Curso criado, mas não foi possível atualizar a sequência: '+ir.error.message,'error');
+
+     if(ir.error)throw ir.error;
    }
-   closeModal();toast(id?'Curso atualizado.':'Curso criado e adicionado à sequência.','success');coursesPage();
- }catch(err){toast(err?.message||'Não foi possível salvar o curso.','error')}
+
+   closeModal();
+   toast(id?'Curso atualizado.':'Curso criado e adicionado à sequência.','success');
+   await coursesPageV11();
+
+ }catch(err){
+   console.error('[Teacher Platform] saveCourseV11:',err);
+   toast(err?.message||'Não foi possível salvar o curso.','error');
+ }
 }
 
 openCourseForm=openCourseFormV11;
