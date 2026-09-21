@@ -1,5 +1,4 @@
 <!doctype html>
-<!-- TEACHER PLATFORM BUILD: 2026-09-21-no-localstorage-course-fix-v1 -->
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -90,6 +89,7 @@ html{scroll-behavior:smooth}body{overflow-x:hidden}button:disabled{opacity:.6;cu
   <form id="loginForm" class="form">
    <div class="field"><label>E-mail</label><input id="email" type="email" autocomplete="username" required></div>
    <div class="field"><label>Senha</label><input id="password" type="password" autocomplete="current-password" required></div>
+   <label class="remember"><input id="remember" type="checkbox" checked> Lembrar e-mail</label>
    <button id="loginBtn" class="btn primary">Entrar</button>
    <button type="button" class="btn ghost" onclick="showForgot()">Esqueci minha senha</button>
    <button type="button" class="btn secondary" onclick="showRegister()">Criar conta de aluno</button>
@@ -233,6 +233,7 @@ $('loginForm').onsubmit=async e=>{
  const {data,error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
  if(error){ diag('Autenticação',false,error.message+' | código: '+(error.code||'sem código')); msg(error.message,true); btn.disabled=false;btn.textContent='Entrar'; $('diagModal').classList.remove('hidden'); return; }
  diag('Autenticação',true,'Sessão criada. ID: '+data.user.id);
+ 
  btn.disabled=false;btn.textContent='Entrar';
 };
 $('forgotForm').onsubmit=async e=>{
@@ -265,6 +266,7 @@ $('registerForm').onsubmit=async e=>{
  showLogin();msg(data.session?'Cadastro criado e você já pode entrar.':'Cadastro criado. Confirme o e-mail se a confirmação estiver ativa e depois entre.');
 };
 (async()=>{
+ $('email').value='';
  startDiag();
  const {data,error}=await sb.auth.getSession();
  if(error)diag('Leitura da sessão',false,error.message);else diag('Leitura da sessão',true,data.session?'sessão existente':'nenhuma sessão ativa');
@@ -380,9 +382,6 @@ function renderStudentsTable(){
  const data=studentsCache.filter(s=>(!q||`${s.display_name||''} ${s.email||''}`.toLowerCase().includes(q))&&(!level||s.current_level===level)&&(!status||s.status===status));
  $('content').innerHTML=`<div class="card"><div class="section-head"><div><h2>Seus alunos</h2><span>${data.length} de ${studentsCache.length} exibidos</span></div><button class="btn primary" onclick="openStudentForm()">+ Novo aluno</button></div><div class="filterbar"><input id="studentSearch" class="field-input" style="flex:2;min-width:220px;border:1px solid var(--line);border-radius:10px;padding:10px 11px" placeholder="Buscar por nome ou e-mail..." value="${esc(q)}" oninput="renderStudentsTable()"><select id="studentLevel" onchange="renderStudentsTable()"><option value="">Todos os níveis</option>${levels.map(l=>`<option ${l===level?'selected':''}>${l}</option>`).join('')}</select><select id="studentStatus" onchange="renderStudentsTable()"><option value="">Todos os status</option><option value="active" ${status==='active'?'selected':''}>Ativos</option><option value="inactive" ${status==='inactive'?'selected':''}>Inativos</option></select></div><div class="table-wrap"><table class="table"><thead><tr><th>Aluno</th><th>Nível</th><th>Mensalidade</th><th>Status</th><th>Ações</th></tr></thead><tbody>${data.map(s=>`<tr><td><b>${esc(s.display_name)}</b><br><small>${esc(s.email||'')}</small></td><td>${esc(s.current_level)} → ${esc(s.target_level||'—')}</td><td>${money(s.monthly_fee)}</td><td>${badge(s.status)}</td><td><div class="action-group"><button class="btn sm secondary" onclick="openStudentView('${s.id}')">🎓 View</button><button class="btn sm ghost" onclick='editStudent(${JSON.stringify(s)})'>Editar</button><button class="btn sm ghost" onclick="shareStudentAccess('${s.id}')">📲 WhatsApp</button><button class="btn sm ghost" onclick="resetStudentPassword('${s.id}')">🔑 Senha</button><button class="btn sm secondary" onclick="shareStudentWhatsApp('${s.id}')">📱 WhatsApp</button><button class="btn sm danger" onclick="deleteRow('tic_students','${s.id}','students')">Excluir</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Nenhum aluno encontrado.</td></tr>'}</tbody></table></div></div>`;
 }
-function openStudentForm(s=null){ if(!requireTeacherAction())return;
- openModal(s?'Editar aluno':'Novo aluno',`<form class="form" onsubmit="saveStudent(event,'${s?.id||''}')"><div class="form-grid"><div class="field"><label>Nome</label><input id="sName" value="${esc(s?.display_name||'')}" required></div><div class="field"><label>E-mail</label><input id="sEmail" type="email" value="${esc(s?.email||'')}"></div></div><div class="form-grid"><div class="field"><label>Nível atual</label><select id="sLevel">${levels.map(x=>`<option ${x===s?.current_level?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Nível objetivo</label><select id="sTarget"><option value="">—</option>${levels.map(x=>`<option ${x===s?.target_level?'selected':''}>${x}</option>`).join('')}</select></div></div><div class="form-grid"><div class="field"><label>Mensalidade</label><input id="sFee" type="number" step=".01" value="${s?.monthly_fee??0}"></div><div class="field"><label>WhatsApp do aluno</label><input id="sPhone" type="tel" inputmode="tel" placeholder="(41) 99999-9999" value="${esc(s?.phone||'')}"><small style="color:var(--muted)">Será usado para compartilhar tarefas, lessons e materiais pelo WhatsApp.</small></div></div>${!s?`<div class="field"><label>🔑 Senha temporária do aluno</label><div style="display:flex;gap:8px"><input id="sTempPassword" type="text" minlength="6" placeholder="Definida pelo Teacher" required><button type="button" class="btn secondary" onclick="generateTempPassword()">Gerar</button></div><small style="color:var(--muted)">O Teacher define a senha inicial e entrega ao aluno. O aluno poderá alterá-la depois.</small></div>`:''}<div class="field"><label>Observações</label><textarea id="sNotes">${esc(s?.notes||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`);
-}
 function editStudent(s){openStudentForm(s)}
 async function saveStudent(e,id){
  e.preventDefault();
@@ -495,7 +494,7 @@ async function assignExistingTaskToClass(classId){
 
 function editGeneric(type,x){if(type==='classes')openClassForm(x);else if(type==='courses')openCourseForm(x);else openMaterialForm(x)}
 function openClassForm(x=null){openModal(x?'Editar turma':'Nova turma',`<form class="form" onsubmit="saveGeneric(event,'tic_classes','${x?.id||''}','classes')"><div class="field"><label>Nome</label><input id="g1" value="${esc(x?.name||'')}" required></div><div class="form-grid"><div class="field"><label>Nível</label><select id="g2">${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Horário</label><input id="g3" value="${esc(x?.schedule_text||'')}"></div></div><div class="field"><label>Link da aula</label><input id="g4" value="${esc(x?.meeting_url||'')}"></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`)}
-/* Course form is defined once below by openCourseFormV11. */
+function openCourseForm(x=null){openModal(x?'Editar curso':'Novo curso',`<form class="form" onsubmit="saveGeneric(event,'tic_courses','${x?.id||''}','courses')"><div class="field"><label>Título</label><input id="g1" value="${esc(x?.title||'')}" required></div><div class="field"><label>Nível</label><select id="g2">${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Descrição</label><textarea id="g3">${esc(x?.description||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`)}
 function openMaterialForm(x=null){openModal(x?'Editar material':'Novo material',`<form class="form" onsubmit="saveMaterial(event,'${x?.id||''}')"><div class="field"><label>Título</label><input id="g1" value="${esc(x?.title||'')}" required></div><div class="form-grid"><div class="field"><label>Tipo principal</label><select id="g2">${['pdf','video','audio','link','file','worksheet','other'].map(l=>`<option ${l===x?.material_type?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Nível</label><select id="g3"><option value="">—</option>${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div></div><div class="field"><label>Imagem de capa (opcional)</label><div class="cover-upload"><input id="gCover" value="${esc(x?.cover_image_url||'')}" placeholder="URL da imagem ou upload"><input type="file" accept="image/*" onchange="uploadCover(this,'gCover')"></div></div><div class="field"><label>Descrição</label><textarea id="g5" rows="3">${esc(x?.description||'')}</textarea></div><div class="resource-box"><div class="resource-head"><b>📚 Recursos deste material</b><button type="button" class="btn secondary" onclick="addResourceRow('gResources')">+ Adicionar recurso</button></div><div id="gResources"></div><div class="resource-help">Um material pode conter quantos links, PDFs, vídeos, áudios ou atividades manuais você quiser.</div></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar material</button></div></form>`);renderResourceRows('gResources',x?.resource_items||((x?.external_url||x?.file_url)?[{type:x?.material_type||'link',title:x?.title||'Recurso',url:x?.external_url||x?.file_url}]:[]))}
 async function saveMaterial(e,id){e.preventDefault();const o={teacher_id:session.user.id,title:$('g1').value.trim(),material_type:$('g2').value,level:$('g3').value||null,description:$('g5').value.trim()||null,resource_items:collectResources('gResources'),cover_image_url:$('gCover').value.trim()||null};const first=o.resource_items[0];if(first?.url){if(o.material_type==='pdf')o.file_url=first.url;else o.external_url=first.url}const r=id?await sb.from('tic_materials').update(o).eq('id',id):await sb.from('tic_materials').insert(o);if(r.error)return toast('Não foi possível salvar o material: '+r.error.message,'error');closeModal();toast(id?'Material atualizado.':'Material criado.','success');loadView('materials')}
 async function saveGeneric(e,table,id,type){e.preventDefault();let o={teacher_id:session.user.id};if(table==='tic_classes')Object.assign(o,{name:$('g1').value,level:$('g2').value,schedule_text:$('g3').value,meeting_url:$('g4').value||null});if(table==='tic_courses')Object.assign(o,{title:$('g1').value,level:$('g2').value,description:$('g3').value});const r=id?await sb.from(table).update(o).eq('id',id):await sb.from(table).insert(o);if(r.error)return toast('Não foi possível salvar: '+r.error.message,'error');closeModal();toast('Registro salvo.','success');loadView(type)}
@@ -1370,12 +1369,81 @@ async function toggleRegistrationLink(id,active){const r=await sb.from('tic_stud
 async function ticLoadRegistration(token){const {data,error}=await sb.rpc('tic_registration_info',{p_token:token});if(error||!data?.length)return showPublicRegistrationError('Link de cadastro inválido, expirado ou desativado.');const x=data[0],free=Number(x.monthly_fee||0)===0;$('login').innerHTML=`<div class="login-card"><h1>Teacher <span>Platform</span></h1><p>Cadastro de aluno · ${esc(x.teacher_name||'Teacher')}</p><div class="notice success">${esc(x.welcome_message||'Bem-vindo! Complete seu cadastro para entrar na plataforma.')}</div><form id="publicRegForm" class="form"><div class="field"><label>Nome completo</label><input id="prName" required></div><div class="field"><label>WhatsApp</label><input id="prWhatsapp" type="tel" inputmode="tel" required placeholder="(41) 99999-9999"></div><div class="field"><label>E-mail</label><input id="prEmail" type="email" required></div><div class="field"><label>Senha</label><input id="prPassword" type="password" minlength="6" required></div><div class="form-grid"><div class="field"><label>Nível atual</label><select id="prLevel">${levels.map(l=>`<option ${l===x.level?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Nível objetivo</label><select id="prTarget">${levels.map(l=>`<option ${l===(x.target_level||'A1')?'selected':''}>${l}</option>`).join('')}</select></div></div>${free?`<div class="registration-free"><b>🆓 Cadastro gratuito</b><br><small>Este cadastro não possui mensalidade.</small></div>`:`<div class="field"><label>Quantas vezes por semana?</label><select id="prWeeks"><option value="1" ${x.lessons_per_week===1?'selected':''}>1x por semana — R$ 250</option><option value="2" ${x.lessons_per_week===2?'selected':''}>2x por semana — R$ 450</option><option value="3" ${x.lessons_per_week===3?'selected':''}>3x por semana — R$ 650</option></select></div><div class="notice">Mensalidade definida: <b>${money(x.monthly_fee)}</b>${x.course_title?` · Curso: <b>${esc(x.course_title)}</b>`:''}</div>`}${free&&x.course_title?`<div class="notice">Curso: <b>${esc(x.course_title)}</b></div>`:''}<button class="btn primary">Criar minha conta</button></form></div>`;$('publicRegForm').onsubmit=async ev=>{ev.preventDefault();const weeks=free?1:Number($('prWeeks').value);const {data:s,error:e}=await sb.auth.signUp({email:$('prEmail').value.trim().toLowerCase(),password:$('prPassword').value,data:{full_name:$('prName').value.trim(),whatsapp:$('prWhatsapp').value.trim(),current_level:$('prLevel').value,target_level:$('prTarget').value,lessons_per_week:String(weeks),monthly_fee:String(free?0:(TIC_WEEKLY_FEES[weeks]||250)),registration_token:token}});if(e)return toast(e.message,'error');if(s.session){toast('Cadastro concluído.','success');location.href=location.pathname}else{$('login').innerHTML=`<div class="login-card"><h1>Cadastro realizado ✅</h1><p>Confira seu e-mail para confirmar a conta e depois entre na plataforma.</p></div>`}}}
 function showPublicRegistrationError(msg){$('login').innerHTML=`<div class="login-card"><h1>Teacher <span>Platform</span></h1><div class="card attention"><b>${esc(msg)}</b></div><button class="btn primary" onclick="location.href=location.pathname">Voltar</button></div>`}
 
-/* ---------- Teacher student form: frequency + fee presets ---------- */
-function syncStudentFee(){const w=Number($('sWeeks')?.value||1);if($('sFee'))$('sFee').value=TIC_WEEKLY_FEES[w]||250}
-function openStudentForm(s=null){
- const weeks=Number(s?.lessons_per_week||1);openModal(s?'Editar aluno':'Novo aluno',`<form class="form" onsubmit="saveStudentV4(event,'${s?.id||''}')"><div class="form-grid"><div class="field"><label>Nome</label><input id="sName" value="${esc(s?.display_name||'')}" required></div><div class="field"><label>E-mail</label><input id="sEmail" type="email" value="${esc(s?.email||'')}"></div></div><div class="form-grid"><div class="field"><label>Nível atual</label><select id="sLevel">${levels.map(x=>`<option ${x===s?.current_level?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Nível objetivo</label><select id="sTarget"><option value="">—</option>${levels.map(x=>`<option ${x===s?.target_level?'selected':''}>${x}</option>`).join('')}</select></div></div><div class="form-grid"><div class="field"><label>Frequência semanal</label><select id="sWeeks" onchange="syncStudentFee()"><option value="1" ${weeks===1?'selected':''}>1x por semana — R$ 250</option><option value="2" ${weeks===2?'selected':''}>2x por semana — R$ 450</option><option value="3" ${weeks===3?'selected':''}>3x por semana — R$ 650</option></select></div><div class="field"><label>Mensalidade</label><input id="sFee" type="number" step=".01" value="${s?.monthly_fee??TIC_WEEKLY_FEES[weeks]}"></div></div><div class="field"><label>WhatsApp do aluno</label><input id="sPhone" type="tel" inputmode="tel" placeholder="(41) 99999-9999" value="${esc(s?.phone||'')}"><small style="color:var(--muted)">Usado para compartilhar Tasks, Lessons, materiais e links.</small></div>${!s?`<div class="field"><label>🔑 Senha temporária</label><div style="display:flex;gap:8px"><input id="sTempPassword" type="text" minlength="6" required placeholder="Definida pelo Teacher"><button type="button" class="btn secondary" onclick="generateTempPassword()">Gerar</button></div></div>`:''}<div class="field"><label>Observações</label><textarea id="sNotes">${esc(s?.notes||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`)
+/* ---------- Teacher student form: responsive + fast manual registration ---------- */
+function syncStudentFee(){
+ const w=Number($('sWeeks')?.value||1);
+ const fee=TIC_WEEKLY_FEES[w]||250;
+ if($('sFee')) $('sFee').value=fee;
 }
-async function saveStudentV4(e,id){e.preventDefault();const obj={display_name:$('sName').value.trim(),email:$('sEmail').value.trim().toLowerCase()||null,current_level:$('sLevel').value,target_level:$('sTarget').value||null,monthly_fee:Number($('sFee').value||0),lessons_per_week:Number($('sWeeks').value||1),phone:$('sPhone').value.trim()||null,notes:$('sNotes').value.trim()||null,status:'active'};if(!obj.display_name)return toast('Informe o nome.','error');if(id){const r=await sb.from('tic_students').update(obj).eq('id',id).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');closeModal();toast('Aluno atualizado.','success');return loadView('students')}if(!obj.email)return toast('Informe o e-mail.','error');const pw=$('sTempPassword')?.value||'';if(pw.length<6)return toast('Defina uma senha temporária de 6+ caracteres.','error');const r=await sb.functions.invoke('tic-student-admin',{body:{action:'create_student',...obj,temp_password:pw,redirect_to:location.origin+location.pathname}});if(r.error)return toast(r.error.message||'Falha ao criar aluno.','error');if(r.data?.error)return toast(r.data.error,'error');let createdId=r.data?.student_id||r.data?.student?.id;if(!createdId&&obj.email){const sr=await sb.from('tic_students').select('id').eq('teacher_id',session.user.id).eq('email',obj.email).maybeSingle();createdId=sr.data?.id||null}closeModal();toast(r.data?.message||'Aluno criado.','success');await loadView('students');if(createdId&&obj.phone){setTimeout(()=>shareStudentAccess(createdId),150)}else if(!obj.phone){toast('Aluno criado. Cadastre o WhatsApp para enviar o acesso por mensagem.','info')}}
+function toggleStudentBilling(){
+ const paid=document.querySelector('input[name="studentBilling"]:checked')?.value==='paid';
+ $('sPaidFields')?.classList.toggle('hidden',!paid);
+ $('sFreeNote')?.classList.toggle('hidden',paid);
+ if($('sFee')){
+   $('sFee').disabled=!paid;
+   $('sFee').required=paid;
+   if(!paid)$('sFee').value=0;
+   else if(Number($('sFee').value||0)===0)syncStudentFee();
+ }
+}
+function copyStudentTempPassword(){
+ const el=$('sTempPassword'); if(!el?.value)return toast('Gere ou informe a senha primeiro.','error');
+ navigator.clipboard?.writeText(el.value).then(()=>toast('Senha copiada.','success')).catch(()=>{el.select();document.execCommand('copy');toast('Senha copiada.','success')});
+}
+function openStudentForm(s=null){
+ if(!requireTeacherAction())return;
+ const weeks=Number(s?.lessons_per_week||1);
+ const isPaid=Number(s?.monthly_fee??250)>0;
+ const fee=s?.monthly_fee!=null?Number(s.monthly_fee):Number(TIC_WEEKLY_FEES[weeks]||250);
+ openModal(s?'Editar aluno':'Novo aluno',`<form class="form student-form" onsubmit="saveStudentV4(event,'${s?.id||''}')">
+ <div class="student-form-banner"><div><span class="student-form-kicker">👨‍🏫 CADASTRO PELO TEACHER</span><h4>${s?'Atualize os dados do aluno':'Crie o acesso do aluno em poucos passos'}</h4><small>Os dados ficam salvos no Supabase e continuam vinculados ao seu Teacher.</small></div><span class="student-form-badge">${s?'EDITAR':'NOVO ALUNO'}</span></div>
+ <div class="student-form-section"><div class="student-form-title">1. Dados do aluno</div><div class="form-grid">
+ <div class="field"><label>Nome completo *</label><input id="sName" value="${esc(s?.display_name||'')}" autocomplete="name" required autofocus></div>
+ <div class="field"><label>E-mail *</label><input id="sEmail" type="email" value="${esc(s?.email||'')}" autocomplete="email" required></div>
+ </div><div class="form-grid">
+ <div class="field"><label>WhatsApp do aluno</label><input id="sPhone" type="tel" inputmode="tel" placeholder="(41) 99999-9999" value="${esc(s?.phone||'')}" autocomplete="tel"><small>Usado para compartilhar Tasks, Lessons, materiais e acesso.</small></div>
+ 
+ </div></div>
+ <div class="student-form-section"><div class="student-form-title">2. Nível e planejamento</div><div class="form-grid">
+ <div class="field"><label>Nível atual</label><select id="sLevel">${levels.map(x=>`<option ${x===s?.current_level?'selected':''}>${x}</option>`).join('')}</select></div>
+ <div class="field"><label>Nível objetivo</label><select id="sTarget"><option value="">—</option>${levels.map(x=>`<option ${x===s?.target_level?'selected':''}>${x}</option>`).join('')}</select></div>
+ </div><div class="form-grid">
+ <div class="field"><label>Frequência semanal</label><select id="sWeeks" onchange="syncStudentFee()"><option value="1" ${weeks===1?'selected':''}>1x por semana — R$ 250</option><option value="2" ${weeks===2?'selected':''}>2x por semana — R$ 450</option><option value="3" ${weeks===3?'selected':''}>3x por semana — R$ 650</option></select></div>
+ 
+ </div></div>
+ <div class="student-form-section"><div class="student-form-title">3. Condição financeira</div>
+ <div class="student-billing-mode"><label class="billing-option"><input type="radio" name="studentBilling" value="free" ${!isPaid?'checked':''} onchange="toggleStudentBilling()"><span><b>🆓 Gratuito</b><small>Sem mensalidade</small></span></label><label class="billing-option"><input type="radio" name="studentBilling" value="paid" ${isPaid?'checked':''} onchange="toggleStudentBilling()"><span><b>💰 Com mensalidade</b><small>Valor definido pelo Teacher</small></span></label></div>
+ <div id="sFreeNote" class="registration-free ${isPaid?'hidden':''}"><b>🆓 Aluno gratuito</b><br><small>Este aluno não terá mensalidade cadastrada.</small></div>
+ <div id="sPaidFields" class="form-grid ${isPaid?'':'hidden'}"><div class="field"><label>Mensalidade (R$)</label><input id="sFee" type="number" min="0" step="0.01" value="${fee}" inputmode="decimal"><small>O valor é sugerido pela frequência, mas você pode alterar manualmente.</small></div></div>
+ </div>
+ ${!s?`<div class="student-form-section"><div class="student-form-title">4. Acesso à plataforma</div><div class="field"><label>🔑 Senha temporária *</label><div class="password-row"><input id="sTempPassword" type="text" minlength="6" placeholder="Definida pelo Teacher" required autocomplete="new-password"><button type="button" class="btn secondary" onclick="generateTempPassword()">Gerar</button><button type="button" class="btn ghost" onclick="copyStudentTempPassword()">📋 Copiar</button></div><small>O Teacher define a senha inicial e pode enviá-la ao aluno pelo WhatsApp. O aluno poderá alterá-la depois.</small></div></div>`:''}
+ <div class="student-form-section"><div class="student-form-title">${s?'4':'5'}. Observações</div><div class="field"><textarea id="sNotes" rows="3" placeholder="Ex.: objetivo do aluno, horários, observações pedagógicas...">${esc(s?.notes||'')}</textarea></div></div>
+ <div class="student-save-summary"><div><b>Confira antes de salvar</b><small>Nome, nível, frequência e condição financeira poderão ser alterados depois.</small></div><div class="student-save-values"><span id="studentBillingPreview">${isPaid?'💰 '+money(fee)+'/mês':'🆓 Gratuito'}</span><span>·</span><span>${weeks}x/semana</span></div></div>
+ <div class="modal-actions student-modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary student-save-btn">✓ ${s?'Salvar alterações':'Criar aluno'}</button></div>
+ </form>`);
+ toggleStudentBilling();
+ const feeEl=$('sFee');
+ if(feeEl)feeEl.addEventListener('input',()=>{const p=$('studentBillingPreview');if(p)p.textContent='💰 '+money(Number(feeEl.value||0))+'/mês'});
+ const weeksEl=$('sWeeks');
+ if(weeksEl)weeksEl.addEventListener('change',()=>{const p=$('studentBillingPreview');const paid=document.querySelector('input[name="studentBilling"]:checked')?.value==='paid';if(p&&paid)p.textContent='💰 '+money(Number($('sFee')?.value||0))+'/mês';});
+}
+async function saveStudentV4(e,id){
+ e.preventDefault();
+ const paid=document.querySelector('input[name="studentBilling"]:checked')?.value==='paid';
+ const obj={display_name:$('sName').value.trim(),email:$('sEmail').value.trim().toLowerCase()||null,current_level:$('sLevel').value,target_level:$('sTarget').value||null,monthly_fee:paid?Number($('sFee').value||0):0,lessons_per_week:Number($('sWeeks').value||1),phone:$('sPhone').value.trim()||null,notes:$('sNotes').value.trim()||null,status:'active'};
+ if(!obj.display_name)return toast('Informe o nome.','error');
+ if(!obj.email)return toast('Informe o e-mail.','error');
+ if(paid&&obj.monthly_fee<0)return toast('Informe uma mensalidade válida.','error');
+ if(id){const r=await sb.from('tic_students').update(obj).eq('id',id).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');closeModal();toast('Aluno atualizado.','success');return loadView('students')}
+ const pw=$('sTempPassword')?.value||'';if(pw.length<6)return toast('Defina uma senha temporária de 6+ caracteres.','error');
+ const r=await sb.functions.invoke('tic-student-admin',{body:{action:'create_student',...obj,temp_password:pw,redirect_to:location.origin+location.pathname}});
+ if(r.error)return toast(r.error.message||'Falha ao criar aluno.','error');
+ if(r.data?.error)return toast(r.data.error,'error');
+ let createdId=r.data?.student_id||r.data?.student?.id;
+ if(!createdId&&obj.email){const sr=await sb.from('tic_students').select('id').eq('teacher_id',session.user.id).eq('email',obj.email).maybeSingle();createdId=sr.data?.id||null}
+ closeModal();toast(r.data?.message||'Aluno criado.','success');await loadView('students');
+ if(createdId&&obj.phone){setTimeout(()=>shareStudentAccess(createdId),150)}else if(!obj.phone){toast('Aluno criado. Cadastre o WhatsApp para enviar o acesso por mensagem.','info')}
+}
 
 /* ---------- Course curriculum teacher: show unassigned lessons + click-through ---------- */
 async function openCourseCurriculum(courseId){
@@ -1944,80 +2012,27 @@ async function saveCourseV11(e,id){
  e.preventDefault();
  try{
    const uid=await ticTeacherAuthIdV12();
-
-   const {data:teacherProfile,error:teacherError}=await sb
-     .from('tic_profiles')
-     .select('id,role,active')
-     .eq('id',uid)
-     .maybeSingle();
-
-   if(teacherError)throw teacherError;
-   if(!teacherProfile)throw new Error('Perfil do Teacher não foi encontrado no Supabase.');
-   if(!['teacher','admin'].includes(teacherProfile.role))throw new Error('Esta conta não possui permissão de Teacher.');
-   if(teacherProfile.active===false)throw new Error('A conta do Teacher está inativa.');
-
-   const o={
-     teacher_id:uid,
-     title:$('g1').value.trim(),
-     level:$('g2').value,
-     description:$('g3').value.trim()||null
-   };
-
+   const o={teacher_id:uid,title:$('g1').value.trim(),level:$('g2').value,description:$('g3').value.trim()||null};
    if(!o.title)return toast('Informe o título.','error');
-
-   let courseId=id;
-
-   if(id){
-     const r=await sb.from('tic_courses')
-       .update(o)
-       .eq('id',id)
-       .eq('teacher_id',uid);
-
-     if(r.error)throw r.error;
-   }else{
-     courseId=crypto.randomUUID();
-
-     const r=await sb.from('tic_courses').insert({
-       id:courseId,
-       ...o
-     });
-
-     if(r.error)throw r.error;
-
+   let r;
+   if(id) r=await sb.from('tic_courses').update(o).eq('id',id).eq('teacher_id',uid);
+   else r=await sb.from('tic_courses').insert(o).select().single();
+   if(r.error)return toast('Não foi possível salvar: '+r.error.message,'error');
+   if(!id){
      const track=await ticEnsureDefaultTrackV11();
-
-     const {data:last,error:lastError}=await sb
-       .from('tic_course_track_items')
-       .select('position')
-       .eq('track_id',track.id)
-       .order('position',{ascending:false})
-       .limit(1)
-       .maybeSingle();
-
-     if(lastError)throw lastError;
-
+     const {data:last}=await sb.from('tic_course_track_items').select('position').eq('track_id',track.id).order('position',{ascending:false}).limit(1).maybeSingle();
      const nextPosition=Number(last?.position||0)+1;
-
+     // A relação Track + Curso é UNIQUE. Use upsert para não gerar erro
+     // quando o curso já estiver na sequência (por exemplo, após duplo clique
+     // ou quando o registro foi criado antes e a etapa de vínculo foi repetida).
      const ir=await sb.from('tic_course_track_items').upsert(
-       {
-         track_id:track.id,
-         course_id:courseId,
-         position:nextPosition
-       },
+       {track_id:track.id,course_id:r.data.id,position:nextPosition},
        {onConflict:'track_id,course_id'}
      );
-
-     if(ir.error)throw ir.error;
+     if(ir.error)return toast('Curso criado, mas não foi possível atualizar a sequência: '+ir.error.message,'error');
    }
-
-   closeModal();
-   toast(id?'Curso atualizado.':'Curso criado e adicionado à sequência.','success');
-   await coursesPageV11();
-
- }catch(err){
-   console.error('[Teacher Platform] saveCourseV11:',err);
-   toast(err?.message||'Não foi possível salvar o curso.','error');
- }
+   closeModal();toast(id?'Curso atualizado.':'Curso criado e adicionado à sequência.','success');coursesPage();
+ }catch(err){toast(err?.message||'Não foi possível salvar o curso.','error')}
 }
 
 openCourseForm=openCourseFormV11;
@@ -2275,6 +2290,17 @@ body{font-size:14px}
 .metric{font-size:13px}
 @media(max-width:1100px){.sidebar{width:235px}.main{margin-left:235px}.container{padding-left:22px;padding-right:22px}.quick-grid,.stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.sidebar{width:275px}.main{margin-left:0}.container{padding:20px 14px 55px}.page-head h1{font-size:24px}.card{padding:17px}.student-action-grid{grid-template-columns:1fr 1fr}.student-welcome h2{font-size:24px}.modal-card{padding:18px}}
+
+/* ---------- Student tab / new-student form UX ---------- */
+.modal-card{width:min(940px,calc(100vw - 36px));max-height:calc(100vh - 36px);padding:24px}
+.modal-card:has(.student-form){width:min(1040px,calc(100vw - 28px));max-height:calc(100vh - 28px);padding:0;overflow:hidden}
+.modal-card:has(.student-form) .modal-head{padding:22px 26px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:3}
+.student-form{margin-top:0;gap:0;max-height:calc(100vh - 120px);overflow:auto;padding:20px 26px 26px}
+.student-form-banner{display:flex;justify-content:space-between;gap:18px;align-items:center;background:linear-gradient(135deg,#f5f0ff,#fbfaff);border:1px solid #e5ddfb;border-radius:16px;padding:17px 18px;margin-bottom:15px}
+.student-form-kicker{display:block;font-size:9px;font-weight:900;letter-spacing:1.2px;color:var(--p);margin-bottom:4px}
+.student-form-banner h4{margin:0;font:800 18px 'Plus Jakarta Sans';color:#29263a}.student-form-banner small{display:block;color:var(--muted);font-size:11px;margin-top:4px}.student-form-badge{white-space:nowrap;padding:7px 10px;border-radius:99px;background:#eee8ff;color:var(--p);font-size:9px;font-weight:900}
+.student-form-section{border:1px solid var(--line);border-radius:15px;padding:16px;margin-bottom:12px;background:#fff}.student-form-title{font:800 12px 'Plus Jakarta Sans';color:#363241;margin-bottom:12px}.student-form-section .field small{font-size:10px;color:var(--muted);line-height:1.4}.optional{font-weight:500;color:#aaa8b6;font-size:9px}.student-billing-mode{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px}.billing-option{border:1px solid var(--line);border-radius:13px;padding:12px;display:flex!important;align-items:center;gap:10px;cursor:pointer;transition:.15s;background:#fff}.billing-option:has(input:checked){border-color:#bdaaf5;background:#faf8ff;box-shadow:0 0 0 2px #6844d80c}.billing-option input{width:auto!important}.billing-option b{display:block;font-size:12px}.billing-option small{display:block;color:var(--muted);font-size:10px;margin-top:2px}.registration-free{margin:0 0 11px}.password-row{display:grid;grid-template-columns:1fr auto auto;gap:8px}.password-row .btn{white-space:nowrap}.student-save-summary{display:flex;justify-content:space-between;align-items:center;gap:15px;border-radius:13px;background:#f7f6fa;border:1px solid var(--line);padding:12px 14px;margin-top:2px}.student-save-summary b{display:block;font-size:11px}.student-save-summary small{display:block;color:var(--muted);font-size:9px;margin-top:2px}.student-save-values{display:flex;gap:7px;align-items:center;white-space:nowrap;font-size:11px;font-weight:800;color:var(--p)}.student-modal-actions{padding-top:4px}.student-save-btn{min-width:140px}
+@media(max-width:760px){.modal{padding:0}.modal-card,.modal-card:has(.student-form){width:100vw;max-width:none;height:100vh;max-height:none;border-radius:0}.modal-card:has(.student-form) .modal-head{padding:16px 17px 13px}.student-form{max-height:calc(100vh - 72px);padding:14px 14px 28px}.student-form-banner{align-items:flex-start;padding:14px}.student-form-banner h4{font-size:16px}.student-form-badge{display:none}.student-form-section{padding:13px}.student-billing-mode{grid-template-columns:1fr}.password-row{grid-template-columns:1fr 1fr}.password-row .btn:first-of-type{grid-column:1}.password-row .btn:last-of-type{grid-column:2}.student-save-summary{align-items:flex-start;flex-direction:column}.student-save-values{white-space:normal}.student-modal-actions{position:sticky;bottom:0;background:#fff;padding:11px 0 0;margin:0 -2px}.student-save-btn{flex:1}.student-modal-actions .ghost{min-width:90px}}
 </style>
 <script>
 /* V19 — canonical data layer fixes. Existing data is preserved; no destructive migration. */
