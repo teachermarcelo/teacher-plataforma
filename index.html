@@ -1480,7 +1480,27 @@ function ticResponsiveSrcdoc(content){
  if(!c)return '';
  const meta='<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">';
  if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}`);
- return '<!doctype html><html><head>'+meta+'</head><body>'+c+'</body></html>';
+ return '<!doctype html><html><head>'+meta+'</head><body>'+c+'
+<style id="tic-v23-real-scroll-fix">
+/* V23 — real modal scrolling: the modal body is the flex viewport and tic21-body is its scroller. */
+#modal:has(.tic21-shell){position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:12px!important;overflow:hidden!important;z-index:9999!important}
+#modal:has(.tic21-shell)>.modal-card.tic21-modal{display:flex!important;flex-direction:column!important;width:min(1320px,calc(100vw - 24px))!important;height:calc(100vh - 24px)!important;max-height:calc(100vh - 24px)!important;min-height:0!important;padding:0!important;overflow:hidden!important}
+#modal:has(.tic21-shell)>.modal-card.tic21-modal>.modal-head{display:none!important}
+#modal:has(.tic21-shell) #modalBody{display:flex!important;flex:1 1 auto!important;min-height:0!important;height:100%!important;overflow:hidden!important;padding:0!important}
+#modal:has(.tic21-shell) #modalBody>.tic21-shell{flex:1 1 auto!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;overflow:hidden!important}
+#modal:has(.tic21-shell) .tic21-body{flex:1 1 auto!important;min-height:0!important;height:0!important;max-height:none!important;overflow-y:scroll!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;scrollbar-width:auto!important}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar{width:12px}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-track{background:#eeeaf5}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-thumb{background:#9b8ac5;border-radius:10px;border:3px solid #eeeaf5}
+@media(max-width:760px){
+ #modal:has(.tic21-shell){padding:0!important;align-items:stretch!important}
+ #modal:has(.tic21-shell)>.modal-card.tic21-modal{width:100vw!important;height:100vh!important;max-height:100vh!important;border-radius:0!important}
+ #modal:has(.tic21-shell) #modalBody{height:100%!important}
+ #modal:has(.tic21-shell) .tic21-body{padding:12px 12px 80px!important}
+}
+</style>
+
+</body></html>';
 }
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
@@ -1600,7 +1620,27 @@ function ticViewerTextFrame(content){
  const c=String(content||'').trim();if(!c)return '';
  const looksHtml=/<(?:html|body|div|p|h[1-6]|ul|ol|table|span|strong|em|img|a\b|section|article)[\s>]/i.test(c);
  if(looksHtml)return ticResponsiveSrcdoc(c);
- return '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;margin:0;padding:28px;line-height:1.7;color:#202033}*{box-sizing:border-box}a{overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>'+esc(c).replace(/\n/g,'<br>')+'</body></html>';
+ return '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;margin:0;padding:28px;line-height:1.7;color:#202033}*{box-sizing:border-box}a{overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>'+esc(c).replace(/\n/g,'<br>')+'
+<style id="tic-v23-real-scroll-fix">
+/* V23 — real modal scrolling: the modal body is the flex viewport and tic21-body is its scroller. */
+#modal:has(.tic21-shell){position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:12px!important;overflow:hidden!important;z-index:9999!important}
+#modal:has(.tic21-shell)>.modal-card.tic21-modal{display:flex!important;flex-direction:column!important;width:min(1320px,calc(100vw - 24px))!important;height:calc(100vh - 24px)!important;max-height:calc(100vh - 24px)!important;min-height:0!important;padding:0!important;overflow:hidden!important}
+#modal:has(.tic21-shell)>.modal-card.tic21-modal>.modal-head{display:none!important}
+#modal:has(.tic21-shell) #modalBody{display:flex!important;flex:1 1 auto!important;min-height:0!important;height:100%!important;overflow:hidden!important;padding:0!important}
+#modal:has(.tic21-shell) #modalBody>.tic21-shell{flex:1 1 auto!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;overflow:hidden!important}
+#modal:has(.tic21-shell) .tic21-body{flex:1 1 auto!important;min-height:0!important;height:0!important;max-height:none!important;overflow-y:scroll!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;scrollbar-width:auto!important}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar{width:12px}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-track{background:#eeeaf5}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-thumb{background:#9b8ac5;border-radius:10px;border:3px solid #eeeaf5}
+@media(max-width:760px){
+ #modal:has(.tic21-shell){padding:0!important;align-items:stretch!important}
+ #modal:has(.tic21-shell)>.modal-card.tic21-modal{width:100vw!important;height:100vh!important;max-height:100vh!important;border-radius:0!important}
+ #modal:has(.tic21-shell) #modalBody{height:100%!important}
+ #modal:has(.tic21-shell) .tic21-body{padding:12px 12px 80px!important}
+}
+</style>
+
+</body></html>';
 }
 
 function ticFrameHtml(content){ const c=String(content||'').trim(); return c ? ticPlainOrHtmlFrame(c) : ''; }
@@ -1831,9 +1871,49 @@ function ticPlainOrHtmlFrame(value){
     if(/<html[\s>]/i.test(c)){
       return c.replace(/<head([^>]*)>/i,`<head$1>${css}`);
     }
-    return `<!doctype html><html><head>${css}</head><body>${c}</body></html>`;
+    return `<!doctype html><html><head>${css}</head><body>${c}
+<style id="tic-v23-real-scroll-fix">
+/* V23 — real modal scrolling: the modal body is the flex viewport and tic21-body is its scroller. */
+#modal:has(.tic21-shell){position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:12px!important;overflow:hidden!important;z-index:9999!important}
+#modal:has(.tic21-shell)>.modal-card.tic21-modal{display:flex!important;flex-direction:column!important;width:min(1320px,calc(100vw - 24px))!important;height:calc(100vh - 24px)!important;max-height:calc(100vh - 24px)!important;min-height:0!important;padding:0!important;overflow:hidden!important}
+#modal:has(.tic21-shell)>.modal-card.tic21-modal>.modal-head{display:none!important}
+#modal:has(.tic21-shell) #modalBody{display:flex!important;flex:1 1 auto!important;min-height:0!important;height:100%!important;overflow:hidden!important;padding:0!important}
+#modal:has(.tic21-shell) #modalBody>.tic21-shell{flex:1 1 auto!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;overflow:hidden!important}
+#modal:has(.tic21-shell) .tic21-body{flex:1 1 auto!important;min-height:0!important;height:0!important;max-height:none!important;overflow-y:scroll!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;scrollbar-width:auto!important}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar{width:12px}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-track{background:#eeeaf5}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-thumb{background:#9b8ac5;border-radius:10px;border:3px solid #eeeaf5}
+@media(max-width:760px){
+ #modal:has(.tic21-shell){padding:0!important;align-items:stretch!important}
+ #modal:has(.tic21-shell)>.modal-card.tic21-modal{width:100vw!important;height:100vh!important;max-height:100vh!important;border-radius:0!important}
+ #modal:has(.tic21-shell) #modalBody{height:100%!important}
+ #modal:has(.tic21-shell) .tic21-body{padding:12px 12px 80px!important}
+}
+</style>
+
+</body></html>`;
   }
-  return `<!doctype html><html><head>${css}</head><body><div style="white-space:pre-wrap">${esc(c)}</div></body></html>`;
+  return `<!doctype html><html><head>${css}</head><body><div style="white-space:pre-wrap">${esc(c)}</div>
+<style id="tic-v23-real-scroll-fix">
+/* V23 — real modal scrolling: the modal body is the flex viewport and tic21-body is its scroller. */
+#modal:has(.tic21-shell){position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:12px!important;overflow:hidden!important;z-index:9999!important}
+#modal:has(.tic21-shell)>.modal-card.tic21-modal{display:flex!important;flex-direction:column!important;width:min(1320px,calc(100vw - 24px))!important;height:calc(100vh - 24px)!important;max-height:calc(100vh - 24px)!important;min-height:0!important;padding:0!important;overflow:hidden!important}
+#modal:has(.tic21-shell)>.modal-card.tic21-modal>.modal-head{display:none!important}
+#modal:has(.tic21-shell) #modalBody{display:flex!important;flex:1 1 auto!important;min-height:0!important;height:100%!important;overflow:hidden!important;padding:0!important}
+#modal:has(.tic21-shell) #modalBody>.tic21-shell{flex:1 1 auto!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;overflow:hidden!important}
+#modal:has(.tic21-shell) .tic21-body{flex:1 1 auto!important;min-height:0!important;height:0!important;max-height:none!important;overflow-y:scroll!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;scrollbar-width:auto!important}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar{width:12px}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-track{background:#eeeaf5}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-thumb{background:#9b8ac5;border-radius:10px;border:3px solid #eeeaf5}
+@media(max-width:760px){
+ #modal:has(.tic21-shell){padding:0!important;align-items:stretch!important}
+ #modal:has(.tic21-shell)>.modal-card.tic21-modal{width:100vw!important;height:100vh!important;max-height:100vh!important;border-radius:0!important}
+ #modal:has(.tic21-shell) #modalBody{height:100%!important}
+ #modal:has(.tic21-shell) .tic21-body{padding:12px 12px 80px!important}
+}
+</style>
+
+</body></html>`;
 }
 
 /* TIC FINAL CONNECTIVITY LAYER — appended intentionally so it overrides broken/legacy viewer versions without removing existing features. */
@@ -2358,6 +2438,26 @@ html.tic21-page-lock, body.tic21-page-lock{overflow:hidden!important;height:100%
   if(oldClose){window.closeModal=function(){try{return oldClose.apply(this,arguments)}finally{unlock();}};}
 })();
 </script>
+
+<style id="tic-v23-real-scroll-fix">
+/* V23 — real modal scrolling: the modal body is the flex viewport and tic21-body is its scroller. */
+#modal:has(.tic21-shell){position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:12px!important;overflow:hidden!important;z-index:9999!important}
+#modal:has(.tic21-shell)>.modal-card.tic21-modal{display:flex!important;flex-direction:column!important;width:min(1320px,calc(100vw - 24px))!important;height:calc(100vh - 24px)!important;max-height:calc(100vh - 24px)!important;min-height:0!important;padding:0!important;overflow:hidden!important}
+#modal:has(.tic21-shell)>.modal-card.tic21-modal>.modal-head{display:none!important}
+#modal:has(.tic21-shell) #modalBody{display:flex!important;flex:1 1 auto!important;min-height:0!important;height:100%!important;overflow:hidden!important;padding:0!important}
+#modal:has(.tic21-shell) #modalBody>.tic21-shell{flex:1 1 auto!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;overflow:hidden!important}
+#modal:has(.tic21-shell) .tic21-body{flex:1 1 auto!important;min-height:0!important;height:0!important;max-height:none!important;overflow-y:scroll!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;scrollbar-width:auto!important}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar{width:12px}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-track{background:#eeeaf5}
+#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-thumb{background:#9b8ac5;border-radius:10px;border:3px solid #eeeaf5}
+@media(max-width:760px){
+ #modal:has(.tic21-shell){padding:0!important;align-items:stretch!important}
+ #modal:has(.tic21-shell)>.modal-card.tic21-modal{width:100vw!important;height:100vh!important;max-height:100vh!important;border-radius:0!important}
+ #modal:has(.tic21-shell) #modalBody{height:100%!important}
+ #modal:has(.tic21-shell) .tic21-body{padding:12px 12px 80px!important}
+}
+</style>
+
 </body>
 </html>
 
