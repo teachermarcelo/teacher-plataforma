@@ -7,7 +7,150 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+/* TIC TASK ENGINE V2 — additive upgrade: preserves existing task system */
+(function(){
+  const CEFR=['A0','A1','A2','B1','B2','C1','C2'];
+  const SKILLS=['Grammar','Vocabulary','Reading','Listening','Speaking','Writing','Pronunciation','Integrated Skills'];
+  const TASK_LEVELS=[['quick','⚡ Quick Task','3–5 min'],['lesson','📘 Lesson Task','10–20 min'],['assessment','🎯 Assessment','20–60 min']];
+  const TYPES=[['multiple_choice','🔘 Multiple Choice'],['true_false','✅ True / False'],['fill_blank','✍️ Fill in the blank'],['short_answer','📝 Short Answer'],['word_order','🔤 Word Order']];
+  window.__ticTaskQuestions=window.__ticTaskQuestions||[];
+  const uid=()=> 'q_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
+  const val=id=>document.getElementById(id)?.value||'';
+  const checked=id=>!!document.getElementById(id)?.checked;
+
+  function questionTypeLabel(t){return (TYPES.find(x=>x[0]===t)||['','Question'])[1]}
+  function normalizeQuestions(q){
+    if(!Array.isArray(q))return [];
+    return q.map(x=>({id:x.id||uid(),type:x.type||'multiple_choice',prompt:x.prompt||'',options:Array.isArray(x.options)?x.options:[],answer:x.answer??'',points:Number(x.points||1),placeholder:x.placeholder||''}));
+  }
+  function renderBuilder(){
+    const box=document.getElementById('taskQuestionBuilder');if(!box)return;
+    box.innerHTML=window.__ticTaskQuestions.length?window.__ticTaskQuestions.map((q,i)=>`
+      <article class="task-q-card" data-qid="${q.id}">
+        <div class="task-q-head"><div><span class="task-q-number">${i+1}</span><b>${questionTypeLabel(q.type)}</b></div><div class="task-q-actions"><button type="button" class="icon-btn" onclick="ticMoveQuestion('${q.id}',-1)" title="Subir">↑</button><button type="button" class="icon-btn" onclick="ticMoveQuestion('${q.id}',1)" title="Descer">↓</button><button type="button" class="icon-btn danger" onclick="ticRemoveQuestion('${q.id}')" title="Excluir">×</button></div></div>
+        <div class="field"><label>Enunciado</label><textarea class="tq-prompt" rows="2" placeholder="Ex.: Choose the correct answer.">${esc(q.prompt)}</textarea></div>
+        <div class="form-grid">
+          <div class="field"><label>Tipo</label><select class="tq-type">${TYPES.map(t=>`<option value="${t[0]}" ${q.type===t[0]?'selected':''}>${t[1]}</option>`).join('')}</select></div>
+          <div class="field"><label>Pontos</label><input class="tq-points" type="number" min="1" value="${q.points||1}"></div>
+        </div>
+        <div class="tq-specific">${renderSpecific(q)}</div>
+      </article>`).join(''):`<div class="task-builder-empty"><div>🧩</div><b>Nenhuma questão criada</b><span>Adicione questões ou use o editor HTML abaixo.</span></div>`;
+    box.querySelectorAll('.task-q-card').forEach(card=>{
+      card.querySelector('.tq-type').addEventListener('change',e=>{const q=window.__ticTaskQuestions.find(x=>x.id===card.dataset.qid);if(q){q.type=e.target.value;q.options=q.options||[];renderBuilder()}});
+      card.querySelector('.tq-prompt').addEventListener('input',e=>{const q=window.__ticTaskQuestions.find(x=>x.id===card.dataset.qid);if(q)q.prompt=e.target.value});
+      card.querySelector('.tq-points').addEventListener('input',e=>{const q=window.__ticTaskQuestions.find(x=>x.id===card.dataset.qid);if(q)q.points=Number(e.target.value||1)});
+      card.querySelectorAll('[data-opt-index]').forEach(el=>el.addEventListener('input',e=>{const q=window.__ticTaskQuestions.find(x=>x.id===card.dataset.qid);if(q)q.options[Number(e.target.dataset.optIndex)]=e.target.value}));
+      const ans=card.querySelector('.tq-answer');if(ans)ans.addEventListener('input',e=>{const q=window.__ticTaskQuestions.find(x=>x.id===card.dataset.qid);if(q)q.answer=e.target.value});
+      card.querySelectorAll('.tq-answer-select').forEach(el=>el.addEventListener('change',e=>{const q=window.__ticTaskQuestions.find(x=>x.id===card.dataset.qid);if(q)q.answer=e.target.value}));
+    });
+  }
+  function renderSpecific(q){
+    if(q.type==='multiple_choice'){
+      const opts=[0,1,2,3].map(i=>`<div class="inline-option"><input data-opt-index="${i}" value="${esc(q.options?.[i]||'')}" placeholder="Opção ${i+1}"><span><input class="tq-answer-select" type="radio" name="ans_${q.id}" value="${i}" ${String(q.answer)===String(i)?'checked':''}> correta</span></div>`).join('');
+      return `<div class="field"><label>Alternativas <small>Marque a correta</small></label>${opts}</div>`;
+    }
+    if(q.type==='true_false')return `<div class="field"><label>Resposta correta</label><select class="tq-answer-select"><option value="true" ${String(q.answer)==='true'?'selected':''}>Verdadeiro</option><option value="false" ${String(q.answer)==='false'?'selected':''}>Falso</option></select></div>`;
+    if(q.type==='fill_blank')return `<div class="field"><label>Resposta esperada</label><input class="tq-answer" value="${esc(q.answer||'')}" placeholder="Ex.: goes"></div>`;
+    if(q.type==='short_answer')return `<div class="field"><label>Resposta / palavras-chave</label><input class="tq-answer" value="${esc(q.answer||'')}" placeholder="Opcional: resposta esperada ou palavras-chave"></div>`;
+    if(q.type==='word_order')return `<div class="field"><label>Frase correta</label><input class="tq-answer" value="${esc(q.answer||'')}" placeholder="Ex.: I study English every day."></div>`;
+    return '';
+  }
+  window.ticAddQuestion=function(type='multiple_choice'){window.__ticTaskQuestions.push({id:uid(),type,prompt:'',options:['','','',''],answer:'',points:1});renderBuilder()};
+  window.ticRemoveQuestion=function(id){window.__ticTaskQuestions=window.__ticTaskQuestions.filter(q=>q.id!==id);renderBuilder()};
+  window.ticMoveQuestion=function(id,dir){const i=window.__ticTaskQuestions.findIndex(q=>q.id===id),j=i+dir;if(i<0||j<0||j>=window.__ticTaskQuestions.length)return;[window.__ticTaskQuestions[i],window.__ticTaskQuestions[j]]=[window.__ticTaskQuestions[j],window.__ticTaskQuestions[i]];renderBuilder()};
+  window.ticAddQuestionMenu=function(){openModal('➕ Adicionar questão',`<div class="task-type-grid">${TYPES.map(t=>`<button class="task-type-choice" onclick="closeModal();ticAddQuestion('${t[0]}')"><b>${t[1]}</b><small>Adicionar ao Task Builder</small></button>`).join('')}</div>`) };
+  window.ticQuestionsJson=function(){return {version:2,questions:window.__ticTaskQuestions.map(q=>({...q,options:q.options||[]}))}};
+  window.ticLoadQuestions=function(data){window.__ticTaskQuestions=normalizeQuestions(data?.questions||[]);renderBuilder()};
+
+  window.openAssignmentForm=async function(x=null){
+    const [{data:students,error},{data:classes}]=await Promise.all([
+      sb.from('tic_students').select('id,display_name,current_level').eq('teacher_id',session.user.id).eq('status','active').order('display_name'),
+      sb.from('tic_classes').select('id,name,level').eq('teacher_id',session.user.id).eq('status','active').order('name')
+    ]);
+    if(error)return toast('Não foi possível carregar os alunos: '+error.message,'error');
+    let existing={};
+    if(x?.id){const {data:a}=await sb.from('tic_assignments').select('cefr_level,skill,task_level,content_json').eq('id',x.id).maybeSingle();existing=a||{}}
+    ticLoadQuestions(existing.content_json||x?.content_json||{});
+    openModal(x?'✏️ Editar Task':'✨ Criar nova Task',`<form class="task-builder-form" onsubmit="saveAssignmentV2(event,'${x?.id||''}')">
+      <div class="task-wizard-head"><div><span class="eyebrow">TASK BUILDER</span><h2>${x?'Editar tarefa':'Criar uma tarefa'}</h2><p>Monte a atividade, teste como aluno e depois distribua.</p></div><div class="task-wizard-progress"><span class="active">1</span><i></i><span class="active">2</span><i></i><span>3</span></div></div>
+      <section class="task-builder-section"><div class="task-section-title"><span>01</span><div><b>Identidade pedagógica</b><small>Organize a Task por CEFR, habilidade e finalidade.</small></div></div>
+        <div class="task-hero-grid"><div class="field"><label>Título da tarefa</label><input id="a1" value="${esc(x?.title||'')}" placeholder="Ex.: Present Simple · Daily Routine" required></div><div class="field"><label>Imagem de capa</label><input id="aCover" value="${esc(x?.cover_image_url||'')}" placeholder="URL da imagem (opcional)"></div></div>
+        <div class="form-grid four"><div class="field"><label>CEFR</label><select id="aCefr">${CEFR.map(v=>`<option ${v===(existing.cefr_level||'A1')?'selected':''}>${v}</option>`).join('')}</select></div><div class="field"><label>Skill</label><select id="aSkill">${SKILLS.map(v=>`<option ${v===(existing.skill||'Grammar')?'selected':''}>${v}</option>`).join('')}</select></div><div class="field"><label>Nível da Task</label><select id="aTaskLevel">${TASK_LEVELS.map(v=>`<option value="${v[0]}" ${v[0]===(existing.task_level||'lesson')?'selected':''}>${v[1]} · ${v[2]}</option>`).join('')}</select></div><div class="field"><label>Tipo principal</label><select id="a3">${['assignment','quiz','speaking','writing','listening','reading','project','audio','file'].map(v=>`<option value="${v}" ${v===(x?.assignment_type||'assignment')?'selected':''}>${v}</option>`).join('')}</select></div></div>
+      </section>
+      <section class="task-builder-section"><div class="task-section-title"><span>02</span><div><b>Instruções</b><small>Explique claramente o que o aluno precisa fazer.</small></div></div><div class="field"><textarea id="a2" rows="3" placeholder="Ex.: Read the sentences and choose the correct answer.">${esc(x?.instructions||'')}</textarea></div></section>
+      <section class="task-builder-section"><div class="task-section-title"><span>03</span><div><b>Questões interativas</b><small>Crie exercícios sem precisar escrever HTML.</small></div><button type="button" class="btn primary" onclick="ticAddQuestionMenu()">＋ Adicionar questão</button></div><div id="taskQuestionBuilder"></div></section>
+      <section class="task-builder-section"><div class="task-section-title"><span>04</span><div><b>HTML avançado</b><small>Preserva seu editor HTML atual para atividades especiais.</small><label class="switchline"><input id="aHtmlEnabled" type="checkbox" ${x?.html_enabled?'checked':''} onchange="$('assignmentHtmlBox')?.classList.toggle('hidden',!this.checked)"> Ativar HTML interativo</label></div></div><div id="assignmentHtmlBox" class="advanced-html ${x?.html_enabled?'':'hidden'}"><textarea id="aHtmlContent" rows="12" placeholder="Cole aqui seu HTML interativo...">${esc(x?.html_content||'')}</textarea><div class="builder-actions"><button type="button" class="btn secondary" onclick="previewAssignmentHtml()">👁 Preview</button><button type="button" class="btn ghost" onclick="ticPreviewTaskBuilder()">🎓 Ver como aluno</button><label class="switchline"><input id="aMulti" type="checkbox" ${x?.allow_multiple_attempts!==false?'checked':''}> Permitir múltiplas tentativas</label></div></div></section>
+      <section class="task-builder-section"><div class="task-section-title"><span>05</span><div><b>Configuração</b><small>Prazo, pontos e prioridade.</small></div></div><div class="form-grid three"><div class="field"><label>Prazo</label><input id="a5" type="datetime-local" value="${x?.due_at?new Date(x.due_at).toISOString().slice(0,16):''}"></div><div class="field"><label>Pontos</label><input id="a6" type="number" min="0" value="${x?.points??10}"></div><div class="field"><label>Prioridade</label><select id="a4"><option value="low" ${x?.priority==='low'?'selected':''}>Baixa</option><option value="normal" ${!x||x?.priority==='normal'?'selected':''}>Normal</option><option value="high" ${x?.priority==='high'?'selected':''}>Alta</option></select></div></div></section>
+      <section class="task-builder-section"><div class="task-section-title"><span>06</span><div><b>Materiais e recursos</b><small>Continue usando os recursos existentes.</small></div></div><div class="resource-box"><div class="resource-head"><b>📚 Recursos</b><button type="button" class="btn secondary" onclick="addResourceRow('aResources')">＋ Adicionar recurso</button></div><div id="aResources"></div></div></section>
+      <section class="task-builder-section"><div class="task-section-title"><span>07</span><div><b>Distribuição</b><small>${x?'As atribuições existentes serão preservadas.':'Escolha aluno(s) ou uma turma.'}</small></div></div>${x?'<div class="notice">📌 Editar a Task não remove as atribuições já existentes. Use <b>Atribuir</b> na lista para adicionar novos alunos.</div>':`<div class="form-grid"><div class="field"><label>Destino</label><select id="a7type" onchange="renderAssignmentTarget()"><option value="students">👤 Aluno(s)</option><option value="class">🏫 Turma inteira</option></select></div><div class="field"><label>Notificação</label><select id="a7notify"><option value="none">Somente plataforma</option><option value="whatsapp">📱 Preparar WhatsApp</option></select></div></div><div id="a7target"></div>`}</section>
+      <div class="task-sticky-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button type="button" class="btn secondary" onclick="ticPreviewTaskBuilder()">👁 Ver como aluno</button><button class="btn primary" id="assignmentSaveBtn">💾 Salvar Task</button></div>
+    </form>`);
+    renderResourceRows('aResources',x?.resource_items||[]);if(!x)renderAssignmentTarget();renderBuilder();
+  };
+
+  window.saveAssignmentV2=async function(e,id){
+    e.preventDefault();const btn=$('assignmentSaveBtn');if(btn){btn.disabled=true;btn.textContent='Salvando...'}
+    const questions=ticQuestionsJson();
+    const o={teacher_id:session.user.id,title:val('a1').trim(),instructions:val('a2').trim(),assignment_type:val('a3'),priority:val('a4'),due_at:val('a5')?new Date(val('a5')).toISOString():null,points:Number(val('a6')||0),resource_items:collectResources('aResources'),cover_image_url:val('aCover').trim()||null,html_enabled:checked('aHtmlEnabled'),html_content:checked('aHtmlEnabled')?(val('aHtmlContent')||''):null,allow_multiple_attempts:document.getElementById('aMulti')?.checked!==false,active:true,cefr_level:val('aCefr')||'A1',skill:val('aSkill')||'Grammar',task_level:val('aTaskLevel')||'lesson',content_json:questions};
+    let r=id?await sb.from('tic_assignments').update(o).eq('id',id).eq('teacher_id',session.user.id).select().single():await sb.from('tic_assignments').insert(o).select().single();
+    if(r.error){if(btn){btn.disabled=false;btn.textContent='💾 Salvar Task'}return toast('Não foi possível salvar: '+r.error.message,'error')}
+    if(!id){let studentIds=[],classId=null;if(val('a7type')==='class'){classId=val('a7class')||null;if(!classId)return toast('Selecione a turma.','error');const {data:members,error:me}=await sb.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active');if(me){await sb.from('tic_assignments').delete().eq('id',r.data.id);return toast(me.message,'error')}studentIds=(members||[]).map(m=>m.student_id)}else studentIds=[...($('a7students')?.selectedOptions||[])].map(o=>o.value);studentIds=[...new Set(studentIds)].filter(Boolean);if(!studentIds.length){await sb.from('tic_assignments').delete().eq('id',r.data.id);return toast('Selecione pelo menos um aluno ou uma turma.','error')}if(classId){const ur=await sb.from('tic_assignments').update({class_id:classId}).eq('id',r.data.id);if(ur.error){await sb.from('tic_assignments').delete().eq('id',r.data.id);return toast(ur.error.message,'error')}}const rows=studentIds.map(student_id=>({assignment_id:r.data.id,student_id,status:'pending',active:true}));const rr=await sb.from('tic_task_assignments').insert(rows);if(rr.error){await sb.from('tic_assignments').delete().eq('id',r.data.id);return toast('A tarefa foi criada, mas não foi vinculada aos alunos: '+rr.error.message,'error')}}
+    closeModal();toast(id?'Task atualizada.':'Task criada e distribuída.','success');loadView('assignments');
+  };
+
+  window.ticPreviewTaskBuilder=function(){
+    const data={id:'preview',title:val('a1')||'Task Preview',instructions:val('a2'),cefr_level:val('aCefr'),skill:val('aSkill'),task_level:val('aTaskLevel'),points:Number(val('a6')||0),html_enabled:checked('aHtmlEnabled'),html_content:val('aHtmlContent'),resource_items:collectResources('aResources'),content_json:ticQuestionsJson()};
+    openModal('🎓 Preview · como aluno',ticRenderStudentTaskPreview(data));
+  };
+  function autoGrade(qs,answers){let earned=0,total=0;qs.forEach(q=>{const pts=Number(q.points||1);total+=pts;const a=answers[q.id];let ok=false;if(q.type==='multiple_choice')ok=String(a)===String(q.answer);else if(q.type==='true_false')ok=String(a)===String(q.answer);else if(q.type==='fill_blank'||q.type==='word_order')ok=String(a||'').trim().toLowerCase()===String(q.answer||'').trim().toLowerCase();else if(q.type==='short_answer'){const keys=String(q.answer||'').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean);ok=!keys.length?false:keys.some(k=>String(a||'').toLowerCase().includes(k))}if(ok)earned+=pts});return {earned,total,percent:total?Math.round(earned/total*100):null}}
+  function renderStudentQuestions(data,interactive=true){const qs=normalizeQuestions(data?.content_json?.questions||[]);if(!qs.length)return '';return `<div class="student-question-stack">${qs.map((q,i)=>{let body='';if(q.type==='multiple_choice')body=(q.options||[]).map((o,j)=>`<label class="student-option"><input type="radio" name="sq_${q.id}" value="${j}"><span>${esc(o||'Opção '+(j+1))}</span></label>`).join('');else if(q.type==='true_false')body=`<label class="student-option"><input type="radio" name="sq_${q.id}" value="true"><span>Verdadeiro</span></label><label class="student-option"><input type="radio" name="sq_${q.id}" value="false"><span>Falso</span></label>`;else if(q.type==='word_order')body=`<input class="student-answer-input" data-answer="${q.id}" placeholder="Digite a frase na ordem correta...">`;else body=`<input class="student-answer-input" data-answer="${q.id}" placeholder="${esc(q.placeholder||'Digite sua resposta...')}">`;return `<article class="student-question"><div class="student-question-head"><span>${i+1}</span><b>${esc(q.prompt||'Question')}</b><em>${q.points||1} pt</em></div><div class="student-question-body">${body}</div></article>`}).join('')}</div>`}
+  window.ticRenderStudentTaskPreview=function(data){return `<div class="student-task-preview"><div class="student-task-cover"><div><span class="badge blue">${esc(data.cefr_level||'A1')}</span><span class="badge green">${esc(data.skill||'Grammar')}</span><h1>${esc(data.title||'Task')}</h1><p>${esc(data.instructions||'Realize a atividade com atenção.')}</p></div><span class="preview-pill">${data.points||0} pts</span></div>${data.html_enabled&&data.html_content?`<div class="viewer-panel"><div class="viewer-panel-head"><b>🧩 HTML interativo</b></div><iframe class="preview-html-frame" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox" srcdoc="${esc(ticResponsiveSrcdoc(data.html_content))}"></iframe></div>`:''}${renderStudentQuestions(data)}<div class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderLessonResources(data)}</div><div class="task-preview-footer"><button class="btn primary" onclick="toast('Preview concluído. No modo aluno, o envio ficará registrado no histórico.','success')">📤 Enviar resposta</button></div></div>`};
+
+  window.openStudentTask=async function(taskId){
+    const s=await studentRecord();if(!s)return;
+    const {data:ta,error}=await sb.from('tic_task_assignments').select('id,status,active,completed_at,assigned_at,assignment_id').eq('student_id',s.id).eq('active',true).or(`id.eq.${taskId},assignment_id.eq.${taskId}`).maybeSingle();
+    if(error||!ta)return toast(error?.message||'Task não encontrada ou não está disponível para sua conta.','error');
+    return openStudentTaskViewer(ta.id);
+  };
+
+  window.studentTasks=async function(){
+    const s=await studentRecord();if(!s){$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}
+    const {data:tas,error}=await sb.from('tic_task_assignments').select('id,status,active,removed_at,completed_at,assigned_at,assignment_id').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false});
+    if(error){$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar suas Tasks.</b><p>${esc(error.message)}</p></div>`;return}
+    const ids=[...new Set((tas||[]).map(x=>x.assignment_id).filter(Boolean))];let amap=new Map();if(ids.length){const {data:as}=await sb.from('tic_assignments').select('id,title,instructions,due_at,points,assignment_type,cefr_level,skill,task_level,html_enabled,cover_image_url').in('id',ids).eq('active',true);(as||[]).forEach(a=>amap.set(a.id,a))}
+    const cards=(tas||[]).map(ta=>{const a=amap.get(ta.assignment_id);if(!a)return '';const overdue=a.due_at&&new Date(a.due_at)<new Date()&&ta.status!=='reviewed';return `<article class="student-task-card ${overdue?'is-overdue':''}" id="task_${ta.id}" onclick="openStudentTaskViewer('${ta.id}')"><div class="student-task-card-top"><div class="task-icon">🧩</div><div class="student-task-title"><div><span class="badge blue">${esc(a.cefr_level||'A1')}</span><span class="badge gray">${esc(a.skill||a.assignment_type||'Task')}</span></div><h3>${esc(a.title)}</h3><p>${esc((a.instructions||'').replace(/<[^>]+>/g,'').slice(0,110))}</p></div><div class="task-status-badge">${badge(ta.status)}</div></div><div class="student-task-card-meta"><span>⭐ ${a.points||0} pontos</span><span>⏱ ${a.task_level==='quick'?'Quick Task':a.task_level==='assessment'?'Assessment':'Lesson Task'}</span><span>${a.due_at?(overdue?'⚠️ Vencida · ':'⏰ ')+fmtDate(a.due_at):'Sem prazo'}</span><button class="btn primary sm" onclick="event.stopPropagation();openStudentTaskViewer('${ta.id}')">Abrir Task →</button></div></article>`}).join('');
+    setPage('My Tasks','Atividades atribuídas pelo Teacher.');$('content').innerHTML=`<div class="task-student-dashboard"><div class="task-stats-row"><div><b>${tas?.length||0}</b><small>Tasks</small></div><div><b>${(tas||[]).filter(x=>x.status==='pending').length}</b><small>Pendentes</small></div><div><b>${(tas||[]).filter(x=>['submitted','reviewed'].includes(x.status)).length}</b><small>Entregues</small></div></div><div class="task-filter-bar"><span>Filtrar</span><button class="filter-chip active" onclick="ticFilterStudentTasks(this,'all')">Todas</button><button class="filter-chip" onclick="ticFilterStudentTasks(this,'pending')">Pendentes</button><button class="filter-chip" onclick="ticFilterStudentTasks(this,'submitted')">Entregues</button></div><div id="studentTaskGrid" class="student-task-grid">${cards||'<div class="card empty">Nenhuma Task atribuída.</div>'}</div></div>`;
+  };
+  window.ticFilterStudentTasks=function(btn,status){document.querySelectorAll('.filter-chip').forEach(x=>x.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.student-task-card').forEach(c=>{const text=c.querySelector('.task-status-badge')?.textContent?.toLowerCase()||'';c.style.display=status==='all'||text.includes(status)?'':'none'})};
+
+  window.openStudentTaskViewer=async function(taskAssignmentId){
+    const s=await studentRecord();if(!s)return;
+    const {data:ta,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id,status,completed_at,assigned_at').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+    if(error||!ta||ta.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');
+    const {data:a,error:ae}=await sb.from('tic_assignments').select('id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,lesson_id,cefr_level,skill,task_level,content_json,assignment_type').eq('id',ta.assignment_id).eq('active',true).maybeSingle();
+    if(ae||!a)return toast(ae?.message||'O conteúdo desta Task não está disponível.','error');
+    const {data:subs}=await sb.from('tic_submissions').select('id,attempt,grade,submitted_at,answer_text,response_data').eq('task_assignment_id',ta.id).eq('student_id',s.id).order('attempt',{ascending:false});
+    const ids=(subs||[]).map(x=>x.id);const {data:fbs}=ids.length?await sb.from('tic_feedback').select('submission_id,comment,grade,private_note,improvement_skill,improvement_link,created_at').in('submission_id',ids).order('created_at',{ascending:false}):{data:[]};
+    const latest=subs?.[0];const fb=latest?(fbs||[]).find(q=>q.submission_id===latest.id):null;
+    const questionHtml=renderStudentQuestions(a);
+    const html=a.html_enabled&&a.html_content?`<div class="viewer-panel"><div class="viewer-panel-head"><b>🧩 Atividade interativa</b><span class="badge green">Responsiva</span></div><div class="html-devicebar"><button class="btn sm secondary" onclick="ticResizeViewer('desktop')">🖥 Desktop</button><button class="btn sm secondary" onclick="ticResizeViewer('tablet')">▣ Tablet</button><button class="btn sm secondary" onclick="ticResizeViewer('mobile')">📱 Mobile</button></div><div id="htmlViewerWrap" class="html-viewer-wrap desktop"><iframe id="htmlViewerFrame" class="viewer-html-frame" title="Task HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div><div id="htmlViewerStatus" class="viewer-status">Faça a atividade e use Enviar/Submit dentro dela.</div></div>`:'';
+    const autoForm=questionHtml?`<div class="viewer-panel"><div class="viewer-panel-head"><b>📝 Questões</b><span>${(a.content_json?.questions||[]).length} questão(ões)</span></div><form id="generatedTaskForm" onsubmit="ticSubmitGeneratedTask(event,'${ta.id}')">${questionHtml}<div class="viewer-actions"><button class="btn primary">📤 Enviar respostas</button></div></form><div id="generatedTaskResult"></div></div>`:'';
+    const plain=!html&&!questionHtml?`<div class="viewer-response"><label><b>✍️ Sua resposta</b></label><textarea id="taskViewerText" placeholder="Digite sua resposta..."></textarea><div class="viewer-actions"><button class="btn primary" onclick="submitTaskViewerText('${ta.id}')">📤 Enviar para o Teacher</button></div></div>`:'';
+    const feedback=fb&&!fb.private_note?`<div class="notice success"><b>👨‍🏫 Feedback do Teacher</b>${fb.grade!=null?`<div style="font-size:20px;font-weight:800;margin-top:5px">Nota: ${fb.grade}</div>`:''}<div style="margin-top:7px;white-space:pre-wrap">${esc(fb.comment||'Sem comentário.')}</div>${fb.improvement_skill||fb.improvement_link?`<div class="improvement-box"><b>🎯 Como melhorar</b>${fb.improvement_skill?`<div>Habilidade: <b>${esc(fb.improvement_skill)}</b></div>`:''}${fb.improvement_link?`<a class="btn secondary" href="${esc(ticSafeUrl(fb.improvement_link))}" target="_blank" rel="noopener noreferrer">🔗 Abrir material</a>`:''}</div>`:''}</div>`:'';
+    openModal(`🧩 ${esc(a.title)}`,`<div class="student-task-viewer-v2"><div class="student-task-viewer-hero"><div><div><span class="badge blue">${esc(a.cefr_level||'A1')}</span><span class="badge green">${esc(a.skill||'Task')}</span><span class="badge gray">${esc(a.task_level||'lesson')}</span></div><h2>${esc(a.title)}</h2><p>${esc(a.instructions||'Realize a atividade e envie sua resposta.')}</p></div><div class="task-score-pill"><b>${a.points||0}</b><small>pontos</small></div></div>${html}${autoForm}${plain}<div class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderLessonResources(a)}</div>${feedback}<div class="viewer-panel"><div class="viewer-panel-head"><b>🕘 Histórico de tentativas</b></div><div class="attempt-history">${(subs||[]).map(z=>{const zf=(fbs||[]).find(q=>q.submission_id===z.id);return `<div class="attempt-row"><div><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)}${z.grade!=null?' · Nota '+z.grade:''}</small></div><span class="badge ${zf?'green':'yellow'}">${zf?'Corrigida':'Aguardando correção'}</span></div>`}).join('')||'<div class="empty">Nenhuma entrega ainda.</div>'}</div></div><div class="notice">💡 A correção não encerra a atribuição. O Teacher pode permitir novas tentativas.</div><div class="viewer-actions"><button class="btn ghost" onclick="closeModal()">Fechar</button></div></div>`);
+    if(html){ticHtmlViewerContext={mode:'studentTask',refId:ta.id,html:a.html_content};const f=$('htmlViewerFrame');if(f)f.srcdoc=ticResponsiveSrcdoc(a.html_content)+ticHtmlBridge()}
+  };
+
+  window.ticSubmitGeneratedTask=async function(e,taskAssignmentId){
+    e.preventDefault();const s=await studentRecord();if(!s)return;const {data:ta}=await sb.from('tic_task_assignments').select('id,active,assignment_id').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();if(!ta||ta.active===false)return toast('Esta atribuição não está disponível.','error');const {data:a}=await sb.from('tic_assignments').select('content_json,points').eq('id',ta.assignment_id).maybeSingle();const qs=normalizeQuestions(a?.content_json?.questions||[]);const answers={};qs.forEach(q=>{if(q.type==='multiple_choice'||q.type==='true_false'){const el=document.querySelector(`[name="sq_${q.id}"]:checked`);answers[q.id]=el?.value||''}else answers[q.id]=document.querySelector(`[data-answer="${q.id}"]`)?.value||''});const g=autoGrade(qs,answers);const {data:last}=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',ta.id).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;const r=await sb.from('tic_submissions').insert({task_assignment_id:ta.id,student_id:s.id,attempt,answer_text:null,response_data:{source:'task_builder_v2',answers,auto_grade:g},submitted_at:new Date().toISOString(),grade:g.percent});if(r.error)return toast('Não foi possível enviar: '+r.error.message,'error');await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',ta.id).eq('student_id',s.id);const box=$('generatedTaskResult');if(box)box.innerHTML=`<div class="auto-result ${g.percent>=70?'good':'review'}"><b>✅ Resposta registrada</b><span>Resultado automático: ${g.earned}/${g.total} pontos · ${g.percent??0}%</span><small>O Teacher ainda poderá revisar e enviar feedback.</small></div>`;toast(`Tentativa ${attempt} enviada. ${g.percent??0}% automático.`,'success');
+  };
+
+  function addFloating(){if(document.getElementById('ticTaskFab'))return;const fab=document.createElement('div');fab.id='ticTaskFab';fab.innerHTML=`<button class="tic-fab-main" title="Ações rápidas">＋</button><div class="tic-fab-menu"><button onclick="openAssignmentForm();ticCloseFab()">✨ Nova Task</button><button onclick="loadView('assignments');ticCloseFab()">📋 Tasks</button><button onclick="loadView('studentTasks');ticCloseFab()">🎓 My Tasks</button></div>`;document.body.appendChild(fab);fab.querySelector('.tic-fab-main').onclick=()=>fab.classList.toggle('open');window.ticCloseFab=()=>fab.classList.remove('open')}
+  addFloating();
+})();
+
+</script>
 <style>
 :root{--p:#6844d8;--p2:#8d61ef;--dark:#171522;--bg:#f6f6fa;--card:#fff;--text:#242330;--muted:#878696;--line:#e9e8f0;--green:#18ae78;--yellow:#e7a52d;--red:#e35d67;--blue:#3c82e8;--shadow:0 12px 35px #34245c10;--r:18px}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;font-size:15px;line-height:1.55}button,input,select,textarea{font:inherit}button{cursor:pointer}a{text-decoration:none;color:inherit}
@@ -77,6 +220,37 @@ html{scroll-behavior:smooth}body{overflow-x:hidden}button:disabled{opacity:.6;cu
 .correction-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 @media(max-width:800px){.feedback-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.viewer-content-frame{height:360px}.viewer-html-frame{height:500px}}
 @media(max-width:520px){.feedback-grid{grid-template-columns:1fr}.viewer-content-frame{height:300px}.viewer-html-frame{height:430px}.viewer-actions .btn{width:100%}}
+</style>
+
+<style id="tic-task-engine-v2-style">
+.task-builder-form{display:grid;gap:0}.task-wizard-head{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:4px 0 20px;border-bottom:1px solid var(--line);margin-bottom:12px}.task-wizard-head h2{margin:3px 0;font-size:25px}.task-wizard-head p{margin:0;color:var(--muted)}.eyebrow{font-size:10px;font-weight:900;letter-spacing:1.6px;color:var(--p)}.task-wizard-progress{display:flex;align-items:center;gap:6px}.task-wizard-progress span{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:#eee9f7;color:#766b89;font-weight:800;font-size:12px}.task-wizard-progress span.active{background:var(--p);color:#fff}.task-wizard-progress i{width:22px;height:2px;background:#e3dcef}.task-builder-section{padding:18px 0;border-bottom:1px solid #eeeaf4}.task-section-title{display:flex;align-items:center;gap:11px;margin-bottom:13px}.task-section-title>span{width:30px;height:30px;border-radius:10px;background:#f0eafa;color:var(--p);display:grid;place-items:center;font-weight:900;font-size:11px}.task-section-title>div{flex:1}.task-section-title b{display:block;font-size:15px}.task-section-title small{display:block;color:var(--muted);margin-top:2px}.task-section-title>.btn{margin-left:auto}.form-grid.four{grid-template-columns:repeat(4,1fr)}.form-grid.three{grid-template-columns:repeat(3,1fr)}.task-question-stack,.task-builder-empty{display:grid;gap:10px}.task-q-card{background:#fbfaff;border:1px solid #e6e0ef;border-radius:15px;padding:14px}.task-q-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.task-q-head>div{display:flex;align-items:center;gap:9px}.task-q-number{width:27px;height:27px;border-radius:8px;background:var(--p);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:900}.task-q-actions{display:flex;gap:5px}.icon-btn{border:1px solid var(--line);background:#fff;border-radius:8px;width:30px;height:30px;cursor:pointer;font-weight:900}.icon-btn:hover{transform:translateY(-1px)}.icon-btn.danger{color:#b4233a}.inline-option{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:6px 0}.inline-option>span{font-size:10px;white-space:nowrap;color:var(--muted)}.inline-option input[type=radio]{margin-right:4px}.task-builder-empty{place-items:center;text-align:center;border:1px dashed #d7cee6;border-radius:15px;padding:30px;color:var(--muted)}.task-builder-empty div{font-size:30px}.advanced-html{background:#16141d;border-radius:14px;padding:12px}.advanced-html textarea{width:100%;background:#0e0d13;color:#e9e4f2;border:1px solid #393342;border-radius:10px;padding:13px;font:12px/1.6 ui-monospace,monospace;resize:vertical}.builder-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}.task-sticky-actions{position:sticky;bottom:-1px;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);padding:13px 0 2px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--line);z-index:5}.task-type-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.task-type-choice{text-align:left;border:1px solid var(--line);background:#fff;border-radius:13px;padding:15px;cursor:pointer}.task-type-choice:hover{border-color:var(--p);box-shadow:0 8px 24px #6844d114;transform:translateY(-1px)}.task-type-choice b,.task-type-choice small{display:block}.task-type-choice small{color:var(--muted);margin-top:4px}.student-task-grid{display:grid;gap:12px}.task-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}.task-stats-row>div{background:#fff;border:1px solid var(--line);border-radius:15px;padding:15px}.task-stats-row b{font-size:25px;display:block}.task-stats-row small{color:var(--muted)}.task-filter-bar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:0 0 14px}.task-filter-bar>span{font-size:11px;color:var(--muted);margin-right:3px}.filter-chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 11px;font-size:11px;cursor:pointer}.filter-chip.active{background:var(--p);color:#fff;border-color:var(--p)}.student-task-card{background:#fff;border:1px solid #e7e1ef;border-radius:18px;padding:16px;cursor:pointer;transition:.18s;box-shadow:0 4px 16px #26143a08}.student-task-card:hover{transform:translateY(-2px);box-shadow:0 15px 35px #26143a12;border-color:#d6c9e8}.student-task-card.is-overdue{border-color:#f2c8d0}.student-task-card-top{display:flex;gap:12px;align-items:flex-start}.task-icon{width:44px;height:44px;border-radius:13px;background:#f0eafa;display:grid;place-items:center;font-size:21px;flex:none}.student-task-title{flex:1;min-width:0}.student-task-title h3{margin:6px 0 4px;font-size:16px}.student-task-title p{margin:0;color:var(--muted);font-size:11px;line-height:1.5}.student-task-card-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid #eeeaf4;color:var(--muted);font-size:10px}.student-task-card-meta .btn{margin-left:auto}.student-task-viewer-v2{display:grid;gap:12px}.student-task-viewer-hero{display:flex;justify-content:space-between;gap:15px;align-items:flex-start;background:linear-gradient(135deg,#24183d,#6844d8);color:#fff;padding:20px;border-radius:17px}.student-task-viewer-hero h2{margin:8px 0 5px;font-size:25px}.student-task-viewer-hero p{margin:0;color:#e9e3f2;max-width:700px;line-height:1.55}.task-score-pill{background:#ffffff1c;border:1px solid #ffffff2b;border-radius:13px;padding:10px 14px;text-align:center;min-width:72px}.task-score-pill b,.task-score-pill small{display:block}.task-score-pill b{font-size:22px}.student-question-stack{display:grid;gap:10px;padding:14px}.student-question{border:1px solid #ebe6f2;border-radius:14px;padding:14px}.student-question-head{display:flex;align-items:flex-start;gap:10px}.student-question-head>span{width:25px;height:25px;border-radius:8px;background:#f0eafa;color:var(--p);display:grid;place-items:center;font-weight:900;font-size:11px;flex:none}.student-question-head b{flex:1;line-height:1.5}.student-question-head em{font-style:normal;color:var(--muted);font-size:10px}.student-question-body{padding:12px 0 0 35px;display:grid;gap:7px}.student-option{display:flex;align-items:center;gap:9px;border:1px solid #e7e1ef;border-radius:10px;padding:10px;cursor:pointer}.student-option:hover{border-color:#bba8d7;background:#fbf9ff}.student-answer-input{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px}.viewer-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:12px 14px}.attempt-history{display:grid;gap:7px;padding:12px}.attempt-row{display:flex;justify-content:space-between;align-items:center;border:1px solid #ebe6f2;border-radius:11px;padding:10px}.attempt-row small{display:block;color:var(--muted);margin-top:3px}.auto-result{margin:12px;border-radius:12px;padding:13px;display:grid;gap:4px;border:1px solid #d9d2e6;background:#faf8fd}.auto-result.good{border-color:#b9e1c5;background:#f3fbf5}.auto-result.review{border-color:#ead4a4;background:#fffaf0}.auto-result span{font-size:14px;font-weight:800}.auto-result small{color:var(--muted)}.preview-html-frame{width:100%;height:420px;border:0;border-radius:10px;background:#fff}.student-task-preview{display:grid;gap:12px}.student-task-cover{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:18px;background:linear-gradient(135deg,#24183d,#6844d8);color:#fff;border-radius:16px}.student-task-cover h1{margin:7px 0;font-size:25px}.student-task-cover p{margin:0;color:#e9e3f2}.preview-pill{padding:8px 10px;background:#ffffff1b;border-radius:10px;font-weight:800}.tic-fab-main{width:58px;height:58px;border:0;border-radius:50%;background:linear-gradient(135deg,#6844d8,#8a63ea);color:#fff;font-size:28px;box-shadow:0 12px 30px #4a2a8d45;cursor:pointer}.tic-fab-menu{position:absolute;right:0;bottom:68px;display:grid;gap:7px;opacity:0;transform:translateY(10px) scale(.96);pointer-events:none;transition:.18s}.tic-fab-menu button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 13px;text-align:left;box-shadow:0 10px 30px #24143b18;cursor:pointer;white-space:nowrap}.tic-fab-menu button:hover{border-color:var(--p)}#ticTaskFab{position:fixed;right:25px;bottom:24px;z-index:9998}#ticTaskFab.open .tic-fab-menu{opacity:1;transform:none;pointer-events:auto}#ticTaskFab.open .tic-fab-main{transform:rotate(45deg)}@media(max-width:900px){.form-grid.four{grid-template-columns:1fr 1fr}.task-wizard-head{align-items:flex-start}.student-task-card-meta .btn{margin-left:0}.student-task-viewer-hero{flex-direction:column}.task-stats-row{grid-template-columns:1fr 1fr 1fr}}@media(max-width:620px){.form-grid.four,.form-grid.three,.task-type-grid{grid-template-columns:1fr}.task-wizard-progress{display:none}.task-section-title{align-items:flex-start;flex-wrap:wrap}.task-section-title>.btn{width:100%}.task-sticky-actions{flex-wrap:wrap}.task-sticky-actions .btn{flex:1}.student-task-card-top{flex-wrap:wrap}.task-status-badge{width:100%}.student-task-card-meta{align-items:flex-start;flex-direction:column}.student-task-card-meta .btn{width:100%}#ticTaskFab{right:16px;bottom:16px}.tic-fab-main{width:54px;height:54px}}
+</style>
+
+<style id="tic-v27-global-scroll">
+/* V27 — GLOBAL PAGE SCROLL
+   Every growing platform view scrolls inside the main workspace.
+   Existing components/functions are preserved; this is layout-only.
+*/
+html,body{width:100%;min-height:100%;margin:0}
+body{overflow:hidden}
+#app.app{height:100vh;min-height:100vh;overflow:hidden}
+#app.app>.main{height:100vh;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
+#app.app>.main>.topbar{position:sticky;top:0;z-index:50}
+#app.app>.main>.container{min-height:calc(100vh - 74px);padding-bottom:90px}
+/* Keep the fixed navigation independently scrollable. */
+#app.app>.sidebar{height:100vh;max-height:100vh;overflow-y:auto;overflow-x:hidden}
+/* Tables/lists can still have their own horizontal scroll without breaking page scroll. */
+.table-wrap{max-width:100%;overflow-x:auto;overflow-y:visible}
+/* Mobile: the workspace itself remains the single vertical scroll surface. */
+@media(max-width:760px){
+  #app.app>.main{height:100vh;overflow-y:auto;overflow-x:hidden}
+  #app.app>.main>.container{min-height:calc(100vh - 64px);padding-bottom:110px}
+}
+/* Accessible scrollbar */
+#app.app>.main::-webkit-scrollbar{width:10px}
+#app.app>.main::-webkit-scrollbar-track{background:#f6f4fa}
+#app.app>.main::-webkit-scrollbar-thumb{background:#c9c2d8;border-radius:20px;border:2px solid #f6f4fa}
+#app.app>.main::-webkit-scrollbar-thumb:hover{background:#8f82a9}
 </style>
 </head>
 <body>
@@ -1480,27 +1654,7 @@ function ticResponsiveSrcdoc(content){
  if(!c)return '';
  const meta='<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">';
  if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}`);
- return '<!doctype html><html><head>'+meta+'</head><body>'+c+'
-<style id="tic-v23-real-scroll-fix">
-/* V23 — real modal scrolling: the modal body is the flex viewport and tic21-body is its scroller. */
-#modal:has(.tic21-shell){position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:12px!important;overflow:hidden!important;z-index:9999!important}
-#modal:has(.tic21-shell)>.modal-card.tic21-modal{display:flex!important;flex-direction:column!important;width:min(1320px,calc(100vw - 24px))!important;height:calc(100vh - 24px)!important;max-height:calc(100vh - 24px)!important;min-height:0!important;padding:0!important;overflow:hidden!important}
-#modal:has(.tic21-shell)>.modal-card.tic21-modal>.modal-head{display:none!important}
-#modal:has(.tic21-shell) #modalBody{display:flex!important;flex:1 1 auto!important;min-height:0!important;height:100%!important;overflow:hidden!important;padding:0!important}
-#modal:has(.tic21-shell) #modalBody>.tic21-shell{flex:1 1 auto!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;overflow:hidden!important}
-#modal:has(.tic21-shell) .tic21-body{flex:1 1 auto!important;min-height:0!important;height:0!important;max-height:none!important;overflow-y:scroll!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;scrollbar-width:auto!important}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar{width:12px}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-track{background:#eeeaf5}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-thumb{background:#9b8ac5;border-radius:10px;border:3px solid #eeeaf5}
-@media(max-width:760px){
- #modal:has(.tic21-shell){padding:0!important;align-items:stretch!important}
- #modal:has(.tic21-shell)>.modal-card.tic21-modal{width:100vw!important;height:100vh!important;max-height:100vh!important;border-radius:0!important}
- #modal:has(.tic21-shell) #modalBody{height:100%!important}
- #modal:has(.tic21-shell) .tic21-body{padding:12px 12px 80px!important}
-}
-</style>
-
-</body></html>';
+ return '<!doctype html><html><head>'+meta+'</head><body>'+c+'</body></html>';
 }
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
@@ -1620,27 +1774,7 @@ function ticViewerTextFrame(content){
  const c=String(content||'').trim();if(!c)return '';
  const looksHtml=/<(?:html|body|div|p|h[1-6]|ul|ol|table|span|strong|em|img|a\b|section|article)[\s>]/i.test(c);
  if(looksHtml)return ticResponsiveSrcdoc(c);
- return '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;margin:0;padding:28px;line-height:1.7;color:#202033}*{box-sizing:border-box}a{overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>'+esc(c).replace(/\n/g,'<br>')+'
-<style id="tic-v23-real-scroll-fix">
-/* V23 — real modal scrolling: the modal body is the flex viewport and tic21-body is its scroller. */
-#modal:has(.tic21-shell){position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:12px!important;overflow:hidden!important;z-index:9999!important}
-#modal:has(.tic21-shell)>.modal-card.tic21-modal{display:flex!important;flex-direction:column!important;width:min(1320px,calc(100vw - 24px))!important;height:calc(100vh - 24px)!important;max-height:calc(100vh - 24px)!important;min-height:0!important;padding:0!important;overflow:hidden!important}
-#modal:has(.tic21-shell)>.modal-card.tic21-modal>.modal-head{display:none!important}
-#modal:has(.tic21-shell) #modalBody{display:flex!important;flex:1 1 auto!important;min-height:0!important;height:100%!important;overflow:hidden!important;padding:0!important}
-#modal:has(.tic21-shell) #modalBody>.tic21-shell{flex:1 1 auto!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;overflow:hidden!important}
-#modal:has(.tic21-shell) .tic21-body{flex:1 1 auto!important;min-height:0!important;height:0!important;max-height:none!important;overflow-y:scroll!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;scrollbar-width:auto!important}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar{width:12px}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-track{background:#eeeaf5}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-thumb{background:#9b8ac5;border-radius:10px;border:3px solid #eeeaf5}
-@media(max-width:760px){
- #modal:has(.tic21-shell){padding:0!important;align-items:stretch!important}
- #modal:has(.tic21-shell)>.modal-card.tic21-modal{width:100vw!important;height:100vh!important;max-height:100vh!important;border-radius:0!important}
- #modal:has(.tic21-shell) #modalBody{height:100%!important}
- #modal:has(.tic21-shell) .tic21-body{padding:12px 12px 80px!important}
-}
-</style>
-
-</body></html>';
+ return '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;margin:0;padding:28px;line-height:1.7;color:#202033}*{box-sizing:border-box}a{overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>'+esc(c).replace(/\n/g,'<br>')+'</body></html>';
 }
 
 function ticFrameHtml(content){ const c=String(content||'').trim(); return c ? ticPlainOrHtmlFrame(c) : ''; }
@@ -1871,49 +2005,9 @@ function ticPlainOrHtmlFrame(value){
     if(/<html[\s>]/i.test(c)){
       return c.replace(/<head([^>]*)>/i,`<head$1>${css}`);
     }
-    return `<!doctype html><html><head>${css}</head><body>${c}
-<style id="tic-v23-real-scroll-fix">
-/* V23 — real modal scrolling: the modal body is the flex viewport and tic21-body is its scroller. */
-#modal:has(.tic21-shell){position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:12px!important;overflow:hidden!important;z-index:9999!important}
-#modal:has(.tic21-shell)>.modal-card.tic21-modal{display:flex!important;flex-direction:column!important;width:min(1320px,calc(100vw - 24px))!important;height:calc(100vh - 24px)!important;max-height:calc(100vh - 24px)!important;min-height:0!important;padding:0!important;overflow:hidden!important}
-#modal:has(.tic21-shell)>.modal-card.tic21-modal>.modal-head{display:none!important}
-#modal:has(.tic21-shell) #modalBody{display:flex!important;flex:1 1 auto!important;min-height:0!important;height:100%!important;overflow:hidden!important;padding:0!important}
-#modal:has(.tic21-shell) #modalBody>.tic21-shell{flex:1 1 auto!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;overflow:hidden!important}
-#modal:has(.tic21-shell) .tic21-body{flex:1 1 auto!important;min-height:0!important;height:0!important;max-height:none!important;overflow-y:scroll!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;scrollbar-width:auto!important}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar{width:12px}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-track{background:#eeeaf5}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-thumb{background:#9b8ac5;border-radius:10px;border:3px solid #eeeaf5}
-@media(max-width:760px){
- #modal:has(.tic21-shell){padding:0!important;align-items:stretch!important}
- #modal:has(.tic21-shell)>.modal-card.tic21-modal{width:100vw!important;height:100vh!important;max-height:100vh!important;border-radius:0!important}
- #modal:has(.tic21-shell) #modalBody{height:100%!important}
- #modal:has(.tic21-shell) .tic21-body{padding:12px 12px 80px!important}
-}
-</style>
-
-</body></html>`;
+    return `<!doctype html><html><head>${css}</head><body>${c}</body></html>`;
   }
-  return `<!doctype html><html><head>${css}</head><body><div style="white-space:pre-wrap">${esc(c)}</div>
-<style id="tic-v23-real-scroll-fix">
-/* V23 — real modal scrolling: the modal body is the flex viewport and tic21-body is its scroller. */
-#modal:has(.tic21-shell){position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:12px!important;overflow:hidden!important;z-index:9999!important}
-#modal:has(.tic21-shell)>.modal-card.tic21-modal{display:flex!important;flex-direction:column!important;width:min(1320px,calc(100vw - 24px))!important;height:calc(100vh - 24px)!important;max-height:calc(100vh - 24px)!important;min-height:0!important;padding:0!important;overflow:hidden!important}
-#modal:has(.tic21-shell)>.modal-card.tic21-modal>.modal-head{display:none!important}
-#modal:has(.tic21-shell) #modalBody{display:flex!important;flex:1 1 auto!important;min-height:0!important;height:100%!important;overflow:hidden!important;padding:0!important}
-#modal:has(.tic21-shell) #modalBody>.tic21-shell{flex:1 1 auto!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;overflow:hidden!important}
-#modal:has(.tic21-shell) .tic21-body{flex:1 1 auto!important;min-height:0!important;height:0!important;max-height:none!important;overflow-y:scroll!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;scrollbar-width:auto!important}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar{width:12px}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-track{background:#eeeaf5}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-thumb{background:#9b8ac5;border-radius:10px;border:3px solid #eeeaf5}
-@media(max-width:760px){
- #modal:has(.tic21-shell){padding:0!important;align-items:stretch!important}
- #modal:has(.tic21-shell)>.modal-card.tic21-modal{width:100vw!important;height:100vh!important;max-height:100vh!important;border-radius:0!important}
- #modal:has(.tic21-shell) #modalBody{height:100%!important}
- #modal:has(.tic21-shell) .tic21-body{padding:12px 12px 80px!important}
-}
-</style>
-
-</body></html>`;
+  return `<!doctype html><html><head>${css}</head><body><div style="white-space:pre-wrap">${esc(c)}</div></body></html>`;
 }
 
 /* TIC FINAL CONNECTIVITY LAYER — appended intentionally so it overrides broken/legacy viewer versions without removing existing features. */
@@ -2276,188 +2370,155 @@ async function sendStudentMessageV18(e){
   toast('Mensagem enviada ao Teacher.','success');messagesPage(true);
 }
 </script>
-<style id="tic-v21-classes-css">
-.tic21-modal{width:min(1320px,calc(100vw - 24px))!important;max-width:1320px!important;height:min(94vh,960px);max-height:94vh!important;padding:0!important;overflow:hidden!important;border-radius:22px!important}
-.tic21-shell{height:100%;display:flex;flex-direction:column;background:#f7f6fb;min-width:0}.tic21-head{background:#fff;border-bottom:1px solid var(--line);padding:18px 22px;display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.tic21-head-main h2{font:800 23px 'Plus Jakarta Sans';margin:6px 0 3px}.tic21-head-main p{margin:0;color:var(--muted);font-size:12px}.tic21-head-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.tic21-tabs{display:flex;gap:4px;padding:8px 18px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto;position:sticky;top:0;z-index:4}.tic21-tabs button{white-space:nowrap;border:0;background:transparent;color:#7f7c8b;border-radius:10px;padding:9px 12px;font-size:11px;font-weight:800}.tic21-tabs button:hover{background:#f5f1ff;color:var(--p)}.tic21-tabs button.active{background:#eee8ff;color:var(--p)}.tic21-body{padding:17px 20px 30px;overflow:auto;min-height:0}.tic21-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}.tic21-kpis>div{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px}.tic21-kpis span{display:block;color:var(--muted);font-size:10px}.tic21-kpis b{display:block;font:800 22px 'Plus Jakarta Sans';margin-top:4px}.tic21-kpis small{color:var(--muted);font-size:9px}.tic21-overview-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(310px,.75fr);gap:14px}.tic21-side{display:grid;gap:14px}.tic21-panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;min-width:0}.tic21-panel>header{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}.tic21-panel>header h3{margin:0;font:800 14px 'Plus Jakarta Sans'}.tic21-panel>header small{display:block;color:var(--muted);font-size:10px;margin-top:2px}.tic21-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.tic21-lane{background:#f7f6fb;border:1px solid #e7e3ee;border-radius:13px;min-height:300px;padding:9px;transition:.15s}.tic21-lane.drop{background:#f0eaff;border-color:#bca7ef;box-shadow:inset 0 0 0 2px #cfc0f5}.tic21-lane>header{display:flex;justify-content:space-between;align-items:center;padding:3px 3px 9px}.tic21-lane>header b{font-size:11px}.tic21-lane>header small{display:block;color:var(--muted);font-size:9px;margin-top:2px}.tic21-lane>header>span{background:#fff;border:1px solid var(--line);border-radius:99px;padding:3px 7px;font-size:9px;color:var(--muted)}.tic21-lane-body{min-height:245px}.tic21-card{background:#fff;border:1px solid #e5e1ec;border-radius:11px;padding:11px;margin-bottom:8px;cursor:grab;box-shadow:0 5px 15px #34245c08}.tic21-card:active{cursor:grabbing}.tic21-card:hover{border-color:#d8cef2;transform:translateY(-1px)}.tic21-card-top{display:flex;justify-content:space-between;gap:8px}.tic21-card-top b{font-size:11px}.tic21-card p{margin:5px 0 0;color:#6e6b78;font-size:10px;line-height:1.45;white-space:pre-wrap}.tic21-more{border:0;background:transparent;color:#aaa5b4;font-weight:900}.tic21-meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}.tic21-empty{text-align:center;color:#aaa6b3;font-size:10px;padding:35px 8px}.tic21-highlight{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px}.tic21-highlight.next{background:#faf8ff}.tic21-highlight span{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.5px}.tic21-highlight b{display:block;font-size:12px;margin-top:4px}.tic21-highlight small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.tic21-row{display:grid;grid-template-columns:58px 1fr auto;gap:11px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px}.tic21-row:last-child{margin-bottom:0}.tic21-date{width:54px;height:48px;border-radius:11px;background:#eee8ff;color:var(--p);display:grid;place-items:center;text-align:center;font-weight:800;font-size:10px}.tic21-row b{font-size:12px}.tic21-row small{display:block;color:var(--muted);font-size:9px;margin-top:3px}.tic21-row p{font-size:10px;color:#676371;white-space:pre-wrap;margin:6px 0 0}.tic21-note{border:1px solid var(--line);background:#faf9ff;border-left:3px solid var(--p);border-radius:0 12px 12px 0;padding:11px 12px}.tic21-note p{font-size:11px;line-height:1.6;white-space:pre-wrap;margin:7px 0}.tic21-note small{font-size:9px;color:var(--muted)}.tic21-note-top{display:flex;justify-content:space-between;gap:8px;align-items:start}.tic21-note-stack{display:grid;gap:9px}.tic21-filter{display:flex;gap:8px;margin-bottom:12px}.tic21-filter input,.tic21-class-tools input,.tic21-class-tools select{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 12px;font-size:12px;outline:0}.tic21-filter input{width:100%}.tic21-material-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tic21-material{display:flex;gap:10px;border:1px solid var(--line);border-radius:13px;padding:11px;background:#fff;min-width:0}.tic21-material-icon{width:38px;height:38px;border-radius:10px;background:#f0ebff;color:var(--p);display:grid;place-items:center;flex:none}.tic21-material-main{min-width:0;flex:1}.tic21-material-title{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.tic21-material-title b{font-size:12px}.tic21-material-main>small{display:block;color:var(--muted);font-size:9px;line-height:1.45;margin:4px 0 8px;overflow-wrap:anywhere}.tic21-student-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tic21-student{display:flex;gap:9px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px}.tic21-student .avatar{width:36px;height:36px;border-radius:10px;background:#eee8ff;color:var(--p);display:grid;place-items:center;font-weight:900}.tic21-student b{display:block;font-size:11px}.tic21-student small{display:block;color:var(--muted);font-size:9px;margin-top:2px}.tic21-student .badge{margin-left:auto}.tic21-loading{min-height:300px;display:grid;place-items:center;align-content:center;color:var(--muted);font-size:11px}.tic21-class-toolbar{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-bottom:15px}.tic21-class-toolbar>b,.tic21-class-toolbar>div:first-child b{font:800 18px 'Plus Jakarta Sans'}.tic21-class-toolbar small{display:block;color:var(--muted);font-size:11px;margin-top:2px}.tic21-class-tools{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.tic21-class-tools input{min-width:230px}.tic21-classes-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.tic21-classes-grid.list{grid-template-columns:1fr}.tic21-class-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:17px;box-shadow:var(--shadow);transition:.18s}.tic21-class-card:hover{transform:translateY(-2px);box-shadow:0 18px 42px #34245c12}.tic21-class-card-head{display:flex;justify-content:space-between;gap:10px;align-items:start}.tic21-class-card-head h2{font:800 18px 'Plus Jakarta Sans';margin:7px 0 0}.tic21-class-metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin:14px 0}.tic21-class-metrics>div{background:#faf9fd;border:1px solid #eeeaf4;border-radius:11px;padding:9px}.tic21-class-metrics span{font-size:13px}.tic21-class-metrics b{display:block;font-size:11px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tic21-class-metrics small{display:block;color:var(--muted);font-size:8px;margin-top:2px}.tic21-class-actions{display:flex;gap:6px;flex-wrap:wrap}.tic21-class-actions .btn{font-size:9px;padding:8px 9px}.tic21-classes-grid.list .tic21-class-card{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}.tic21-classes-grid.list .tic21-class-metrics{margin:0}.tic21-classes-grid.list .tic21-class-actions{grid-column:1/-1}
-@media(max-width:1050px){.tic21-kpis{grid-template-columns:repeat(3,1fr)}.tic21-overview-grid{grid-template-columns:1fr}.tic21-material-grid{grid-template-columns:1fr}}
-@media(max-width:760px){.tic21-modal{width:100vw!important;height:100vh;max-height:100vh!important;border-radius:0!important}.tic21-head{padding:14px 15px;display:block}.tic21-head-actions{justify-content:flex-start;margin-top:10px}.tic21-body{padding:12px 12px 26px}.tic21-tabs{padding:7px 9px}.tic21-tabs button{padding:8px 10px}.tic21-kpis{grid-template-columns:1fr 1fr}.tic21-board{grid-template-columns:1fr}.tic21-lane{min-height:170px}.tic21-lane-body{min-height:100px}.tic21-row{grid-template-columns:48px 1fr}.tic21-row>.actions{grid-column:2;justify-self:start}.tic21-student-grid{grid-template-columns:1fr}.tic21-class-toolbar{display:block}.tic21-class-tools{margin-top:10px}.tic21-class-tools input{min-width:0;flex:1}.tic21-classes-grid,.tic21-classes-grid.list{grid-template-columns:1fr}.tic21-classes-grid.list .tic21-class-card{display:block}.tic21-class-metrics{grid-template-columns:1fr 1fr 1fr}.tic21-class-actions .btn{flex:1;min-width:110px}}
-@media(max-width:460px){.tic21-kpis{grid-template-columns:1fr}.tic21-class-metrics{grid-template-columns:1fr}.tic21-head-actions .btn{flex:1}.tic21-panel{padding:12px}}
-</style>
+
 <script>
-/* TIC V21 — additive Classes Command Center. Preserves the existing platform and adds tools. */
+/* ================================================================
+   TIC V26 — PRESERVATION PATCH
+   Built on the user's latest full source (Texto colado(6)).
+   This layer is intentionally additive: no existing functions/data are removed.
+   Fixes: Teacher actions, Add Student, modal close/ESC, responsive modal,
+   Student Tasks (HTML + structured tasks + legacy tasks), and safer navigation.
+   ================================================================ */
 (function(){
-  const escH = s => typeof esc==='function' ? esc(s==null?'':String(s)) : String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const missing = e => !!e && /relation|does not exist|schema cache|could not find the table/i.test(e.message||'');
-  const fmtDate=v=>{if(!v)return'—';const d=new Date(v);return isNaN(d)?'—':d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});};
-  const fmtDateTime=v=>{if(!v)return'—';const d=new Date(v);return isNaN(d)?'—':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});};
-  const isoInput=v=>v?new Date(v).toISOString().slice(0,16):'';
-  const typeIcon=t=>({youtube:'▶️',video:'🎥',drive:'📁',doc:'📄',pdf:'📕',audio:'🎧',website:'🌐',link:'🔗'})[String(t||'').toLowerCase()]||'🔗';
-  const statusLabel=s=>({planned:'Planejado',progress:'Em andamento',done:'Concluído'})[s]||'Planejado';
-  const statusBadge=s=>({planned:'gray',progress:'blue',done:'green'})[s]||'gray';
-  const getClass=async id=>{const r=await sb.from('tic_classes').select('*').eq('id',id).eq('teacher_id',session.user.id).maybeSingle();if(r.error)throw r.error;if(!r.data)throw Error('Turma não encontrada.');return r.data;};
-  const read=async(table,id,limit=100)=>{const r=await sb.from(table).select('*').eq('class_id',id).eq('teacher_id',session.user.id).order('created_at',{ascending:false}).limit(limit);if(r.error){if(missing(r.error))return{data:[],missing:true};throw r.error;}return{data:r.data||[],missing:false};};
-  const getMembers=async id=>{const m=await sb.from('tic_class_students').select('student_id,status').eq('class_id',id);if(m.error)throw m.error;const ids=(m.data||[]).filter(x=>x.status==='active').map(x=>x.student_id);if(!ids.length)return[];const s=await sb.from('tic_students').select('id,display_name,current_level,target_level,status,email,phone').in('id',ids).order('display_name');if(s.error)throw s.error;return s.data||[];};
+  const ticV26Toast=(m,t='info')=>{try{toast(m,t)}catch(_){alert(m)}};
 
-  function boardHtml(items,id){
-    const lanes=[['planned','Planejado'],['progress','Em andamento'],['done','Concluído']];
-    return `<div class="tic21-board">${lanes.map(([key,title])=>{const rows=(items||[]).filter(x=>(x.status||'planned')===key).sort((a,b)=>(a.position||0)-(b.position||0));return `<section class="tic21-lane" data-status="${key}" ondragover="tic21AllowDrop(event,this)" ondrop="tic21Drop(event,'${id}','${key}')"><header><div><b>${title}</b><small>${rows.length} card${rows.length===1?'':'s'}</small></div><span>${rows.length}</span></header><div class="tic21-lane-body">${rows.map(x=>`<article class="tic21-card" draggable="true" ondragstart="tic21Drag(event,'${x.id}')"><div class="tic21-card-top"><b>${escH(x.title||'Card')}</b><button class="tic21-more" onclick="event.stopPropagation();tic21EditCard('${x.id}','${id}')">⋯</button></div><p>${escH(x.description||'')}</p><div class="tic21-meta"><span class="badge ${statusBadge(x.status)}">${statusLabel(x.status)}</span>${x.due_at?`<span class="badge gray">📅 ${fmtDate(x.due_at)}</span>`:''}${x.source_type&&x.source_type!=='manual'?`<span class="badge gray">${escH(x.source_type)}</span>`:''}</div></article>`).join('')||`<div class="tic21-empty">Arraste um card para cá<br><small>ou crie um novo</small></div>`}</div></section>`}).join('')}</div>`;
-  }
-
-  async function openCommand(id,initialTab='overview'){
+  /* ----- Robust Teacher gate: recover profile when the page is already loaded. ----- */
+  window.requireTeacherActionV26=async function(){
+    if(session?.user?.id && (profile?.role==='teacher'||profile?.role==='admin')) return true;
+    if(!session?.user?.id){ticV26Toast('Sua sessão expirou. Entre novamente.','error');return false}
     try{
-      window.__tic21ClassId=id;
-      const c=await getClass(id);
-      const [members,board,materials,notes,sessions]=await Promise.all([getMembers(id),read('tic_class_board_items',id,200),read('tic_class_material_links',id,200),read('tic_class_notes',id,30),read('tic_class_sessions',id,100)]);
-      const b=board.data||[], mats=materials.data||[], ns=notes.data||[], ss=sessions.data||[];
-      const now=Date.now();
-      const past=ss.filter(x=>new Date(x.session_at).getTime()<=now).sort((a,b)=>new Date(b.session_at)-new Date(a.session_at));
-      const future=ss.filter(x=>new Date(x.session_at).getTime()>now).sort((a,b)=>new Date(a.session_at)-new Date(b.session_at));
-      const last=past[0], next=future[0];
-      const done=b.filter(x=>x.status==='done').length, progress=b.filter(x=>x.status==='progress').length, planned=b.filter(x=>!x.status||x.status==='planned').length;
-      const missingTables=[board,materials,notes,sessions].some(x=>x.missing);
-      const notice=missingTables?`<div class="notice warning">⚠️ O painel está funcionando, mas as tabelas novas ainda não foram criadas no Supabase. Execute a migração <b>TIC-V21-migration.sql</b> para ativar Board, materiais, histórico e observações.</div>`:'';
-      const completion=b.length?Math.round(done/b.length*100):0;
-      const tabButtons=[['overview','Visão geral'],['board','📌 Board'],['sessions','🕐 Aulas'],['materials','📚 Materiais'],['students','👥 Alunos'],['notes','📝 Observações']];
-      const shell=`<div class="tic21-shell">
-        <header class="tic21-head"><div class="tic21-head-main"><span class="badge blue">${escH(c.level||'A1')}</span><h2>🏫 ${escH(c.name)}</h2><p>${escH(c.schedule_text||'Horário não definido')}${c.meeting_url?' · 🔗 Aula online':''}</p></div><div class="tic21-head-actions"><button class="btn secondary" onclick="openClassMembers('${id}')">👥 Alunos</button><button class="btn primary" onclick="openClassAssign('${id}')">📤 Atribuir</button>${c.meeting_url?`<button class="btn ghost" onclick="tic21Copy('${escH(c.meeting_url)}')">🔗 Copiar link</button>`:''}<button class="btn ghost" onclick="closeModal()">Fechar</button></div></header>
-        <nav class="tic21-tabs">${tabButtons.map(([k,t])=>`<button class="${initialTab===k?'active':''}" onclick="tic21Tab('${id}','${k}')">${t}</button>`).join('')}</nav>
-        <main id="tic21Body" class="tic21-body">${notice}<div class="tic21-loading"><div class="spinner"></div>Carregando painel...</div></main>
-      </div>`;
-      openModal('',shell);
-      const mc=document.querySelector('.modal-card'); if(mc)mc.classList.add('tic21-modal');
-      await renderTab(id,initialTab,{c,members,b,mats,ns,ss,last,next,planned,progress,done,completion});
-    }catch(e){toast('Não foi possível abrir a turma: '+(e?.message||e),'error');}
-  }
-
-  async function fresh(id){
-    const c=await getClass(id);const [members,b,m,n,s]=await Promise.all([getMembers(id),read('tic_class_board_items',id,200),read('tic_class_material_links',id,200),read('tic_class_notes',id,30),read('tic_class_sessions',id,100)]);
-    const ss=s.data||[], now=Date.now(), past=ss.filter(x=>new Date(x.session_at).getTime()<=now).sort((a,b)=>new Date(b.session_at)-new Date(a.session_at)), future=ss.filter(x=>new Date(x.session_at).getTime()>now).sort((a,b)=>new Date(a.session_at)-new Date(b.session_at));
-    const bdata=b.data||[], done=bdata.filter(x=>x.status==='done').length, progress=bdata.filter(x=>x.status==='progress').length, planned=bdata.filter(x=>!x.status||x.status==='planned').length;
-    return {c,members,b:bdata,mats:m.data||[],ns:n.data||[],ss,last:past[0],next:future[0],planned,progress,done,completion:bdata.length?Math.round(done/bdata.length*100):0,missing:[b,m,n,s].some(x=>x.missing)};
-  }
-
-  async function renderTab(id,tab,data){
-    const body=$('tic21Body'); if(!body)return; const d=data||await fresh(id);
-    document.querySelectorAll('.tic21-tabs button').forEach(btn=>btn.classList.toggle('active',btn.getAttribute('onclick')===`tic21Tab('${id}','${tab}')`));
-    if(tab==='overview'){
-      const upcoming=d.ss.filter(x=>new Date(x.session_at)>new Date()).sort((a,b)=>new Date(a.session_at)-new Date(b.session_at)).slice(0,3);
-      body.innerHTML=`<div class="tic21-kpis"><div><span>👥 Alunos</span><b>${d.members.length}</b><small>ativos</small></div><div><span>📌 Planejados</span><b>${d.planned}</b><small>cards</small></div><div><span>🔄 Em andamento</span><b>${d.progress}</b><small>cards</small></div><div><span>✅ Concluídos</span><b>${d.done}</b><small>${d.completion}% do board</small></div><div><span>📚 Materiais</span><b>${d.mats.length}</b><small>links</small></div></div>
-      <div class="tic21-overview-grid"><section class="tic21-panel"><header><div><h3>📌 Board da turma</h3><small>Visão rápida do trabalho da turma</small></div><button class="btn sm secondary" onclick="tic21Tab('${id}','board')">Abrir board</button></header>${boardHtml(d.b,id)}</section><aside class="tic21-side"><section class="tic21-panel"><header><div><h3>🕐 Aulas</h3><small>Última e próxima</small></div><button class="btn sm secondary" onclick="tic21NewSession('${id}')">+ Aula</button></header><div class="tic21-highlight"><span>Última aula</span><b>${d.last?escH(d.last.title):'Ainda não registrada'}</b><small>${d.last?fmtDateTime(d.last.session_at):'—'}</small></div><div class="tic21-highlight next"><span>Próxima aula</span><b>${d.next?escH(d.next.title):'Não planejada'}</b><small>${d.next?fmtDateTime(d.next.session_at):'—'}</small></div></section><section class="tic21-panel"><header><div><h3>📝 Última observação</h3></div><button class="btn sm secondary" onclick="tic21NewNote('${id}')">+ Nota</button></header>${d.ns[0]?`<div class="tic21-note"><b>${escH(d.ns[0].title)}</b><p>${escH(d.ns[0].body)}</p><small>${fmtDateTime(d.ns[0].created_at)}</small></div>`:'<div class="empty">Nenhuma observação.</div>'}</section></aside></div>
-      <section class="tic21-panel" style="margin-top:14px"><header><div><h3>📅 Próximas aulas</h3><small>Planejamento imediato</small></div><button class="btn sm ghost" onclick="tic21Tab('${id}','sessions')">Ver histórico</button></header>${upcoming.map(x=>`<div class="tic21-row"><div class="tic21-date">${fmtDate(x.session_at)}</div><div><b>${escH(x.title)}</b><small>${fmtDateTime(x.session_at)} · ${x.duration_minutes||60} min</small></div><button class="btn sm ghost" onclick="tic21EditSession('${x.id}','${id}')">Editar</button></div>`).join('')||'<div class="empty">Nenhuma aula futura planejada.</div>'}</section>`;
-    } else if(tab==='board'){
-      body.innerHTML=`<section class="tic21-panel"><header><div><h3>📌 Board da turma</h3><small>Arraste cards entre as colunas. Você pode criar, editar e excluir.</small></div><div class="actions"><button class="btn sm ghost" onclick="tic21BoardSeed('${id}')">✨ Gerar cards iniciais</button><button class="btn sm primary" onclick="tic21NewCard('${id}')">+ Card</button></div></header>${boardHtml(d.b,id)}</section>`;
-    } else if(tab==='sessions'){
-      body.innerHTML=`<section class="tic21-panel"><header><div><h3>🕐 Aulas da turma</h3><small>Histórico + próximas aulas</small></div><button class="btn sm primary" onclick="tic21NewSession('${id}')">+ Registrar aula</button></header><div class="tic21-filter"><input id="tic21SessionSearch" placeholder="Buscar aula..." oninput="tic21FilterSessions('${id}')"></div><div id="tic21SessionsList">${sessionList(d.ss,id)}</div></section>`;
-    } else if(tab==='materials'){
-      body.innerHTML=`<section class="tic21-panel"><header><div><h3>📚 Materiais da turma</h3><small>Links, vídeos, PDFs, Drive, Docs, áudio e sites</small></div><button class="btn sm primary" onclick="tic21NewMaterial('${id}')">+ Material</button></header><div class="tic21-filter"><input id="tic21MaterialSearch" placeholder="Buscar material..." oninput="tic21FilterMaterials('${id}')"></div><div id="tic21MaterialsList" class="tic21-material-grid">${materialList(d.mats,id)}</div></section>`;
-    } else if(tab==='students'){
-      body.innerHTML=`<section class="tic21-panel"><header><div><h3>👥 Alunos da turma</h3><small>${d.members.length} aluno${d.members.length===1?'':'s'} ativo${d.members.length===1?'':'s'}</small></div><div class="actions"><button class="btn sm secondary" onclick="openClassMembers('${id}')">Gerenciar alunos</button><button class="btn sm ghost" onclick="openClassProgress('${id}')">📊 Progresso</button></div></header><div class="tic21-filter"><input id="tic21StudentSearch" placeholder="Buscar aluno..." oninput="tic21FilterStudents('${id}')"></div><div id="tic21StudentsList" class="tic21-student-grid">${studentList(d.members)}</div></section>`;
-    } else if(tab==='notes'){
-      body.innerHTML=`<section class="tic21-panel"><header><div><h3>📝 Observações do Teacher</h3><small>Histórico pedagógico da turma</small></div><button class="btn sm primary" onclick="tic21NewNote('${id}')">+ Observação</button></header><div class="tic21-note-stack">${d.ns.map(x=>`<article class="tic21-note"><div class="tic21-note-top"><b>${escH(x.title)}</b><div class="actions"><button class="btn sm ghost" onclick="tic21EditNote('${x.id}','${id}')">Editar</button><button class="btn sm danger" onclick="tic21DeleteNote('${x.id}','${id}')">Excluir</button></div></div><p>${escH(x.body)}</p><small>${fmtDateTime(x.created_at)}</small></article>`).join('')||'<div class="empty">Nenhuma observação registrada.</div>'}</div></section>`;
-    }
-  }
-
-  function sessionList(rows,id){return rows.slice().sort((a,b)=>new Date(b.session_at)-new Date(a.session_at)).map(x=>`<article class="tic21-row session-row" data-search="${escH((x.title||'')+' '+(x.notes||''))}"><div class="tic21-date">${fmtDate(x.session_at)}</div><div><b>${escH(x.title)}</b><small>${fmtDateTime(x.session_at)} · ${x.duration_minutes||60} min · ${x.status==='done'?'Ministrada':'Planejada'}</small>${x.notes?`<p>${escH(x.notes)}</p>`:''}</div><div class="actions"><button class="btn sm ghost" onclick="tic21EditSession('${x.id}','${id}')">Editar</button><button class="btn sm danger" onclick="tic21DeleteSession('${x.id}','${id}')">Excluir</button></div></article>`).join('')||'<div class="empty">Nenhuma aula registrada.</div>';}
-  function materialList(rows,id){return rows.slice().sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(x=>`<article class="tic21-material" data-search="${escH((x.title||'')+' '+(x.description||'')+' '+(x.url||''))}"><div class="tic21-material-icon">${typeIcon(x.material_type)}</div><div class="tic21-material-main"><div class="tic21-material-title"><b>${escH(x.title)}</b>${x.pinned?'<span class="badge yellow">📌 Fixado</span>':''}</div><small>${escH(x.description||x.url||'')}</small><div class="actions"><button class="btn sm primary" onclick="window.open('${escH(x.url)}','_blank','noopener')">Abrir</button><button class="btn sm ghost" onclick="tic21EditMaterial('${x.id}','${id}')">Editar</button><button class="btn sm danger" onclick="tic21DeleteMaterial('${x.id}','${id}')">Excluir</button></div></div></article>`).join('')||'<div class="empty">Nenhum material adicionado.</div>';}
-  function studentList(rows){return rows.map(x=>`<article class="tic21-student" data-search="${escH((x.display_name||'')+' '+(x.email||''))}"><div class="avatar">${escH((x.display_name||'?').slice(0,1).toUpperCase())}</div><div><b>${escH(x.display_name)}</b><small>${escH(x.current_level||'A1')} → ${escH(x.target_level||'—')}</small></div><span class="badge green">Ativo</span></article>`).join('')||'<div class="empty">Nenhum aluno.</div>';}
-
-  window.tic21Tab=async(id,tab)=>{try{await renderTab(id,tab);}catch(e){toast('Erro ao carregar: '+(e?.message||e),'error');}};
-  window.tic21AllowDrop=(e,el)=>{e.preventDefault();document.querySelectorAll('.tic21-lane').forEach(x=>x.classList.remove('drop'));el.classList.add('drop');};
-  window.tic21Drag=(e,id)=>{e.dataTransfer.setData('text/plain',id);window.__tic21Drag=id;};
-  window.tic21Drop=async(e,classId,status)=>{e.preventDefault();document.querySelectorAll('.tic21-lane').forEach(x=>x.classList.remove('drop'));const id=e.dataTransfer.getData('text/plain')||window.__tic21Drag;if(!id)return;const r=await sb.from('tic_class_board_items').update({status,position:Date.now(),updated_at:new Date().toISOString()}).eq('id',id).eq('teacher_id',session.user.id).eq('class_id',classId);if(r.error)return toast(r.error.message,'error');toast('Card movido para '+statusLabel(status)+'.','success');tic21Tab(classId,'board');};
-  window.tic21Copy=async value=>{try{await navigator.clipboard.writeText(value);toast('Link copiado.','success');}catch(e){toast('Não foi possível copiar automaticamente.','error');}};
-  window.tic21NewCard=id=>openModal('Novo card da turma',`<form class="form" onsubmit="tic21SaveCard(event,'${id}')"><div class="field"><label>Título</label><input id="tic21CardTitle" required placeholder="Ex.: Homework — Present Simple"></div><div class="class-form-grid"><div class="field"><label>Status</label><select id="tic21CardStatus"><option value="planned">Planejado</option><option value="progress">Em andamento</option><option value="done">Concluído</option></select></div><div class="field"><label>Prazo</label><input id="tic21CardDue" type="datetime-local"></div></div><div class="field"><label>Tipo</label><select id="tic21CardType"><option value="manual">Manual</option><option value="lesson">Lesson</option><option value="task">Task</option><option value="material">Material</option><option value="plan">Lesson Plan</option></select></div><div class="field"><label>Descrição</label><textarea id="tic21CardDesc" rows="5" placeholder="O que precisa ser feito?"></textarea></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar card</button></div></form>`);
-  window.tic21SaveCard=async(e,id)=>{e.preventDefault();const r=await sb.from('tic_class_board_items').insert({class_id:id,teacher_id:session.user.id,title:$('tic21CardTitle').value.trim(),description:$('tic21CardDesc').value.trim()||null,status:$('tic21CardStatus').value,source_type:$('tic21CardType').value,due_at:$('tic21CardDue').value?new Date($('tic21CardDue').value).toISOString():null,position:Date.now()});if(r.error)return toast('Não foi possível salvar: '+r.error.message,'error');closeModal();toast('Card criado.','success');tic21Tab(id,'board');};
-  window.tic21EditCard=async(cardId,id)=>{const r=await sb.from('tic_class_board_items').select('*').eq('id',cardId).eq('teacher_id',session.user.id).maybeSingle();if(r.error||!r.data)return toast('Card não encontrado.','error');const x=r.data;openModal('Editar card',`<form class="form" onsubmit="tic21UpdateCard(event,'${cardId}','${id}')"><div class="field"><label>Título</label><input id="tic21CardTitle" value="${escH(x.title||'')}" required></div><div class="class-form-grid"><div class="field"><label>Status</label><select id="tic21CardStatus"><option value="planned" ${x.status==='planned'?'selected':''}>Planejado</option><option value="progress" ${x.status==='progress'?'selected':''}>Em andamento</option><option value="done" ${x.status==='done'?'selected':''}>Concluído</option></select></div><div class="field"><label>Prazo</label><input id="tic21CardDue" type="datetime-local" value="${isoInput(x.due_at)}"></div></div><div class="field"><label>Descrição</label><textarea id="tic21CardDesc" rows="5">${escH(x.description||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn danger" onclick="tic21DeleteCard('${cardId}','${id}')">Excluir</button><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`);};
-  window.tic21UpdateCard=async(e,cid,id)=>{e.preventDefault();const r=await sb.from('tic_class_board_items').update({title:$('tic21CardTitle').value.trim(),description:$('tic21CardDesc').value.trim()||null,status:$('tic21CardStatus').value,due_at:$('tic21CardDue').value?new Date($('tic21CardDue').value).toISOString():null,updated_at:new Date().toISOString()}).eq('id',cid).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');closeModal();toast('Card atualizado.','success');tic21Tab(id,'board');};
-  window.tic21DeleteCard=async(cid,id)=>{if(!confirm('Excluir este card?'))return;const r=await sb.from('tic_class_board_items').delete().eq('id',cid).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');closeModal();toast('Card excluído.','success');tic21Tab(id,'board');};
-  window.tic21BoardSeed=async id=>{const existing=await sb.from('tic_class_board_items').select('id').eq('class_id',id).limit(1);if(existing.data?.length)return toast('A turma já possui cards.','error');const rows=[{title:'Planejar próxima aula',status:'planned',source_type:'manual'},{title:'Preparar material',status:'planned',source_type:'material'},{title:'Aula em andamento',status:'progress',source_type:'lesson'},{title:'Revisar progresso da turma',status:'done',source_type:'manual'}].map((x,i)=>({...x,class_id:id,teacher_id:session.user.id,position:i}));const r=await sb.from('tic_class_board_items').insert(rows);if(r.error)return toast(r.error.message,'error');toast('Cards iniciais criados.','success');tic21Tab(id,'board');};
-
-  window.tic21NewMaterial=id=>openModal('Adicionar material à turma',`<form class="form" onsubmit="tic21SaveMaterial(event,'${id}')"><div class="class-form-grid"><div class="field"><label>Título</label><input id="tic21MatTitle" required placeholder="Ex.: YouTube — Present Simple"></div><div class="field"><label>Tipo</label><select id="tic21MatType"><option value="link">🔗 Link</option><option value="youtube">▶️ YouTube</option><option value="drive">📁 Google Drive</option><option value="doc">📄 Google Docs</option><option value="pdf">📕 PDF</option><option value="audio">🎧 Áudio</option><option value="website">🌐 Site</option></select></div></div><div class="field"><label>URL</label><input id="tic21MatUrl" type="url" required placeholder="https://..."></div><div class="field"><label>Descrição</label><textarea id="tic21MatDesc" rows="4"></textarea></div><label class="switchline"><input id="tic21MatPinned" type="checkbox"> 📌 Fixar no topo</label><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Adicionar</button></div></form>`);
-  window.tic21SaveMaterial=async(e,id)=>{e.preventDefault();const r=await sb.from('tic_class_material_links').insert({class_id:id,teacher_id:session.user.id,title:$('tic21MatTitle').value.trim(),material_type:$('tic21MatType').value,url:$('tic21MatUrl').value.trim(),description:$('tic21MatDesc').value.trim()||null,pinned:$('tic21MatPinned').checked,position:Date.now()});if(r.error)return toast(r.error.message,'error');closeModal();toast('Material adicionado.','success');tic21Tab(id,'materials');};
-  window.tic21EditMaterial=async(mid,id)=>{const r=await sb.from('tic_class_material_links').select('*').eq('id',mid).eq('teacher_id',session.user.id).maybeSingle();if(r.error||!r.data)return toast('Material não encontrado.','error');const x=r.data;openModal('Editar material',`<form class="form" onsubmit="tic21UpdateMaterial(event,'${mid}','${id}')"><div class="class-form-grid"><div class="field"><label>Título</label><input id="tic21MatTitle" value="${escH(x.title||'')}" required></div><div class="field"><label>Tipo</label><select id="tic21MatType"><option value="link">🔗 Link</option><option value="youtube" ${x.material_type==='youtube'?'selected':''}>▶️ YouTube</option><option value="drive" ${x.material_type==='drive'?'selected':''}>📁 Drive</option><option value="doc" ${x.material_type==='doc'?'selected':''}>📄 Docs</option><option value="pdf" ${x.material_type==='pdf'?'selected':''}>📕 PDF</option><option value="audio" ${x.material_type==='audio'?'selected':''}>🎧 Áudio</option><option value="website" ${x.material_type==='website'?'selected':''}>🌐 Site</option></select></div></div><div class="field"><label>URL</label><input id="tic21MatUrl" type="url" value="${escH(x.url||'')}" required></div><div class="field"><label>Descrição</label><textarea id="tic21MatDesc" rows="4">${escH(x.description||'')}</textarea></div><label class="switchline"><input id="tic21MatPinned" type="checkbox" ${x.pinned?'checked':''}> 📌 Fixar no topo</label><div class="modal-actions"><button type="button" class="btn danger" onclick="tic21DeleteMaterial('${mid}','${id}')">Excluir</button><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`);};
-  window.tic21UpdateMaterial=async(e,mid,id)=>{e.preventDefault();const r=await sb.from('tic_class_material_links').update({title:$('tic21MatTitle').value.trim(),material_type:$('tic21MatType').value,url:$('tic21MatUrl').value.trim(),description:$('tic21MatDesc').value.trim()||null,pinned:$('tic21MatPinned').checked,updated_at:new Date().toISOString()}).eq('id',mid).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');closeModal();toast('Material atualizado.','success');tic21Tab(id,'materials');};
-  window.tic21DeleteMaterial=async(mid,id)=>{if(!confirm('Excluir este material?'))return;const r=await sb.from('tic_class_material_links').delete().eq('id',mid).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');toast('Material excluído.','success');tic21Tab(id,'materials');};
-
-  window.tic21NewSession=id=>openModal('Registrar / planejar aula',`<form class="form" onsubmit="tic21SaveSession(event,'${id}')"><div class="field"><label>Título da aula</label><input id="tic21SesTitle" required placeholder="Ex.: Travel — Asking for directions"></div><div class="class-form-grid"><div class="field"><label>Data e hora</label><input id="tic21SesDate" type="datetime-local" required></div><div class="field"><label>Duração (min)</label><input id="tic21SesDuration" type="number" min="1" value="60"></div></div><div class="field"><label>Status</label><select id="tic21SesStatus"><option value="planned">Planejada</option><option value="done">Ministrada</option></select></div><div class="field"><label>Observação da aula</label><textarea id="tic21SesNotes" rows="5" placeholder="Conteúdo, desempenho, pontos para revisar..."></textarea></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar aula</button></div></form>`);
-  window.tic21SaveSession=async(e,id)=>{e.preventDefault();const r=await sb.from('tic_class_sessions').insert({class_id:id,teacher_id:session.user.id,title:$('tic21SesTitle').value.trim(),session_at:new Date($('tic21SesDate').value).toISOString(),duration_minutes:Number($('tic21SesDuration').value||60),status:$('tic21SesStatus').value,notes:$('tic21SesNotes').value.trim()||null});if(r.error)return toast('Não foi possível salvar: '+r.error.message,'error');closeModal();toast('Aula registrada.','success');tic21Tab(id,'sessions');};
-  window.tic21EditSession=async(sid,id)=>{const r=await sb.from('tic_class_sessions').select('*').eq('id',sid).eq('teacher_id',session.user.id).maybeSingle();if(r.error||!r.data)return toast('Aula não encontrada.','error');const x=r.data;openModal('Editar aula',`<form class="form" onsubmit="tic21UpdateSession(event,'${sid}','${id}')"><div class="field"><label>Título</label><input id="tic21SesTitle" value="${escH(x.title||'')}" required></div><div class="class-form-grid"><div class="field"><label>Data e hora</label><input id="tic21SesDate" type="datetime-local" value="${isoInput(x.session_at)}" required></div><div class="field"><label>Duração (min)</label><input id="tic21SesDuration" type="number" min="1" value="${x.duration_minutes||60}"></div></div><div class="field"><label>Status</label><select id="tic21SesStatus"><option value="planned" ${x.status==='planned'?'selected':''}>Planejada</option><option value="done" ${x.status==='done'?'selected':''}>Ministrada</option></select></div><div class="field"><label>Observação</label><textarea id="tic21SesNotes" rows="5">${escH(x.notes||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn danger" onclick="tic21DeleteSession('${sid}','${id}')">Excluir</button><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`);};
-  window.tic21UpdateSession=async(e,sid,id)=>{e.preventDefault();const r=await sb.from('tic_class_sessions').update({title:$('tic21SesTitle').value.trim(),session_at:new Date($('tic21SesDate').value).toISOString(),duration_minutes:Number($('tic21SesDuration').value||60),status:$('tic21SesStatus').value,notes:$('tic21SesNotes').value.trim()||null,updated_at:new Date().toISOString()}).eq('id',sid).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');closeModal();toast('Aula atualizada.','success');tic21Tab(id,'sessions');};
-  window.tic21DeleteSession=async(sid,id)=>{if(!confirm('Excluir esta aula do histórico?'))return;const r=await sb.from('tic_class_sessions').delete().eq('id',sid).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');closeModal();toast('Aula excluída.','success');tic21Tab(id,'sessions');};
-
-  window.tic21NewNote=id=>openModal('Nova observação do Teacher',`<form class="form" onsubmit="tic21SaveNote(event,'${id}')"><div class="field"><label>Título</label><input id="tic21NoteTitle" placeholder="Ex.: Participação e pontos a reforçar"></div><div class="field"><label>Observação</label><textarea id="tic21NoteBody" rows="8" required placeholder="Evolução, dificuldades, participação, comportamento acadêmico e próximos passos..."></textarea></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar observação</button></div></form>`);
-  window.tic21SaveNote=async(e,id)=>{e.preventDefault();const r=await sb.from('tic_class_notes').insert({class_id:id,teacher_id:session.user.id,title:$('tic21NoteTitle').value.trim()||'Observação do Teacher',body:$('tic21NoteBody').value.trim()});if(r.error)return toast('Não foi possível salvar: '+r.error.message,'error');closeModal();toast('Observação registrada.','success');tic21Tab(id,'notes');};
-  window.tic21EditNote=async(nid,id)=>{const r=await sb.from('tic_class_notes').select('*').eq('id',nid).eq('teacher_id',session.user.id).maybeSingle();if(r.error||!r.data)return toast('Observação não encontrada.','error');const x=r.data;openModal('Editar observação',`<form class="form" onsubmit="tic21UpdateNote(event,'${nid}','${id}')"><div class="field"><label>Título</label><input id="tic21NoteTitle" value="${escH(x.title||'')}" required></div><div class="field"><label>Observação</label><textarea id="tic21NoteBody" rows="8" required>${escH(x.body||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn danger" onclick="tic21DeleteNote('${nid}','${id}')">Excluir</button><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`);};
-  window.tic21UpdateNote=async(e,nid,id)=>{e.preventDefault();const r=await sb.from('tic_class_notes').update({title:$('tic21NoteTitle').value.trim()||'Observação do Teacher',body:$('tic21NoteBody').value.trim(),updated_at:new Date().toISOString()}).eq('id',nid).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');closeModal();toast('Observação atualizada.','success');tic21Tab(id,'notes');};
-  window.tic21DeleteNote=async(nid,id)=>{if(!confirm('Excluir esta observação?'))return;const r=await sb.from('tic_class_notes').delete().eq('id',nid).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');closeModal();toast('Observação excluída.','success');tic21Tab(id,'notes');};
-
-  window.tic21FilterSessions=id=>{const q=($('tic21SessionSearch')?.value||'').toLowerCase();document.querySelectorAll('#tic21SessionsList .session-row').forEach(x=>x.style.display=(x.dataset.search||'').toLowerCase().includes(q)?'':'none');};
-  window.tic21FilterMaterials=id=>{const q=($('tic21MaterialSearch')?.value||'').toLowerCase();document.querySelectorAll('#tic21MaterialsList .tic21-material').forEach(x=>x.style.display=(x.dataset.search||'').toLowerCase().includes(q)?'':'none');};
-  window.tic21FilterStudents=id=>{const q=($('tic21StudentSearch')?.value||'').toLowerCase();document.querySelectorAll('#tic21StudentsList .tic21-student').forEach(x=>x.style.display=(x.dataset.search||'').toLowerCase().includes(q)?'':'none');};
-
-  window.tic21OpenClassCommand=openCommand;
-
-  /* Replace only the Classes renderer. All original functions remain untouched. */
-  window.classesPage=async function(){
-    const {data,error}=await sb.from('tic_classes').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
-    if(error){$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar as turmas.</b><p>${escH(error.message)}</p></div>`;return;}
-    const ids=(data||[]).map(x=>x.id);let members=[];
-    if(ids.length){const r=await sb.from('tic_class_students').select('class_id,student_id,status').in('class_id',ids);members=r.data||[];}
-    const countBy={};members.forEach(m=>{if(m.status==='active')countBy[m.class_id]=(countBy[m.class_id]||0)+1;});
-    $('content').innerHTML=`<div class="tic21-class-toolbar"><div><b>🏫 Suas turmas</b><small>${(data||[]).length} turma${(data||[]).length===1?'':'s'} cadastrada${(data||[]).length===1?'':'s'}</small></div><div class="tic21-class-tools"><input id="tic21ClassSearch" placeholder="🔎 Buscar turma..." oninput="tic21FilterClasses()"><select id="tic21ClassLevel" onchange="tic21FilterClasses()"><option value="">Todos os níveis</option>${['A0','A1','A2','B1','B2','C1','C2'].map(l=>`<option>${l}</option>`).join('')}</select><button id="tic21GridBtn" class="btn sm secondary" onclick="tic21SetClassLayout('grid')">▦</button><button id="tic21ListBtn" class="btn sm ghost" onclick="tic21SetClassLayout('list')">☰</button></div></div><div id="tic21ClassesGrid" class="tic21-classes-grid">${(data||[]).map(c=>`<article class="tic21-class-card" data-search="${escH(c.name+' '+(c.level||'')+' '+(c.schedule_text||''))}" data-level="${escH(c.level||'')}"><div class="tic21-class-card-head"><div><span class="badge blue">${escH(c.level||'A1')}</span><h2>${escH(c.name)}</h2></div>${badge(c.status||'active')}</div><div class="tic21-class-metrics"><div><span>👥</span><b>${countBy[c.id]||0}</b><small>alunos</small></div><div><span>🕐</span><b>${escH(c.schedule_text||'—')}</b><small>horário</small></div><div><span>🔗</span><b>${c.meeting_url?'Sim':'—'}</b><small>online</small></div></div><div class="tic21-class-actions"><button class="btn primary" onclick="tic21OpenClassCommand('${c.id}')">🏫 Abrir turma</button><button class="btn secondary" onclick="openClassMembers('${c.id}')">👥 Alunos</button><button class="btn ghost" onclick="openClassAssign('${c.id}')">📤 Atribuir</button><button class="btn ghost" onclick="openClassSubmissions('${c.id}')">📝 Feedback</button><button class="btn ghost" onclick="openClassProgress('${c.id}')">📊 Progresso</button><button class="btn ghost" onclick='editGeneric("classes",${JSON.stringify(c)})'>Editar</button><button class="btn danger" onclick="deleteRow('tic_classes','${c.id}','classes')">Excluir</button></div></article>`).join('')||'<div class="card empty">Nenhuma turma criada.</div>'}</div>`;
+      const {data:p,error}=await sb.from('tic_profiles').select('id,role,full_name,active').eq('id',session.user.id).maybeSingle();
+      if(error) throw error;
+      if(p) profile=p;
+      if(profile?.role==='teacher'||profile?.role==='admin') return true;
+      ticV26Toast('O usuário conectado não possui perfil de Teacher.','error');
+    }catch(e){ticV26Toast('Não foi possível validar o perfil do Teacher: '+(e?.message||e),'error')}
+    return false;
   };
-  window.tic21FilterClasses=()=>{const q=($('tic21ClassSearch')?.value||'').toLowerCase(),l=$('tic21ClassLevel')?.value||'';document.querySelectorAll('.tic21-class-card').forEach(c=>{c.style.display=((!q||(c.dataset.search||'').toLowerCase().includes(q))&&(!l||c.dataset.level===l))?'':'none';});};
-  window.tic21SetClassLayout=mode=>{const g=$('tic21ClassesGrid');if(!g)return;g.classList.toggle('list',mode==='list');$('tic21GridBtn')?.classList.toggle('primary',mode==='grid');$('tic21ListBtn')?.classList.toggle('primary',mode==='list');};
-  try{classesPage=window.classesPage;}catch(e){}
+
+  /* ----- Add Student: keep the original complete form, but make opening resilient. ----- */
+  const originalOpenStudentForm=window.openStudentForm;
+  window.openStudentFormV26=async function(student){
+    const ok=await window.requireTeacherActionV26();
+    if(!ok)return;
+    try{
+      if(typeof originalOpenStudentForm==='function') return originalOpenStudentForm(student||null);
+      if(typeof openStudentForm==='function') return openStudentForm(student||null);
+      ticV26Toast('O formulário de aluno não está disponível nesta versão.','error');
+    }catch(e){
+      console.error('openStudentFormV26',e);
+      ticV26Toast('Não foi possível abrir o cadastro do aluno: '+(e?.message||e),'error');
+    }
+  };
+  /* Inline buttons in the existing HTML can safely call this async wrapper. */
+  window.openStudentForm=window.openStudentFormV26;
+
+  /* ----- Modal UX: preserve existing openModal/closeModal, add ESC/backdrop/scroll. ----- */
+  const originalCloseModal=window.closeModal;
+  window.closeModalV26=function(){
+    try{
+      if(typeof originalCloseModal==='function') originalCloseModal();
+      else document.getElementById('modal')?.classList.add('hidden');
+    }finally{
+      document.body.classList.remove('tic-v26-modal-open');
+      document.documentElement.classList.remove('tic-v26-modal-open');
+    }
+  };
+  window.closeModal=window.closeModalV26;
+
+  const originalOpenModal=window.openModal;
+  window.openModalV26=function(title,body){
+    const r=originalOpenModal?.(title,body);
+    const modal=document.getElementById('modal');
+    const card=modal?.querySelector('.modal-card');
+    if(modal){modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');}
+    if(card){card.classList.add('tic-v26-modal-card');}
+    document.body.classList.add('tic-v26-modal-open');
+    return r;
+  };
+  window.openModal=window.openModalV26;
+
+  /* ----- Student Tasks: final override supports HTML, structured JSON and legacy tasks. ----- */
+  window.openStudentTaskViewer=async function(taskAssignmentId){
+    const s=await studentRecord();
+    if(!s)return;
+    const {data:x,error}=await sb.from('tic_task_assignments')
+      .select('id,active,status,assignment_id,tic_assignments(*)')
+      .eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+    if(error||!x||x.active===false)return ticV26Toast(error?.message||'Task não encontrada ou removida.','error');
+    const a=x.tic_assignments||{};
+    const {data:subs}=await sb.from('tic_submissions')
+      .select('id,attempt,grade,status,submitted_at,answer_text,file_url,audio_url,video_url')
+      .eq('task_assignment_id',x.id).eq('student_id',s.id).order('attempt',{ascending:false});
+    let qs=[];try{qs=normalizeQuestions?.(a.content_json?.questions||[])||[]}catch(_){qs=[]}
+    const hasStructured=qs.length>0;
+    const hasHtml=!!(a.html_enabled&&a.html_content);
+    const hasLegacyResponse=!hasStructured&&!hasHtml;
+    const attempt=(subs||[]).length+1;
+    const safeTitle=esc(a.title||'Task');
+    const questionHtml=hasStructured?renderStudentQuestions(a,true):'';
+    const htmlBlock=hasHtml?`<section class="viewer-panel"><div class="viewer-panel-head"><b>🧩 Atividade interativa</b><div class="html-devicebar"><button type="button" class="btn sm secondary" onclick="ticResizeViewer('desktop')">🖥</button><button type="button" class="btn sm secondary" onclick="ticResizeViewer('tablet')">▣</button><button type="button" class="btn sm secondary" onclick="ticResizeViewer('mobile')">📱</button></div></div><div id="htmlViewerWrap" class="html-viewer-wrap desktop"><iframe id="htmlViewerFrame" title="Task interactive viewer" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div><div id="htmlViewerStatus" class="notice">Conteúdo carregado. Use o botão de envio da atividade quando existir.</div></section>`:'';
+    const legacyBlock=hasLegacyResponse?`<section class="viewer-panel"><div class="viewer-panel-head"><b>📝 Sua resposta</b><span>Tentativa ${attempt}</span></div><form class="form" onsubmit="ticSubmitLegacyTaskV26(event,'${x.id}')"><div class="field"><label>Resposta / observação</label><textarea id="ticLegacyTaskAnswer" rows="8" placeholder="Digite sua resposta para o Teacher..."></textarea></div><div class="field"><label>Link ou arquivo (opcional)</label><input id="ticLegacyTaskFile" type="url" placeholder="https://..."></div><button class="btn primary">📤 Enviar para o Teacher</button></form></section>`:'';
+    const structuredBlock=hasStructured?`<section class="viewer-panel"><div class="viewer-panel-head"><b>🧠 Questões</b><span>${qs.length} questão(ões)</span></div><form id="ticStructuredTaskForm" class="form" onsubmit="ticSubmitStructuredTaskV26(event,'${x.id}')">${questionHtml}<div class="task-sticky-actions"><button class="btn primary">📤 Enviar respostas</button></div></form></section>`:'';
+    const attempts=(subs||[]).map(z=>`<div class="tic-attempt"><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:'Aguardando correção'}</small></div>`).join('')||'<div class="empty">Nenhuma tentativa enviada ainda.</div>';
+    openModal(`🧩 ${safeTitle}`,`<div class="tic-v26-task-view"><section class="student-task-viewer-hero"><div><span class="badge blue">${esc(a.cefr_level||'A1')}</span> <span class="badge green">${esc(a.skill||a.assignment_type||'Task')}</span><h2>${safeTitle}</h2><p>${esc(a.instructions||'Complete a atividade com atenção.')}</p></div><div class="task-stats-row"><span><b>${a.points||0}</b><small>pontos</small></span><span><b>${attempt}</b><small>próxima tentativa</small></span><span><b>${a.due_at?fmtDate(a.due_at):'—'}</b><small>prazo</small></span></div></section>${hasHtml?htmlBlock:''}${structuredBlock}${legacyBlock}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${typeof ticRenderResourcesFinal==='function'?ticRenderResourcesFinal(a):typeof ticRenderLessonResources==='function'?ticRenderLessonResources(a):'<div class="empty">Nenhum recurso.</div>'}</section><section class="viewer-panel"><div class="viewer-panel-head"><b>🕘 Histórico de tentativas</b></div>${attempts}</section></div>`);
+    if(hasHtml){try{const f=document.getElementById('htmlViewerFrame');if(f){ticHtmlViewerContext={mode:'studentTask',refId:x.id,html:a.html_content};f.srcdoc=(typeof ticResponsiveSrcdoc==='function'?ticResponsiveSrcdoc(a.html_content):a.html_content)+(typeof ticHtmlBridge==='function'?ticHtmlBridge():'')}}catch(e){console.error(e)}}
+  };
+
+  window.ticSubmitLegacyTaskV26=async function(e,taskAssignmentId){
+    e.preventDefault();
+    const s=await studentRecord();if(!s)return;
+    const {data:ta,error:te}=await sb.from('tic_task_assignments').select('id,active,assignment_id').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+    if(te||!ta||ta.active===false)return ticV26Toast(te?.message||'Atribuição indisponível.','error');
+    const {data:last}=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',ta.id).order('attempt',{ascending:false}).limit(1).maybeSingle();
+    const payload={task_assignment_id:ta.id,student_id:s.id,attempt:Number(last?.attempt||0)+1,answer_text:document.getElementById('ticLegacyTaskAnswer')?.value.trim()||null,file_url:document.getElementById('ticLegacyTaskFile')?.value.trim()||null,status:'submitted',submitted_at:new Date().toISOString()};
+    const r=await sb.from('tic_submissions').insert(payload);
+    if(r.error)return ticV26Toast('Não foi possível enviar: '+r.error.message,'error');
+    await sb.from('tic_task_assignments').update({status:'submitted'}).eq('id',ta.id).eq('student_id',s.id);
+    ticV26Toast('Resposta enviada ao Teacher.','success');openStudentTaskViewer(taskAssignmentId);
+  };
+
+  window.ticSubmitStructuredTaskV26=async function(e,taskAssignmentId){
+    e.preventDefault();
+    const s=await studentRecord();if(!s)return;
+    const {data:ta,error:te}=await sb.from('tic_task_assignments').select('id,active,assignment_id,tic_assignments(content_json,points)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+    if(te||!ta||ta.active===false)return ticV26Toast(te?.message||'Atribuição indisponível.','error');
+    const qs=normalizeQuestions?.(ta.tic_assignments?.content_json?.questions||[])||[];const answers={};qs.forEach(q=>{if(q.type==='multiple_choice'||q.type==='true_false'){const el=document.querySelector(`[name="sq_${q.id}"]:checked`);answers[q.id]=el?.value??''}else answers[q.id]=document.querySelector(`[data-answer="${q.id}"]`)?.value?.trim()||''});
+    let result=null;try{result=autoGrade(qs,answers)}catch(_){result=null}
+    const {data:last}=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',ta.id).order('attempt',{ascending:false}).limit(1).maybeSingle();
+    const row={task_assignment_id:ta.id,student_id:s.id,attempt:Number(last?.attempt||0)+1,answer_text:null,response_data:{fields:answers,auto_grade:result},grade:result?.percent??null,status:'submitted',submitted_at:new Date().toISOString()};
+    const r=await sb.from('tic_submissions').insert(row);if(r.error)return ticV26Toast('Não foi possível enviar: '+r.error.message,'error');
+    await sb.from('tic_task_assignments').update({status:'submitted'}).eq('id',ta.id).eq('student_id',s.id);
+    ticV26Toast(result?.percent!=null?`Resposta enviada. Resultado automático: ${result.percent}%`:'Resposta enviada ao Teacher.','success');
+    openStudentTaskViewer(taskAssignmentId);
+  };
+
+  /* ----- Close behavior: ESC and backdrop, without breaking nested dialogs. ----- */
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){
+      const modal=document.getElementById('modal');
+      if(modal&&!modal.classList.contains('hidden')){e.preventDefault();window.closeModalV26();return}
+      const search=document.getElementById('searchModal');if(search&&!search.classList.contains('hidden')&&typeof closeSearch==='function'){e.preventDefault();closeSearch()}
+    }
+  },true);
+  document.addEventListener('click',e=>{
+    const modal=document.getElementById('modal');
+    if(modal&&!modal.classList.contains('hidden')&&e.target===modal)window.closeModalV26();
+  });
+
+  /* ----- Responsive/floating button polish without replacing the existing design. ----- */
+  const st=document.createElement('style');st.id='tic-v26-preserve-style';st.textContent=`
+    body.tic-v26-modal-open{overflow:hidden}
+    .tic-v26-modal-card{width:min(1180px,calc(100vw - 28px))!important;max-width:1180px!important;max-height:calc(100vh - 28px)!important;overflow:auto!important;overscroll-behavior:contain}
+    .tic-v26-task-view{display:grid;gap:14px}.tic-v26-task-view .viewer-panel{min-width:0}
+    .tic-v26-modal-card .modal-head{position:sticky;top:0;background:#fff;z-index:5;padding-bottom:10px}
+    .float-main,.float-item button,.btn{transition:transform .18s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease,color .18s ease}
+    .float-main:hover,.float-item button:hover,.btn:hover{transform:translateY(-2px)}
+    .float-main:hover{box-shadow:0 14px 30px #6844d83d}
+    @media(max-width:760px){.tic-v26-modal-card{width:100vw!important;max-width:none!important;max-height:100vh!important;height:100vh!important;border-radius:0!important;padding:16px!important}.tic-v26-modal-card .modal-head{top:-16px;margin:0 -16px;padding:16px;background:#fff}.student-task-viewer-hero{flex-direction:column}.task-stats-row{grid-template-columns:1fr 1fr}.task-sticky-actions{position:sticky;bottom:0;background:#fff;padding:10px 0;z-index:4}}
+  `;document.head.appendChild(st);
 })();
-
 </script>
-
-<style id="tic-v22-scroll-fix">
-/* V22 — scroll fix for Class Command Center */
-html.tic21-page-lock, body.tic21-page-lock{overflow:hidden!important;height:100%!important}
-.modal:has(.tic21-shell){display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;padding:12px!important}
-.modal-card.tic21-modal{display:flex!important;flex-direction:column!important;width:min(1320px,calc(100vw - 24px))!important;height:min(94vh,960px)!important;max-height:94vh!important;min-height:0!important;overflow:hidden!important;padding:0!important}
-.tic21-shell{height:100%!important;min-height:0!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
-.tic21-head,.tic21-tabs{flex:0 0 auto}
-.tic21-body{flex:1 1 auto!important;height:auto!important;min-height:0!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;scrollbar-width:auto!important;padding-bottom:40px!important}
-.tic21-body::-webkit-scrollbar{width:10px}
-.tic21-body::-webkit-scrollbar-track{background:#f0eef5;border-radius:20px}
-.tic21-body::-webkit-scrollbar-thumb{background:#b9add7;border-radius:20px;border:2px solid #f0eef5}
-.tic21-body::-webkit-scrollbar-thumb:hover{background:#8f7bc0}
-.tic21-board,.tic21-panel,.tic21-overview-grid{min-width:0}
-@media(max-width:760px){.modal:has(.tic21-shell){padding:0!important;align-items:stretch!important}.modal-card.tic21-modal{width:100vw!important;height:100vh!important;max-height:100vh!important;border-radius:0!important}.tic21-body{padding:12px 12px 60px!important}}
-</style>
-<script>
-(function(){
-  function lock(){document.documentElement.classList.add('tic21-page-lock');document.body.classList.add('tic21-page-lock');}
-  function unlock(){document.documentElement.classList.remove('tic21-page-lock');document.body.classList.remove('tic21-page-lock');}
-  const oldOpen=window.tic21OpenClassCommand;
-  if(oldOpen){window.tic21OpenClassCommand=async function(){lock();return oldOpen.apply(this,arguments);};}
-  const oldClose=window.closeModal;
-  if(oldClose){window.closeModal=function(){try{return oldClose.apply(this,arguments)}finally{unlock();}};}
-})();
-</script>
-
-<style id="tic-v23-real-scroll-fix">
-/* V23 — real modal scrolling: the modal body is the flex viewport and tic21-body is its scroller. */
-#modal:has(.tic21-shell){position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:12px!important;overflow:hidden!important;z-index:9999!important}
-#modal:has(.tic21-shell)>.modal-card.tic21-modal{display:flex!important;flex-direction:column!important;width:min(1320px,calc(100vw - 24px))!important;height:calc(100vh - 24px)!important;max-height:calc(100vh - 24px)!important;min-height:0!important;padding:0!important;overflow:hidden!important}
-#modal:has(.tic21-shell)>.modal-card.tic21-modal>.modal-head{display:none!important}
-#modal:has(.tic21-shell) #modalBody{display:flex!important;flex:1 1 auto!important;min-height:0!important;height:100%!important;overflow:hidden!important;padding:0!important}
-#modal:has(.tic21-shell) #modalBody>.tic21-shell{flex:1 1 auto!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;overflow:hidden!important}
-#modal:has(.tic21-shell) .tic21-body{flex:1 1 auto!important;min-height:0!important;height:0!important;max-height:none!important;overflow-y:scroll!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;scrollbar-width:auto!important}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar{width:12px}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-track{background:#eeeaf5}
-#modal:has(.tic21-shell) .tic21-body::-webkit-scrollbar-thumb{background:#9b8ac5;border-radius:10px;border:3px solid #eeeaf5}
-@media(max-width:760px){
- #modal:has(.tic21-shell){padding:0!important;align-items:stretch!important}
- #modal:has(.tic21-shell)>.modal-card.tic21-modal{width:100vw!important;height:100vh!important;max-height:100vh!important;border-radius:0!important}
- #modal:has(.tic21-shell) #modalBody{height:100%!important}
- #modal:has(.tic21-shell) .tic21-body{padding:12px 12px 80px!important}
-}
-</style>
-
 </body>
 </html>
 
@@ -2694,176 +2755,4 @@ window.progressPage=async function(student=false){
   const ids=students.map(s=>s.id);const {data:p}=ids.length?await sb.from('tic_progress').select('*').in('student_id',ids):{data:[]};
   $('content').innerHTML=`<div class="grid cols3">${students.map(s=>{const overall=Number(p?.find(x=>x.student_id===s.id&&x.skill==='overall'&&x.level===s.current_level)?.progress||0);return `<div class="card"><div class="section-head"><h2>${esc(s.display_name)}</h2><span>${esc(s.current_level)}</span></div><div style="font:800 30px 'Plus Jakarta Sans'">${overall}%</div><div class="progress"><i style="width:${overall}%"></i></div><div style="margin-top:15px">${['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'].map(k=>{const v=Number(p?.find(x=>x.student_id===s.id&&x.skill===k&&x.level===s.current_level)?.progress||0);return `<div class="mini"><span>${k}</span><b>${v}%</b></div><div class="progress" style="height:6px;margin-bottom:9px"><i style="width:${v}%"></i></div>`}).join('')}</div></div>`}).join('')||'<div class="card empty">Nenhum aluno.</div>'}</div>`;
 };
-</script>
-
-<style id="teacher-platform-v24-polish">
-/* V24 — responsive shell, reliable modal controls, accessible floating actions */
-.modal{align-items:stretch;justify-items:stretch;padding:12px;overflow:hidden}
-.modal-card{width:min(1180px,96vw);max-width:1180px;height:min(94vh,920px);max-height:94vh;margin:auto;display:flex;flex-direction:column;min-height:0;padding:0;overflow:hidden}
-.modal-head{flex:0 0 auto;padding:16px 18px;border-bottom:1px solid var(--line);background:#fff;position:relative;z-index:5}
-#modalBody{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:18px}
-.modal-card:has(.tic21-shell){width:min(1440px,98vw);height:min(96vh,980px);max-height:96vh;padding:0;overflow:hidden}
-.modal-card:has(.tic21-shell) #modalBody{padding:0;overflow:hidden}
-.tic21-shell{height:100%;min-height:0}
-.tic21-body{flex:1 1 auto;min-height:0;height:auto;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:auto}
-.tic21-body::-webkit-scrollbar,#modalBody::-webkit-scrollbar{width:10px;height:10px}
-.tic21-body::-webkit-scrollbar-thumb,#modalBody::-webkit-scrollbar-thumb{background:#c9c2d8;border-radius:99px;border:2px solid transparent;background-clip:padding-box}
-.tic21-body::-webkit-scrollbar-track,#modalBody::-webkit-scrollbar-track{background:#f3f1f7}
-/* full-width, responsive class center */
-.tic21-head{flex:0 0 auto}
-.tic21-tabs{flex:0 0 auto;position:relative!important;top:auto!important}
-.tic21-head-actions .btn,.modal-head .btn{min-height:40px}
-/* floating action buttons: color change + motion + keyboard focus */
-.float-main,.float-item button{transition:transform .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease,border-color .18s ease}
-.float-main:hover,.float-main:focus-visible{transform:translateY(-3px) scale(1.04);background:linear-gradient(135deg,#7b57e7,#a16ff5);box-shadow:0 18px 40px #6844d866;outline:none}
-.float-item button:hover,.float-item button:focus-visible{transform:translateX(-4px) scale(1.06);background:var(--p);color:#fff;border-color:var(--p);box-shadow:0 12px 25px #6844d83b;outline:none}
-.float-item span{transition:.18s ease}
-.float-item:hover span{background:var(--p);transform:translateX(-2px)}
-.btn{transition:transform .16s ease,box-shadow .16s ease,background .16s ease,color .16s ease,border-color .16s ease}
-.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 18px #34245c16}
-.btn.primary:hover:not(:disabled){background:#7a56e6}
-.btn.secondary:hover:not(:disabled){background:#e3d9ff}
-.btn.ghost:hover:not(:disabled){background:#f7f4ff;color:var(--p);border-color:#d9cff5}
-/* Student dashboard/task cards */
-.student-task-row-v24{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:9px;background:#fff;transition:.18s ease}
-.student-task-row-v24:hover{border-color:#d8cef2;box-shadow:0 10px 24px #34245c0d;transform:translateY(-1px)}
-.student-task-main-v24{min-width:0}.student-task-main-v24 b{display:block;font-size:13px;overflow-wrap:anywhere}.student-task-main-v24 small{display:block;color:var(--muted);font-size:10px;margin-top:3px}
-.student-task-actions-v24{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
-.student-dashboard-actions-v24{display:flex;gap:8px;flex-wrap:wrap}
-/* Professional task viewer */
-.tic-v24-task{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;min-height:100%}
-.tic-v24-main,.tic-v24-side{min-width:0}.tic-v24-panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:17px;margin-bottom:14px}
-.tic-v24-hero{background:linear-gradient(135deg,#171522,#3a285d);color:#fff;border-radius:18px;padding:20px;margin-bottom:14px}
-.tic-v24-hero h2{font:800 24px 'Plus Jakarta Sans';margin:8px 0 5px}.tic-v24-hero p{margin:0;color:#d2cada;font-size:12px;line-height:1.6}
-.tic-v24-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.tic-v24-question{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;background:#fff}.tic-v24-question h4{margin:0 0 9px;font-size:13px}.tic-v24-option{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;border:1px solid #ece8f2;border-radius:10px;margin-top:7px;cursor:pointer}.tic-v24-option:hover{background:#faf8ff;border-color:#d8cef2}.tic-v24-option input{margin-top:3px}.tic-v24-question input[type=text],.tic-v24-question textarea,.tic-v24-question select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:14px}.tic-v24-submitbar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px;display:flex;justify-content:flex-end;gap:8px;z-index:3}
-@media(max-width:900px){.tic-v24-task{grid-template-columns:1fr}.tic-v24-side{display:block}.modal-card{width:98vw;height:94vh}}
-@media(max-width:760px){.modal{padding:0}.modal-card,.modal-card:has(.tic21-shell){width:100vw;height:100vh;max-height:100vh;border-radius:0}.modal-head{padding:13px 14px}.modal-card:not(:has(.tic21-shell)) #modalBody{padding:14px}.tic21-head{padding:14px 15px}.tic21-head-actions .btn{flex:1}.tic-v24-task{display:block}.tic-v24-hero h2{font-size:20px}.student-task-row-v24{display:block}.student-task-actions-v24{justify-content:flex-start;margin-top:10px}.student-dashboard-actions-v24 .btn{flex:1;min-width:130px}.float{right:14px;bottom:14px}.float-main{width:50px;height:50px}.tic-v24-submitbar{position:static;margin-top:10px}}
-@media(prefers-reduced-motion:reduce){.btn,.float-main,.float-item button,.student-task-row-v24{transition:none!important}}
-</style>
-
-
-<script id="teacher-platform-v24-runtime">
-(function(){
-  const $v24=id=>document.getElementById(id);
-  const escV24=v=>typeof esc==='function'?esc(v==null?'':String(v)):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const safeUrlV24=v=>{try{const u=new URL(String(v||''),location.href);return /^https?:$/.test(u.protocol)?u.href:'#'}catch{return'#'}};
-  const badgeV24=s=>typeof badge==='function'?badge(s):`<span class="badge gray">${escV24(s||'')}</span>`;
-  const fmtV24=v=>typeof fmtDate==='function'?fmtDate(v):(v?new Date(v).toLocaleDateString('pt-BR'):'—');
-
-  /* Reliable modal lifecycle: one source of truth, ESC, backdrop, focus return. */
-  let lastFocusV24=null;
-  const oldClose=window.closeModal;
-  window.closeModal=function(){
-    const modal=$v24('modal');
-    if(modal){modal.classList.add('hidden');modal.setAttribute('aria-hidden','true');}
-    document.body.classList.remove('modal-open-v24');
-    const mb=$v24('modalBody');if(mb)mb.scrollTop=0;
-    if(lastFocusV24&&document.contains(lastFocusV24)){try{lastFocusV24.focus()}catch{}}
-    lastFocusV24=null;
-  };
-  const oldOpen=window.openModal;
-  window.openModal=function(title,body){
-    lastFocusV24=document.activeElement instanceof HTMLElement?document.activeElement:null;
-    oldOpen(title,body);
-    const modal=$v24('modal');
-    if(modal){modal.classList.remove('hidden');modal.setAttribute('aria-hidden','false');modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');}
-    document.body.classList.add('modal-open-v24');
-    requestAnimationFrame(()=>{
-      const close=modal?.querySelector('.modal-head .btn');if(close)close.setAttribute('aria-label','Fechar');
-    });
-  };
-  document.addEventListener('keydown',e=>{
-    const modal=$v24('modal');
-    if(e.key==='Escape'&&modal&&!modal.classList.contains('hidden')){e.preventDefault();window.closeModal();}
-  });
-  document.addEventListener('click',e=>{
-    const modal=$v24('modal');
-    if(!modal||modal.classList.contains('hidden'))return;
-    if(e.target===modal)window.closeModal();
-  });
-
-  /* Student task: direct, reliable opening from Dashboard and My Tasks. */
-  window.openStudentTask=async function(taskAssignmentId){
-    const s=await studentRecord();if(!s)return;
-    let q=await sb.from('tic_task_assignments').select('*,tic_assignments(*)').eq('id',taskAssignmentId).eq('student_id',s.id).eq('active',true).maybeSingle();
-    if(q.error||!q.data){
-      q=await sb.from('tic_task_assignments').select('*,tic_assignments(*)').eq('assignment_id',taskAssignmentId).eq('student_id',s.id).eq('active',true).maybeSingle();
-    }
-    if(q.error||!q.data)return toast(q.error?.message||'Não foi possível abrir esta Task.','error');
-    return window.openStudentTaskV24(q.data);
-  };
-
-  function renderQuestionsV24(a,ta){
-    const cj=a?.content_json||{};const qs=Array.isArray(cj.questions)?cj.questions:[];
-    if(!qs.length)return '';
-    return `<section class="tic-v24-panel"><div class="section-head"><h2>🧩 Atividade</h2><span>${qs.length} questão${qs.length===1?'':'ões'}</span></div><div id="v24Questions">${qs.map((q,i)=>{
-      const type=String(q.type||q.kind||'multiple_choice').toLowerCase();const opts=Array.isArray(q.options)?q.options:(Array.isArray(q.choices)?q.choices:[]);const name=`v24q_${i}`;
-      let control='';
-      if(['multiple_choice','multiple-choice','mcq','choice'].includes(type))control=opts.map((o,j)=>{const val=typeof o==='object'?(o.value??o.text??o.label??j):o;const label=typeof o==='object'?(o.text??o.label??o.value??j):o;return `<label class="tic-v24-option"><input type="radio" name="${name}" value="${escV24(val)}"> <span>${escV24(label)}</span></label>`}).join('');
-      else if(['true_false','true-false','boolean'].includes(type))control=['true','false'].map(v=>`<label class="tic-v24-option"><input type="radio" name="${name}" value="${v}"> <span>${v==='true'?'Verdadeiro':'Falso'}</span></label>`).join('');
-      else if(type==='select')control=`<select name="${name}"><option value="">Selecione...</option>${opts.map(o=>{const val=typeof o==='object'?(o.value??o.text??o.label):o;const label=typeof o==='object'?(o.text??o.label??o.value):o;return `<option value="${escV24(val)}">${escV24(label)}</option>`}).join('')}</select>`;
-      else control=`<textarea name="${name}" rows="3" placeholder="Digite sua resposta..."></textarea>`;
-      return `<div class="tic-v24-question"><h4>${i+1}. ${escV24(q.question||q.prompt||q.text||'Questão')}</h4>${control}</div>`;
-    }).join('')}</div></section>`;
-  }
-  function collectQuestionsV24(a){const qs=Array.isArray(a?.content_json?.questions)?a.content_json.questions:[];return qs.map((q,i)=>{const el=document.querySelector(`[name="v24q_${i}"]:checked`)||document.querySelector(`[name="v24q_${i}"]`);return {question:q.question||q.prompt||q.text||'',answer:el?.value||''};});}
-  async function submitV24(ta,a){
-    const s=await studentRecord();if(!s)return;
-    const latest=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',ta.id).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1);
-    const attempt=Number(latest.data?.[0]?.attempt||0)+1;
-    const qs=Array.isArray(a?.content_json?.questions)?a.content_json.questions:[];
-    const answers=qs.length?collectQuestionsV24(a):[];
-    const text=$v24('v24FreeAnswer')?.value.trim()||null;
-    if(!answers.length&&!text)return toast('Responda a atividade antes de enviar.','info');
-    let autoGrade=null;
-    if(answers.length){let correct=0,total=0;answers.forEach((r,i)=>{const q=qs[i]||{};const expected=q.answer??q.correct??q.correct_answer;if(expected!=null){total++;if(String(r.answer).trim().toLowerCase()===String(expected).trim().toLowerCase())correct++;}});if(total)autoGrade=Math.round(correct/total*100);}
-    const payload={task_assignment_id:ta.id,student_id:s.id,attempt,answer_text:text,response_data:{questions:answers,source:'task_builder_v24'},submitted_at:new Date().toISOString(),status:'submitted'};
-    if(autoGrade!=null)payload.grade=autoGrade;
-    const ins=await sb.from('tic_submissions').insert(payload);if(ins.error)return toast('Não foi possível enviar: '+ins.error.message,'error');
-    const upd=await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',ta.id).eq('student_id',s.id);if(upd.error)return toast('Entrega registrada, mas o status não foi atualizado: '+upd.error.message,'error');
-    toast(`Task enviada. Tentativa ${attempt}${autoGrade!=null?' · '+autoGrade+'%':''}.`,'success');window.openStudentTask(ta.id);
-  }
-  window.openStudentTaskV24=async function(ta){
-    const a=ta.tic_assignments||{};
-    const s=await studentRecord();if(!s)return;
-    const sub=await sb.from('tic_submissions').select('id,attempt,grade,submitted_at,answer_text,file_url,response_data,status').eq('task_assignment_id',ta.id).eq('student_id',s.id).order('attempt',{ascending:false});
-    const submissions=sub.data||[];const ids=submissions.map(x=>x.id);
-    const fb=ids.length?await sb.from('tic_feedback').select('submission_id,comment,grade,private_note,improvement_skill,improvement_link,created_at').in('submission_id',ids).order('created_at',{ascending:false}):{data:[]};
-    const feedbackRowsV24=fb.data||[];const latest=submissions[0];const latestFb=latest?feedbackRowsV24.find(x=>x.submission_id===latest.id):null;
-    const html=a.html_enabled&&a.html_content?`<section class="tic-v24-panel"><div class="section-head"><h2>🧩 Atividade interativa</h2><span class="badge green">HTML</span></div><div class="tic-viewer-content" id="v24HtmlWrap"><iframe id="v24HtmlFrame" title="Atividade interativa" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox" style="width:100%;height:620px;border:0;border-radius:12px;background:#fff"></iframe></div><div id="v24HtmlStatus" class="notice" style="margin-top:10px">Responda dentro da atividade.</div></section>`:'';
-    const qs=renderQuestionsV24(a,ta);
-    const hasBuilder=Array.isArray(a?.content_json?.questions)&&a.content_json.questions.length;
-    const answerBox=(!hasBuilder&&!html)?`<section class="tic-v24-panel"><div class="section-head"><h2>✍️ Sua resposta</h2><span>${a.allow_multiple_attempts===false?'1 tentativa':'Tentativas múltiplas'}</span></div>${a.instructions?`<div style="white-space:pre-wrap;line-height:1.65;margin-bottom:12px">${escV24(a.instructions)}</div>`:''}<textarea id="v24FreeAnswer" rows="7" placeholder="Digite sua resposta, produção escrita ou orientação ao Teacher..."></textarea></section>`:'';
-    const feedback=latestFb&&!latestFb.private_note?`<section class="tic-v24-panel"><div class="section-head"><h2>👨‍🏫 Feedback do Teacher</h2><span class="badge green">Corrigida</span></div>${latestFb.grade!=null?`<div style="font:800 30px 'Plus Jakarta Sans';margin-bottom:8px">${latestFb.grade}/100</div>`:''}<div style="white-space:pre-wrap;line-height:1.65">${escV24(latestFb.comment||'Sem comentário.')}</div>${latestFb.improvement_skill||latestFb.improvement_link?`<div class="improvement-box" style="margin-top:12px"><b>🎯 Como melhorar</b>${latestFb.improvement_skill?`<div>Habilidade: <b>${escV24(latestFb.improvement_skill)}</b></div>`:''}${latestFb.improvement_link?`<a class="btn secondary" href="${safeUrlV24(latestFb.improvement_link)}" target="_blank" rel="noopener noreferrer">🔗 Material de melhoria</a>`:''}</div>`:''}</section>`:'';
-    const history=`<section class="tic-v24-panel"><div class="section-head"><h2>🔄 Histórico</h2><span>${submissions.length} tentativa${submissions.length===1?'':'s'}</span></div>${submissions.map(z=>{const f=feedbackRowsV24.find(q=>q.submission_id===z.id);return `<div class="row"><div><b>Tentativa ${z.attempt||1}</b><small>${fmtV24(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:(f?'Corrigida':'Aguardando correção')}</small></div>${z.grade!=null?`<span class="badge green">${z.grade}%</span>`:badgeV24(f?'Corrigida':'Pendente')}</div>`}).join('')||'<div class="empty">Nenhuma entrega ainda.</div>'}</section>`;
-    const resources=Array.isArray(a.resource_items)?a.resource_items:[];
-    const resourceHtml=resources.length?`<section class="tic-v24-panel"><div class="section-head"><h2>📚 Recursos</h2><span>${resources.length}</span></div>${resources.map(r=>`<a class="row" href="${safeUrlV24(r.url||r.link)}" target="_blank" rel="noopener noreferrer"><div><b>${escV24(r.title||r.name||'Recurso')}</b><small>${escV24(r.type||'Material')}</small></div><span class="btn sm secondary">Abrir →</span></a>`).join('')}</section>`:'';
-    const active=ta.active!==false;const canSubmit=active&&a.allow_multiple_attempts!==false||(!submissions.length);
-    const action=`${active?`<div class="tic-v24-submitbar"><button class="btn ghost" type="button" onclick="closeModal()">Fechar</button><button class="btn primary" type="button" onclick="submitStudentTaskV24('${ta.id}')">📤 Enviar tarefa</button></div>`:`<div class="notice warning">Esta atribuição foi removida pelo Teacher.</div>`}`;
-    openModal('',`<div class="tic-v24-task"><div class="tic-v24-main"><div class="tic-v24-hero"><div>${badgeV24('🔓 Atribuição ativa')}</div><h2>${escV24(a.title||'Task')}</h2><p>${escV24(a.instructions||'Complete a atividade e envie sua resposta ao Teacher.')}</p><div class="tic-v24-meta"><span class="badge blue">${escV24(a.cefr_level||'CEFR não definido')}</span><span class="badge gray">${escV24(a.skill||'Skill não definida')}</span><span class="badge gray">${a.points||0} pontos</span><span class="badge gray">${a.due_at?'Prazo '+fmtV24(a.due_at):'Sem prazo'}</span></div></div>${html}${qs}${answerBox}${feedback}${history}</div><aside class="tic-v24-side">${resourceHtml||'<section class="tic-v24-panel"><h2 style="font-size:14px">📚 Recursos</h2><div class="empty">Nenhum recurso adicional.</div></section>'}<section class="tic-v24-panel"><h2 style="font-size:14px;margin:0 0 8px">💡 Como funciona</h2><p style="font-size:11px;color:var(--muted);line-height:1.6;margin:0">Você pode enviar uma nova tentativa enquanto o Teacher mantiver a atribuição ativa. O histórico permanece disponível mesmo depois da correção.</p></section></aside></div>${action}`);
-    if(html){const f=$v24('v24HtmlFrame');if(f&&typeof ticFrameHtml==='function')f.srcdoc=ticFrameHtml(a.html_content)+(typeof ticHtmlBridge==='function'?ticHtmlBridge():'');}
-  };
-  window.submitStudentTaskV24=async function(id){
-    const s=await studentRecord();if(!s)return;const r=await sb.from('tic_task_assignments').select('*,tic_assignments(*)').eq('id',id).eq('student_id',s.id).eq('active',true).maybeSingle();if(r.error||!r.data)return toast(r.error?.message||'Task não encontrada.','error');return submitV24(r.data,r.data.tic_assignments||{});
-  };
-
-  /* Dashboard: task button opens the actual viewer, not just My Tasks. */
-  const oldDashboard=window.studentDashboard;
-  window.studentDashboard=async function(){
-    const s=await studentRecord();if(!s)return;
-    const snap=await ticRecalculateStudentProgressV19(s.id);
-    const [{data:ta},{data:pay}]=await Promise.all([
-      sb.from('tic_task_assignments').select('id,status,active,assignment_id,assigned_at,tic_assignments(id,title,due_at,points,cefr_level,skill,task_level)').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false}).limit(8),
-      sb.from('tic_monthly_payments').select('*').eq('student_id',s.id).order('reference_month',{ascending:false}).limit(3)
-    ]);
-    const overall=Number(snap?.overall||0);
-    setPage(`Hello, ${s.display_name?.split(' ')[0]||'Student'} 👋`,'Seu espaço de aprendizagem.');
-    const tasks=(ta||[]).map(x=>{const a=x.tic_assignments||{};return `<article class="student-task-row-v24"><div class="student-task-main-v24"><b>🧩 ${escV24(a.title||'Task')}</b><small>${a.cefr_level||s.current_level||'CEFR'} · ${a.skill||'Activity'} · ${a.due_at?'Prazo '+fmtV24(a.due_at):'Sem prazo'}</small></div><div class="student-task-actions-v24">${badgeV24(x.status||'pending')}<button class="btn sm primary" type="button" onclick="openStudentTask('${x.id}')">Abrir Task →</button></div></article>`}).join('');
-    $('content').innerHTML=`<div class="student-banner"><div style="font-size:11px;letter-spacing:1.5px;color:#aaa1bd">CURRENT LEVEL</div><h2>${escV24(s.current_level)} → ${escV24(s.target_level||'—')}</h2><p>Progresso geral: <b>${overall}%</b> · ${snap?.done||0}/${snap?.total||0} Lessons concluídas</p><div class="progress" style="margin-top:10px;background:#ffffff22"><i style="width:${overall}%;background:#fff"></i></div></div><div class="grid cols2 section"><div class="card"><div class="section-head"><div><h2>✅ My Tasks</h2><span>${tasks.length} tarefa${tasks.length===1?'':'s'} ativa${tasks.length===1?'':'s'}</span></div><div class="student-dashboard-actions-v24"><button class="btn secondary" type="button" onclick="loadView('studentTasks')">Ver todas</button></div></div>${tasks||'<div class="empty">Nenhuma tarefa.</div>'}</div><div class="card"><div class="section-head"><h2>📊 My Progress</h2><span>${overall}% do currículo</span></div><div class="metric"><span>Lessons concluídas</span><b>${snap?.done||0} / ${snap?.total||0}</b></div><div class="progress" style="margin:8px 0 16px"><i style="width:${overall}%"></i></div>${['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'].map(k=>`<div class="mini"><span>${k}</span><b>nível ${escV24(s.current_level)}</b></div>`).join('')}</div></div><div class="card section"><div class="section-head"><h2>💰 My Payments</h2></div>${(pay||[]).map(x=>`<div class="row"><div><b>${monthLabel(x.reference_month)}</b><small>${x.payment_date?'Pago em '+fmtV24(x.payment_date):'Vencimento '+fmtV24(x.due_date)}</small></div><b>${money(x.amount)} ${badgeV24(x.status)}</b></div>`).join('')||'<div class="empty">Nenhum registro.</div>'}</div>`;
-  };
-
-  /* Make the primary Student/Teacher shortcuts resilient and explicit. */
-  window.openStudentFormSafe=()=>{if(typeof openStudentForm==='function')openStudentForm();else toast('Cadastro de aluno indisponível nesta versão.','error')};
-  window.__teacherPlatformV24=true;
-})();
 </script>
