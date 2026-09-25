@@ -2695,3 +2695,175 @@ window.progressPage=async function(student=false){
   $('content').innerHTML=`<div class="grid cols3">${students.map(s=>{const overall=Number(p?.find(x=>x.student_id===s.id&&x.skill==='overall'&&x.level===s.current_level)?.progress||0);return `<div class="card"><div class="section-head"><h2>${esc(s.display_name)}</h2><span>${esc(s.current_level)}</span></div><div style="font:800 30px 'Plus Jakarta Sans'">${overall}%</div><div class="progress"><i style="width:${overall}%"></i></div><div style="margin-top:15px">${['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'].map(k=>{const v=Number(p?.find(x=>x.student_id===s.id&&x.skill===k&&x.level===s.current_level)?.progress||0);return `<div class="mini"><span>${k}</span><b>${v}%</b></div><div class="progress" style="height:6px;margin-bottom:9px"><i style="width:${v}%"></i></div>`}).join('')}</div></div>`}).join('')||'<div class="card empty">Nenhum aluno.</div>'}</div>`;
 };
 </script>
+
+<style id="teacher-platform-v24-polish">
+/* V24 — responsive shell, reliable modal controls, accessible floating actions */
+.modal{align-items:stretch;justify-items:stretch;padding:12px;overflow:hidden}
+.modal-card{width:min(1180px,96vw);max-width:1180px;height:min(94vh,920px);max-height:94vh;margin:auto;display:flex;flex-direction:column;min-height:0;padding:0;overflow:hidden}
+.modal-head{flex:0 0 auto;padding:16px 18px;border-bottom:1px solid var(--line);background:#fff;position:relative;z-index:5}
+#modalBody{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:18px}
+.modal-card:has(.tic21-shell){width:min(1440px,98vw);height:min(96vh,980px);max-height:96vh;padding:0;overflow:hidden}
+.modal-card:has(.tic21-shell) #modalBody{padding:0;overflow:hidden}
+.tic21-shell{height:100%;min-height:0}
+.tic21-body{flex:1 1 auto;min-height:0;height:auto;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:auto}
+.tic21-body::-webkit-scrollbar,#modalBody::-webkit-scrollbar{width:10px;height:10px}
+.tic21-body::-webkit-scrollbar-thumb,#modalBody::-webkit-scrollbar-thumb{background:#c9c2d8;border-radius:99px;border:2px solid transparent;background-clip:padding-box}
+.tic21-body::-webkit-scrollbar-track,#modalBody::-webkit-scrollbar-track{background:#f3f1f7}
+/* full-width, responsive class center */
+.tic21-head{flex:0 0 auto}
+.tic21-tabs{flex:0 0 auto;position:relative!important;top:auto!important}
+.tic21-head-actions .btn,.modal-head .btn{min-height:40px}
+/* floating action buttons: color change + motion + keyboard focus */
+.float-main,.float-item button{transition:transform .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease,border-color .18s ease}
+.float-main:hover,.float-main:focus-visible{transform:translateY(-3px) scale(1.04);background:linear-gradient(135deg,#7b57e7,#a16ff5);box-shadow:0 18px 40px #6844d866;outline:none}
+.float-item button:hover,.float-item button:focus-visible{transform:translateX(-4px) scale(1.06);background:var(--p);color:#fff;border-color:var(--p);box-shadow:0 12px 25px #6844d83b;outline:none}
+.float-item span{transition:.18s ease}
+.float-item:hover span{background:var(--p);transform:translateX(-2px)}
+.btn{transition:transform .16s ease,box-shadow .16s ease,background .16s ease,color .16s ease,border-color .16s ease}
+.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 18px #34245c16}
+.btn.primary:hover:not(:disabled){background:#7a56e6}
+.btn.secondary:hover:not(:disabled){background:#e3d9ff}
+.btn.ghost:hover:not(:disabled){background:#f7f4ff;color:var(--p);border-color:#d9cff5}
+/* Student dashboard/task cards */
+.student-task-row-v24{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:9px;background:#fff;transition:.18s ease}
+.student-task-row-v24:hover{border-color:#d8cef2;box-shadow:0 10px 24px #34245c0d;transform:translateY(-1px)}
+.student-task-main-v24{min-width:0}.student-task-main-v24 b{display:block;font-size:13px;overflow-wrap:anywhere}.student-task-main-v24 small{display:block;color:var(--muted);font-size:10px;margin-top:3px}
+.student-task-actions-v24{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.student-dashboard-actions-v24{display:flex;gap:8px;flex-wrap:wrap}
+/* Professional task viewer */
+.tic-v24-task{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;min-height:100%}
+.tic-v24-main,.tic-v24-side{min-width:0}.tic-v24-panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:17px;margin-bottom:14px}
+.tic-v24-hero{background:linear-gradient(135deg,#171522,#3a285d);color:#fff;border-radius:18px;padding:20px;margin-bottom:14px}
+.tic-v24-hero h2{font:800 24px 'Plus Jakarta Sans';margin:8px 0 5px}.tic-v24-hero p{margin:0;color:#d2cada;font-size:12px;line-height:1.6}
+.tic-v24-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.tic-v24-question{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;background:#fff}.tic-v24-question h4{margin:0 0 9px;font-size:13px}.tic-v24-option{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;border:1px solid #ece8f2;border-radius:10px;margin-top:7px;cursor:pointer}.tic-v24-option:hover{background:#faf8ff;border-color:#d8cef2}.tic-v24-option input{margin-top:3px}.tic-v24-question input[type=text],.tic-v24-question textarea,.tic-v24-question select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:14px}.tic-v24-submitbar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px;display:flex;justify-content:flex-end;gap:8px;z-index:3}
+@media(max-width:900px){.tic-v24-task{grid-template-columns:1fr}.tic-v24-side{display:block}.modal-card{width:98vw;height:94vh}}
+@media(max-width:760px){.modal{padding:0}.modal-card,.modal-card:has(.tic21-shell){width:100vw;height:100vh;max-height:100vh;border-radius:0}.modal-head{padding:13px 14px}.modal-card:not(:has(.tic21-shell)) #modalBody{padding:14px}.tic21-head{padding:14px 15px}.tic21-head-actions .btn{flex:1}.tic-v24-task{display:block}.tic-v24-hero h2{font-size:20px}.student-task-row-v24{display:block}.student-task-actions-v24{justify-content:flex-start;margin-top:10px}.student-dashboard-actions-v24 .btn{flex:1;min-width:130px}.float{right:14px;bottom:14px}.float-main{width:50px;height:50px}.tic-v24-submitbar{position:static;margin-top:10px}}
+@media(prefers-reduced-motion:reduce){.btn,.float-main,.float-item button,.student-task-row-v24{transition:none!important}}
+</style>
+
+
+<script id="teacher-platform-v24-runtime">
+(function(){
+  const $v24=id=>document.getElementById(id);
+  const escV24=v=>typeof esc==='function'?esc(v==null?'':String(v)):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const safeUrlV24=v=>{try{const u=new URL(String(v||''),location.href);return /^https?:$/.test(u.protocol)?u.href:'#'}catch{return'#'}};
+  const badgeV24=s=>typeof badge==='function'?badge(s):`<span class="badge gray">${escV24(s||'')}</span>`;
+  const fmtV24=v=>typeof fmtDate==='function'?fmtDate(v):(v?new Date(v).toLocaleDateString('pt-BR'):'—');
+
+  /* Reliable modal lifecycle: one source of truth, ESC, backdrop, focus return. */
+  let lastFocusV24=null;
+  const oldClose=window.closeModal;
+  window.closeModal=function(){
+    const modal=$v24('modal');
+    if(modal){modal.classList.add('hidden');modal.setAttribute('aria-hidden','true');}
+    document.body.classList.remove('modal-open-v24');
+    const mb=$v24('modalBody');if(mb)mb.scrollTop=0;
+    if(lastFocusV24&&document.contains(lastFocusV24)){try{lastFocusV24.focus()}catch{}}
+    lastFocusV24=null;
+  };
+  const oldOpen=window.openModal;
+  window.openModal=function(title,body){
+    lastFocusV24=document.activeElement instanceof HTMLElement?document.activeElement:null;
+    oldOpen(title,body);
+    const modal=$v24('modal');
+    if(modal){modal.classList.remove('hidden');modal.setAttribute('aria-hidden','false');modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');}
+    document.body.classList.add('modal-open-v24');
+    requestAnimationFrame(()=>{
+      const close=modal?.querySelector('.modal-head .btn');if(close)close.setAttribute('aria-label','Fechar');
+    });
+  };
+  document.addEventListener('keydown',e=>{
+    const modal=$v24('modal');
+    if(e.key==='Escape'&&modal&&!modal.classList.contains('hidden')){e.preventDefault();window.closeModal();}
+  });
+  document.addEventListener('click',e=>{
+    const modal=$v24('modal');
+    if(!modal||modal.classList.contains('hidden'))return;
+    if(e.target===modal)window.closeModal();
+  });
+
+  /* Student task: direct, reliable opening from Dashboard and My Tasks. */
+  window.openStudentTask=async function(taskAssignmentId){
+    const s=await studentRecord();if(!s)return;
+    let q=await sb.from('tic_task_assignments').select('*,tic_assignments(*)').eq('id',taskAssignmentId).eq('student_id',s.id).eq('active',true).maybeSingle();
+    if(q.error||!q.data){
+      q=await sb.from('tic_task_assignments').select('*,tic_assignments(*)').eq('assignment_id',taskAssignmentId).eq('student_id',s.id).eq('active',true).maybeSingle();
+    }
+    if(q.error||!q.data)return toast(q.error?.message||'Não foi possível abrir esta Task.','error');
+    return window.openStudentTaskV24(q.data);
+  };
+
+  function renderQuestionsV24(a,ta){
+    const cj=a?.content_json||{};const qs=Array.isArray(cj.questions)?cj.questions:[];
+    if(!qs.length)return '';
+    return `<section class="tic-v24-panel"><div class="section-head"><h2>🧩 Atividade</h2><span>${qs.length} questão${qs.length===1?'':'ões'}</span></div><div id="v24Questions">${qs.map((q,i)=>{
+      const type=String(q.type||q.kind||'multiple_choice').toLowerCase();const opts=Array.isArray(q.options)?q.options:(Array.isArray(q.choices)?q.choices:[]);const name=`v24q_${i}`;
+      let control='';
+      if(['multiple_choice','multiple-choice','mcq','choice'].includes(type))control=opts.map((o,j)=>{const val=typeof o==='object'?(o.value??o.text??o.label??j):o;const label=typeof o==='object'?(o.text??o.label??o.value??j):o;return `<label class="tic-v24-option"><input type="radio" name="${name}" value="${escV24(val)}"> <span>${escV24(label)}</span></label>`}).join('');
+      else if(['true_false','true-false','boolean'].includes(type))control=['true','false'].map(v=>`<label class="tic-v24-option"><input type="radio" name="${name}" value="${v}"> <span>${v==='true'?'Verdadeiro':'Falso'}</span></label>`).join('');
+      else if(type==='select')control=`<select name="${name}"><option value="">Selecione...</option>${opts.map(o=>{const val=typeof o==='object'?(o.value??o.text??o.label):o;const label=typeof o==='object'?(o.text??o.label??o.value):o;return `<option value="${escV24(val)}">${escV24(label)}</option>`}).join('')}</select>`;
+      else control=`<textarea name="${name}" rows="3" placeholder="Digite sua resposta..."></textarea>`;
+      return `<div class="tic-v24-question"><h4>${i+1}. ${escV24(q.question||q.prompt||q.text||'Questão')}</h4>${control}</div>`;
+    }).join('')}</div></section>`;
+  }
+  function collectQuestionsV24(a){const qs=Array.isArray(a?.content_json?.questions)?a.content_json.questions:[];return qs.map((q,i)=>{const el=document.querySelector(`[name="v24q_${i}"]:checked`)||document.querySelector(`[name="v24q_${i}"]`);return {question:q.question||q.prompt||q.text||'',answer:el?.value||''};});}
+  async function submitV24(ta,a){
+    const s=await studentRecord();if(!s)return;
+    const latest=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',ta.id).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1);
+    const attempt=Number(latest.data?.[0]?.attempt||0)+1;
+    const qs=Array.isArray(a?.content_json?.questions)?a.content_json.questions:[];
+    const answers=qs.length?collectQuestionsV24(a):[];
+    const text=$v24('v24FreeAnswer')?.value.trim()||null;
+    if(!answers.length&&!text)return toast('Responda a atividade antes de enviar.','info');
+    let autoGrade=null;
+    if(answers.length){let correct=0,total=0;answers.forEach((r,i)=>{const q=qs[i]||{};const expected=q.answer??q.correct??q.correct_answer;if(expected!=null){total++;if(String(r.answer).trim().toLowerCase()===String(expected).trim().toLowerCase())correct++;}});if(total)autoGrade=Math.round(correct/total*100);}
+    const payload={task_assignment_id:ta.id,student_id:s.id,attempt,answer_text:text,response_data:{questions:answers,source:'task_builder_v24'},submitted_at:new Date().toISOString(),status:'submitted'};
+    if(autoGrade!=null)payload.grade=autoGrade;
+    const ins=await sb.from('tic_submissions').insert(payload);if(ins.error)return toast('Não foi possível enviar: '+ins.error.message,'error');
+    const upd=await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',ta.id).eq('student_id',s.id);if(upd.error)return toast('Entrega registrada, mas o status não foi atualizado: '+upd.error.message,'error');
+    toast(`Task enviada. Tentativa ${attempt}${autoGrade!=null?' · '+autoGrade+'%':''}.`,'success');window.openStudentTask(ta.id);
+  }
+  window.openStudentTaskV24=async function(ta){
+    const a=ta.tic_assignments||{};
+    const s=await studentRecord();if(!s)return;
+    const sub=await sb.from('tic_submissions').select('id,attempt,grade,submitted_at,answer_text,file_url,response_data,status').eq('task_assignment_id',ta.id).eq('student_id',s.id).order('attempt',{ascending:false});
+    const submissions=sub.data||[];const ids=submissions.map(x=>x.id);
+    const fb=ids.length?await sb.from('tic_feedback').select('submission_id,comment,grade,private_note,improvement_skill,improvement_link,created_at').in('submission_id',ids).order('created_at',{ascending:false}):{data:[]};
+    const feedbackRowsV24=fb.data||[];const latest=submissions[0];const latestFb=latest?feedbackRowsV24.find(x=>x.submission_id===latest.id):null;
+    const html=a.html_enabled&&a.html_content?`<section class="tic-v24-panel"><div class="section-head"><h2>🧩 Atividade interativa</h2><span class="badge green">HTML</span></div><div class="tic-viewer-content" id="v24HtmlWrap"><iframe id="v24HtmlFrame" title="Atividade interativa" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox" style="width:100%;height:620px;border:0;border-radius:12px;background:#fff"></iframe></div><div id="v24HtmlStatus" class="notice" style="margin-top:10px">Responda dentro da atividade.</div></section>`:'';
+    const qs=renderQuestionsV24(a,ta);
+    const hasBuilder=Array.isArray(a?.content_json?.questions)&&a.content_json.questions.length;
+    const answerBox=(!hasBuilder&&!html)?`<section class="tic-v24-panel"><div class="section-head"><h2>✍️ Sua resposta</h2><span>${a.allow_multiple_attempts===false?'1 tentativa':'Tentativas múltiplas'}</span></div>${a.instructions?`<div style="white-space:pre-wrap;line-height:1.65;margin-bottom:12px">${escV24(a.instructions)}</div>`:''}<textarea id="v24FreeAnswer" rows="7" placeholder="Digite sua resposta, produção escrita ou orientação ao Teacher..."></textarea></section>`:'';
+    const feedback=latestFb&&!latestFb.private_note?`<section class="tic-v24-panel"><div class="section-head"><h2>👨‍🏫 Feedback do Teacher</h2><span class="badge green">Corrigida</span></div>${latestFb.grade!=null?`<div style="font:800 30px 'Plus Jakarta Sans';margin-bottom:8px">${latestFb.grade}/100</div>`:''}<div style="white-space:pre-wrap;line-height:1.65">${escV24(latestFb.comment||'Sem comentário.')}</div>${latestFb.improvement_skill||latestFb.improvement_link?`<div class="improvement-box" style="margin-top:12px"><b>🎯 Como melhorar</b>${latestFb.improvement_skill?`<div>Habilidade: <b>${escV24(latestFb.improvement_skill)}</b></div>`:''}${latestFb.improvement_link?`<a class="btn secondary" href="${safeUrlV24(latestFb.improvement_link)}" target="_blank" rel="noopener noreferrer">🔗 Material de melhoria</a>`:''}</div>`:''}</section>`:'';
+    const history=`<section class="tic-v24-panel"><div class="section-head"><h2>🔄 Histórico</h2><span>${submissions.length} tentativa${submissions.length===1?'':'s'}</span></div>${submissions.map(z=>{const f=feedbackRowsV24.find(q=>q.submission_id===z.id);return `<div class="row"><div><b>Tentativa ${z.attempt||1}</b><small>${fmtV24(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:(f?'Corrigida':'Aguardando correção')}</small></div>${z.grade!=null?`<span class="badge green">${z.grade}%</span>`:badgeV24(f?'Corrigida':'Pendente')}</div>`}).join('')||'<div class="empty">Nenhuma entrega ainda.</div>'}</section>`;
+    const resources=Array.isArray(a.resource_items)?a.resource_items:[];
+    const resourceHtml=resources.length?`<section class="tic-v24-panel"><div class="section-head"><h2>📚 Recursos</h2><span>${resources.length}</span></div>${resources.map(r=>`<a class="row" href="${safeUrlV24(r.url||r.link)}" target="_blank" rel="noopener noreferrer"><div><b>${escV24(r.title||r.name||'Recurso')}</b><small>${escV24(r.type||'Material')}</small></div><span class="btn sm secondary">Abrir →</span></a>`).join('')}</section>`:'';
+    const active=ta.active!==false;const canSubmit=active&&a.allow_multiple_attempts!==false||(!submissions.length);
+    const action=`${active?`<div class="tic-v24-submitbar"><button class="btn ghost" type="button" onclick="closeModal()">Fechar</button><button class="btn primary" type="button" onclick="submitStudentTaskV24('${ta.id}')">📤 Enviar tarefa</button></div>`:`<div class="notice warning">Esta atribuição foi removida pelo Teacher.</div>`}`;
+    openModal('',`<div class="tic-v24-task"><div class="tic-v24-main"><div class="tic-v24-hero"><div>${badgeV24('🔓 Atribuição ativa')}</div><h2>${escV24(a.title||'Task')}</h2><p>${escV24(a.instructions||'Complete a atividade e envie sua resposta ao Teacher.')}</p><div class="tic-v24-meta"><span class="badge blue">${escV24(a.cefr_level||'CEFR não definido')}</span><span class="badge gray">${escV24(a.skill||'Skill não definida')}</span><span class="badge gray">${a.points||0} pontos</span><span class="badge gray">${a.due_at?'Prazo '+fmtV24(a.due_at):'Sem prazo'}</span></div></div>${html}${qs}${answerBox}${feedback}${history}</div><aside class="tic-v24-side">${resourceHtml||'<section class="tic-v24-panel"><h2 style="font-size:14px">📚 Recursos</h2><div class="empty">Nenhum recurso adicional.</div></section>'}<section class="tic-v24-panel"><h2 style="font-size:14px;margin:0 0 8px">💡 Como funciona</h2><p style="font-size:11px;color:var(--muted);line-height:1.6;margin:0">Você pode enviar uma nova tentativa enquanto o Teacher mantiver a atribuição ativa. O histórico permanece disponível mesmo depois da correção.</p></section></aside></div>${action}`);
+    if(html){const f=$v24('v24HtmlFrame');if(f&&typeof ticFrameHtml==='function')f.srcdoc=ticFrameHtml(a.html_content)+(typeof ticHtmlBridge==='function'?ticHtmlBridge():'');}
+  };
+  window.submitStudentTaskV24=async function(id){
+    const s=await studentRecord();if(!s)return;const r=await sb.from('tic_task_assignments').select('*,tic_assignments(*)').eq('id',id).eq('student_id',s.id).eq('active',true).maybeSingle();if(r.error||!r.data)return toast(r.error?.message||'Task não encontrada.','error');return submitV24(r.data,r.data.tic_assignments||{});
+  };
+
+  /* Dashboard: task button opens the actual viewer, not just My Tasks. */
+  const oldDashboard=window.studentDashboard;
+  window.studentDashboard=async function(){
+    const s=await studentRecord();if(!s)return;
+    const snap=await ticRecalculateStudentProgressV19(s.id);
+    const [{data:ta},{data:pay}]=await Promise.all([
+      sb.from('tic_task_assignments').select('id,status,active,assignment_id,assigned_at,tic_assignments(id,title,due_at,points,cefr_level,skill,task_level)').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false}).limit(8),
+      sb.from('tic_monthly_payments').select('*').eq('student_id',s.id).order('reference_month',{ascending:false}).limit(3)
+    ]);
+    const overall=Number(snap?.overall||0);
+    setPage(`Hello, ${s.display_name?.split(' ')[0]||'Student'} 👋`,'Seu espaço de aprendizagem.');
+    const tasks=(ta||[]).map(x=>{const a=x.tic_assignments||{};return `<article class="student-task-row-v24"><div class="student-task-main-v24"><b>🧩 ${escV24(a.title||'Task')}</b><small>${a.cefr_level||s.current_level||'CEFR'} · ${a.skill||'Activity'} · ${a.due_at?'Prazo '+fmtV24(a.due_at):'Sem prazo'}</small></div><div class="student-task-actions-v24">${badgeV24(x.status||'pending')}<button class="btn sm primary" type="button" onclick="openStudentTask('${x.id}')">Abrir Task →</button></div></article>`}).join('');
+    $('content').innerHTML=`<div class="student-banner"><div style="font-size:11px;letter-spacing:1.5px;color:#aaa1bd">CURRENT LEVEL</div><h2>${escV24(s.current_level)} → ${escV24(s.target_level||'—')}</h2><p>Progresso geral: <b>${overall}%</b> · ${snap?.done||0}/${snap?.total||0} Lessons concluídas</p><div class="progress" style="margin-top:10px;background:#ffffff22"><i style="width:${overall}%;background:#fff"></i></div></div><div class="grid cols2 section"><div class="card"><div class="section-head"><div><h2>✅ My Tasks</h2><span>${tasks.length} tarefa${tasks.length===1?'':'s'} ativa${tasks.length===1?'':'s'}</span></div><div class="student-dashboard-actions-v24"><button class="btn secondary" type="button" onclick="loadView('studentTasks')">Ver todas</button></div></div>${tasks||'<div class="empty">Nenhuma tarefa.</div>'}</div><div class="card"><div class="section-head"><h2>📊 My Progress</h2><span>${overall}% do currículo</span></div><div class="metric"><span>Lessons concluídas</span><b>${snap?.done||0} / ${snap?.total||0}</b></div><div class="progress" style="margin:8px 0 16px"><i style="width:${overall}%"></i></div>${['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'].map(k=>`<div class="mini"><span>${k}</span><b>nível ${escV24(s.current_level)}</b></div>`).join('')}</div></div><div class="card section"><div class="section-head"><h2>💰 My Payments</h2></div>${(pay||[]).map(x=>`<div class="row"><div><b>${monthLabel(x.reference_month)}</b><small>${x.payment_date?'Pago em '+fmtV24(x.payment_date):'Vencimento '+fmtV24(x.due_date)}</small></div><b>${money(x.amount)} ${badgeV24(x.status)}</b></div>`).join('')||'<div class="empty">Nenhum registro.</div>'}</div>`;
+  };
+
+  /* Make the primary Student/Teacher shortcuts resilient and explicit. */
+  window.openStudentFormSafe=()=>{if(typeof openStudentForm==='function')openStudentForm();else toast('Cadastro de aluno indisponível nesta versão.','error')};
+  window.__teacherPlatformV24=true;
+})();
+</script>
