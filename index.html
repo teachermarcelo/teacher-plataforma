@@ -1642,7 +1642,72 @@ function ticResponsiveSrcdoc(content){
  if(!c)return '';
  const meta='<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">';
  if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}`);
- return '<!doctype html><html><head>'+meta+'</head><body>'+c+'</body></html>';
+ return '<!doctype html><html><head>'+meta+'</head><body>'+c+'
+<!-- V30 PATCH: robust multi-student class manager; additive, preserves existing platform -->
+<style>
+.cc-student-manager{display:grid;grid-template-columns:1fr 1fr;gap:18px}.cc-sm-box{border:1px solid #e7e3f5;border-radius:18px;padding:16px;background:#fff}.cc-sm-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.cc-sm-search{width:100%;border:1px solid #ddd7ef;border-radius:12px;padding:11px 13px;margin-bottom:12px;outline:none}.cc-sm-list{max-height:430px;overflow:auto;display:grid;gap:8px}.cc-sm-row{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid #eeeaf7;border-radius:12px;cursor:pointer;transition:.18s}.cc-sm-row:hover{transform:translateY(-1px);box-shadow:0 5px 14px #5b38c41a;border-color:#cfc4ff}.cc-sm-row input{width:18px;height:18px}.cc-sm-avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#eee8ff;color:#6238d8;font-weight:800}.cc-sm-meta{flex:1;min-width:0}.cc-sm-meta b{display:block}.cc-sm-meta small{color:#7c7690}.cc-sm-selected{border-color:#b9a7ff;background:#faf8ff}.cc-sm-empty{padding:28px;text-align:center;color:#88829a}.cc-sm-count{font-size:12px;padding:5px 9px;border-radius:999px;background:#f0ecff;color:#5d39d5;font-weight:700}@media(max-width:760px){.cc-student-manager{grid-template-columns:1fr}.cc-sm-list{max-height:300px}}
+</style>
+<script>
+(function(){
+  const escV30=x=>typeof esc==='function'?esc(x??''):String(x??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
+  window.openClassMembers=async function(classId){
+    try{
+      const [{data:cls,error:ce},{data:students,error:se},{data:members,error:me}]=await Promise.all([
+        sb.from('tic_classes').select('id,name,level,teacher_id').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle(),
+        sb.from('tic_students').select('id,display_name,current_level,target_level,email,status').eq('teacher_id',session.user.id).eq('status','active').order('display_name'),
+        sb.from('tic_class_students').select('id,student_id,status').eq('class_id',classId)
+      ]);
+      if(ce) throw ce; if(se) throw se; if(me) throw me; if(!cls) return toast('Turma não encontrada.','error');
+      const current=new Set((members||[]).filter(x=>x.status==='active').map(x=>x.student_id));
+      const render=filter=>{
+        const q=(filter||'').toLowerCase().trim();
+        return (students||[]).filter(st=>!q || [st.display_name,st.email,st.current_level,st.target_level].filter(Boolean).join(' ').toLowerCase().includes(q)).map(st=>`
+          <label class="cc-sm-row ${current.has(st.id)?'cc-sm-selected':''}" data-student-row="${st.id}">
+            <input type="checkbox" value="${st.id}" ${current.has(st.id)?'checked':''} onchange="window.ccToggleStudentV30(this,'${st.id}')">
+            <span class="cc-sm-avatar">${escV30((st.display_name||'?').trim().charAt(0).toUpperCase())}</span>
+            <span class="cc-sm-meta"><b>${escV30(st.display_name)}</b><small>${escV30(st.current_level||'—')} ${st.target_level?'→ '+escV30(st.target_level):''} ${st.email?' · '+escV30(st.email):''}</small></span>
+          </label>`).join('') || '<div class="cc-sm-empty">Nenhum aluno encontrado.</div>';
+      };
+      window.ccStudentsV30=[...current];
+      window.ccAllStudentsV30=(students||[]).map(x=>x.id);
+      window.ccToggleStudentV30=(el,id)=>{
+        const set=new Set(window.ccStudentsV30||[]); el.checked?set.add(id):set.delete(id); window.ccStudentsV30=[...set];
+        const row=document.querySelector(`[data-student-row="${id}"]`); if(row) row.classList.toggle('cc-sm-selected',el.checked);
+        const c=document.getElementById('ccSelectedCountV30'); if(c)c.textContent=String(window.ccStudentsV30.length);
+      };
+      window.ccFilterStudentsV30=()=>{const q=document.getElementById('ccStudentSearchV30')?.value||'';const list=document.getElementById('ccStudentListV30');if(list)list.innerHTML=render(q);const c=document.getElementById('ccSelectedCountV30');if(c)c.textContent=String(window.ccStudentsV30.length)};
+      window.ccSelectAllV30=()=>{window.ccStudentsV30=[...new Set([...(window.ccStudentsV30||[]),...(window.ccAllStudentsV30||[])])];window.ccFilterStudentsV30()};
+      window.ccClearAllV30=()=>{window.ccStudentsV30=[];window.ccFilterStudentsV30()};
+      window.saveClassMembersV30=async function(e){
+        e.preventDefault(); const ids=[...new Set(window.ccStudentsV30||[])];
+        const btn=document.getElementById('ccSaveMembersV30'); if(btn){btn.disabled=true;btn.textContent='Salvando...'}
+        try{
+          const {data:old,error:oe}=await sb.from('tic_class_students').select('id,student_id,status').eq('class_id',classId); if(oe)throw oe;
+          const oldMap=new Map((old||[]).map(x=>[x.student_id,x]));
+          const selected=new Set(ids);
+          const remove=(old||[]).filter(x=>x.status==='active'&&!selected.has(x.student_id)).map(x=>x.id);
+          if(remove.length){const r=await sb.from('tic_class_students').delete().in('id',remove);if(r.error)throw r.error}
+          const add=ids.filter(id=>!oldMap.has(id)).map(student_id=>({class_id:classId,student_id,status:'active'}));
+          if(add.length){const r=await sb.from('tic_class_students').insert(add);if(r.error)throw r.error}
+          const reactivate=ids.filter(id=>oldMap.has(id)&&oldMap.get(id).status!=='active').map(id=>oldMap.get(id).id);
+          if(reactivate.length){const r=await sb.from('tic_class_students').update({status:'active'}).in('id',reactivate);if(r.error)throw r.error}
+          closeModal(); toast('Alunos da turma atualizados.','success');
+          if(typeof openClassCommandCenter==='function') await openClassCommandCenter(classId); else if(typeof loadView==='function') await loadView('classes');
+        }catch(err){toast('Não foi possível atualizar os alunos: '+(err?.message||err),'error');if(btn){btn.disabled=false;btn.textContent='Salvar alunos'}}
+      };
+      openModal(`👥 Alunos · ${escV30(cls.name)}`,`<div class="cc-sm-box" style="padding:20px">
+        <div class="cc-sm-head"><div><h3 style="margin:0">Alunos da turma</h3><small>Adicione vários alunos do seu cadastro à mesma turma.</small></div><span class="cc-sm-count"><span id="ccSelectedCountV30">${window.ccStudentsV30.length}</span> selecionados</span></div>
+        <input id="ccStudentSearchV30" class="cc-sm-search" placeholder="🔎 Buscar por nome ou e-mail..." oninput="ccFilterStudentsV30()">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button type="button" class="btn sm ghost" onclick="ccSelectAllV30()">Selecionar todos</button><button type="button" class="btn sm ghost" onclick="ccClearAllV30()">Limpar seleção</button></div>
+        <form onsubmit="saveClassMembersV30(event)"><div id="ccStudentListV30" class="cc-sm-list">${render('')}</div>
+        <div class="modal-actions" style="margin-top:16px"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button id="ccSaveMembersV30" class="btn primary">Salvar alunos</button></div></form>
+      </div>`);
+    }catch(err){toast('Não foi possível carregar os alunos: '+(err?.message||err),'error')}
+  };
+})();
+</script>
+
+</body></html>';
 }
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
@@ -1762,7 +1827,72 @@ function ticViewerTextFrame(content){
  const c=String(content||'').trim();if(!c)return '';
  const looksHtml=/<(?:html|body|div|p|h[1-6]|ul|ol|table|span|strong|em|img|a\b|section|article)[\s>]/i.test(c);
  if(looksHtml)return ticResponsiveSrcdoc(c);
- return '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;margin:0;padding:28px;line-height:1.7;color:#202033}*{box-sizing:border-box}a{overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>'+esc(c).replace(/\n/g,'<br>')+'</body></html>';
+ return '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;margin:0;padding:28px;line-height:1.7;color:#202033}*{box-sizing:border-box}a{overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>'+esc(c).replace(/\n/g,'<br>')+'
+<!-- V30 PATCH: robust multi-student class manager; additive, preserves existing platform -->
+<style>
+.cc-student-manager{display:grid;grid-template-columns:1fr 1fr;gap:18px}.cc-sm-box{border:1px solid #e7e3f5;border-radius:18px;padding:16px;background:#fff}.cc-sm-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.cc-sm-search{width:100%;border:1px solid #ddd7ef;border-radius:12px;padding:11px 13px;margin-bottom:12px;outline:none}.cc-sm-list{max-height:430px;overflow:auto;display:grid;gap:8px}.cc-sm-row{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid #eeeaf7;border-radius:12px;cursor:pointer;transition:.18s}.cc-sm-row:hover{transform:translateY(-1px);box-shadow:0 5px 14px #5b38c41a;border-color:#cfc4ff}.cc-sm-row input{width:18px;height:18px}.cc-sm-avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#eee8ff;color:#6238d8;font-weight:800}.cc-sm-meta{flex:1;min-width:0}.cc-sm-meta b{display:block}.cc-sm-meta small{color:#7c7690}.cc-sm-selected{border-color:#b9a7ff;background:#faf8ff}.cc-sm-empty{padding:28px;text-align:center;color:#88829a}.cc-sm-count{font-size:12px;padding:5px 9px;border-radius:999px;background:#f0ecff;color:#5d39d5;font-weight:700}@media(max-width:760px){.cc-student-manager{grid-template-columns:1fr}.cc-sm-list{max-height:300px}}
+</style>
+<script>
+(function(){
+  const escV30=x=>typeof esc==='function'?esc(x??''):String(x??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
+  window.openClassMembers=async function(classId){
+    try{
+      const [{data:cls,error:ce},{data:students,error:se},{data:members,error:me}]=await Promise.all([
+        sb.from('tic_classes').select('id,name,level,teacher_id').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle(),
+        sb.from('tic_students').select('id,display_name,current_level,target_level,email,status').eq('teacher_id',session.user.id).eq('status','active').order('display_name'),
+        sb.from('tic_class_students').select('id,student_id,status').eq('class_id',classId)
+      ]);
+      if(ce) throw ce; if(se) throw se; if(me) throw me; if(!cls) return toast('Turma não encontrada.','error');
+      const current=new Set((members||[]).filter(x=>x.status==='active').map(x=>x.student_id));
+      const render=filter=>{
+        const q=(filter||'').toLowerCase().trim();
+        return (students||[]).filter(st=>!q || [st.display_name,st.email,st.current_level,st.target_level].filter(Boolean).join(' ').toLowerCase().includes(q)).map(st=>`
+          <label class="cc-sm-row ${current.has(st.id)?'cc-sm-selected':''}" data-student-row="${st.id}">
+            <input type="checkbox" value="${st.id}" ${current.has(st.id)?'checked':''} onchange="window.ccToggleStudentV30(this,'${st.id}')">
+            <span class="cc-sm-avatar">${escV30((st.display_name||'?').trim().charAt(0).toUpperCase())}</span>
+            <span class="cc-sm-meta"><b>${escV30(st.display_name)}</b><small>${escV30(st.current_level||'—')} ${st.target_level?'→ '+escV30(st.target_level):''} ${st.email?' · '+escV30(st.email):''}</small></span>
+          </label>`).join('') || '<div class="cc-sm-empty">Nenhum aluno encontrado.</div>';
+      };
+      window.ccStudentsV30=[...current];
+      window.ccAllStudentsV30=(students||[]).map(x=>x.id);
+      window.ccToggleStudentV30=(el,id)=>{
+        const set=new Set(window.ccStudentsV30||[]); el.checked?set.add(id):set.delete(id); window.ccStudentsV30=[...set];
+        const row=document.querySelector(`[data-student-row="${id}"]`); if(row) row.classList.toggle('cc-sm-selected',el.checked);
+        const c=document.getElementById('ccSelectedCountV30'); if(c)c.textContent=String(window.ccStudentsV30.length);
+      };
+      window.ccFilterStudentsV30=()=>{const q=document.getElementById('ccStudentSearchV30')?.value||'';const list=document.getElementById('ccStudentListV30');if(list)list.innerHTML=render(q);const c=document.getElementById('ccSelectedCountV30');if(c)c.textContent=String(window.ccStudentsV30.length)};
+      window.ccSelectAllV30=()=>{window.ccStudentsV30=[...new Set([...(window.ccStudentsV30||[]),...(window.ccAllStudentsV30||[])])];window.ccFilterStudentsV30()};
+      window.ccClearAllV30=()=>{window.ccStudentsV30=[];window.ccFilterStudentsV30()};
+      window.saveClassMembersV30=async function(e){
+        e.preventDefault(); const ids=[...new Set(window.ccStudentsV30||[])];
+        const btn=document.getElementById('ccSaveMembersV30'); if(btn){btn.disabled=true;btn.textContent='Salvando...'}
+        try{
+          const {data:old,error:oe}=await sb.from('tic_class_students').select('id,student_id,status').eq('class_id',classId); if(oe)throw oe;
+          const oldMap=new Map((old||[]).map(x=>[x.student_id,x]));
+          const selected=new Set(ids);
+          const remove=(old||[]).filter(x=>x.status==='active'&&!selected.has(x.student_id)).map(x=>x.id);
+          if(remove.length){const r=await sb.from('tic_class_students').delete().in('id',remove);if(r.error)throw r.error}
+          const add=ids.filter(id=>!oldMap.has(id)).map(student_id=>({class_id:classId,student_id,status:'active'}));
+          if(add.length){const r=await sb.from('tic_class_students').insert(add);if(r.error)throw r.error}
+          const reactivate=ids.filter(id=>oldMap.has(id)&&oldMap.get(id).status!=='active').map(id=>oldMap.get(id).id);
+          if(reactivate.length){const r=await sb.from('tic_class_students').update({status:'active'}).in('id',reactivate);if(r.error)throw r.error}
+          closeModal(); toast('Alunos da turma atualizados.','success');
+          if(typeof openClassCommandCenter==='function') await openClassCommandCenter(classId); else if(typeof loadView==='function') await loadView('classes');
+        }catch(err){toast('Não foi possível atualizar os alunos: '+(err?.message||err),'error');if(btn){btn.disabled=false;btn.textContent='Salvar alunos'}}
+      };
+      openModal(`👥 Alunos · ${escV30(cls.name)}`,`<div class="cc-sm-box" style="padding:20px">
+        <div class="cc-sm-head"><div><h3 style="margin:0">Alunos da turma</h3><small>Adicione vários alunos do seu cadastro à mesma turma.</small></div><span class="cc-sm-count"><span id="ccSelectedCountV30">${window.ccStudentsV30.length}</span> selecionados</span></div>
+        <input id="ccStudentSearchV30" class="cc-sm-search" placeholder="🔎 Buscar por nome ou e-mail..." oninput="ccFilterStudentsV30()">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button type="button" class="btn sm ghost" onclick="ccSelectAllV30()">Selecionar todos</button><button type="button" class="btn sm ghost" onclick="ccClearAllV30()">Limpar seleção</button></div>
+        <form onsubmit="saveClassMembersV30(event)"><div id="ccStudentListV30" class="cc-sm-list">${render('')}</div>
+        <div class="modal-actions" style="margin-top:16px"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button id="ccSaveMembersV30" class="btn primary">Salvar alunos</button></div></form>
+      </div>`);
+    }catch(err){toast('Não foi possível carregar os alunos: '+(err?.message||err),'error')}
+  };
+})();
+</script>
+
+</body></html>';
 }
 
 function ticFrameHtml(content){ const c=String(content||'').trim(); return c ? ticPlainOrHtmlFrame(c) : ''; }
@@ -1993,9 +2123,139 @@ function ticPlainOrHtmlFrame(value){
     if(/<html[\s>]/i.test(c)){
       return c.replace(/<head([^>]*)>/i,`<head$1>${css}`);
     }
-    return `<!doctype html><html><head>${css}</head><body>${c}</body></html>`;
+    return `<!doctype html><html><head>${css}</head><body>${c}
+<!-- V30 PATCH: robust multi-student class manager; additive, preserves existing platform -->
+<style>
+.cc-student-manager{display:grid;grid-template-columns:1fr 1fr;gap:18px}.cc-sm-box{border:1px solid #e7e3f5;border-radius:18px;padding:16px;background:#fff}.cc-sm-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.cc-sm-search{width:100%;border:1px solid #ddd7ef;border-radius:12px;padding:11px 13px;margin-bottom:12px;outline:none}.cc-sm-list{max-height:430px;overflow:auto;display:grid;gap:8px}.cc-sm-row{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid #eeeaf7;border-radius:12px;cursor:pointer;transition:.18s}.cc-sm-row:hover{transform:translateY(-1px);box-shadow:0 5px 14px #5b38c41a;border-color:#cfc4ff}.cc-sm-row input{width:18px;height:18px}.cc-sm-avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#eee8ff;color:#6238d8;font-weight:800}.cc-sm-meta{flex:1;min-width:0}.cc-sm-meta b{display:block}.cc-sm-meta small{color:#7c7690}.cc-sm-selected{border-color:#b9a7ff;background:#faf8ff}.cc-sm-empty{padding:28px;text-align:center;color:#88829a}.cc-sm-count{font-size:12px;padding:5px 9px;border-radius:999px;background:#f0ecff;color:#5d39d5;font-weight:700}@media(max-width:760px){.cc-student-manager{grid-template-columns:1fr}.cc-sm-list{max-height:300px}}
+</style>
+<script>
+(function(){
+  const escV30=x=>typeof esc==='function'?esc(x??''):String(x??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
+  window.openClassMembers=async function(classId){
+    try{
+      const [{data:cls,error:ce},{data:students,error:se},{data:members,error:me}]=await Promise.all([
+        sb.from('tic_classes').select('id,name,level,teacher_id').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle(),
+        sb.from('tic_students').select('id,display_name,current_level,target_level,email,status').eq('teacher_id',session.user.id).eq('status','active').order('display_name'),
+        sb.from('tic_class_students').select('id,student_id,status').eq('class_id',classId)
+      ]);
+      if(ce) throw ce; if(se) throw se; if(me) throw me; if(!cls) return toast('Turma não encontrada.','error');
+      const current=new Set((members||[]).filter(x=>x.status==='active').map(x=>x.student_id));
+      const render=filter=>{
+        const q=(filter||'').toLowerCase().trim();
+        return (students||[]).filter(st=>!q || [st.display_name,st.email,st.current_level,st.target_level].filter(Boolean).join(' ').toLowerCase().includes(q)).map(st=>`
+          <label class="cc-sm-row ${current.has(st.id)?'cc-sm-selected':''}" data-student-row="${st.id}">
+            <input type="checkbox" value="${st.id}" ${current.has(st.id)?'checked':''} onchange="window.ccToggleStudentV30(this,'${st.id}')">
+            <span class="cc-sm-avatar">${escV30((st.display_name||'?').trim().charAt(0).toUpperCase())}</span>
+            <span class="cc-sm-meta"><b>${escV30(st.display_name)}</b><small>${escV30(st.current_level||'—')} ${st.target_level?'→ '+escV30(st.target_level):''} ${st.email?' · '+escV30(st.email):''}</small></span>
+          </label>`).join('') || '<div class="cc-sm-empty">Nenhum aluno encontrado.</div>';
+      };
+      window.ccStudentsV30=[...current];
+      window.ccAllStudentsV30=(students||[]).map(x=>x.id);
+      window.ccToggleStudentV30=(el,id)=>{
+        const set=new Set(window.ccStudentsV30||[]); el.checked?set.add(id):set.delete(id); window.ccStudentsV30=[...set];
+        const row=document.querySelector(`[data-student-row="${id}"]`); if(row) row.classList.toggle('cc-sm-selected',el.checked);
+        const c=document.getElementById('ccSelectedCountV30'); if(c)c.textContent=String(window.ccStudentsV30.length);
+      };
+      window.ccFilterStudentsV30=()=>{const q=document.getElementById('ccStudentSearchV30')?.value||'';const list=document.getElementById('ccStudentListV30');if(list)list.innerHTML=render(q);const c=document.getElementById('ccSelectedCountV30');if(c)c.textContent=String(window.ccStudentsV30.length)};
+      window.ccSelectAllV30=()=>{window.ccStudentsV30=[...new Set([...(window.ccStudentsV30||[]),...(window.ccAllStudentsV30||[])])];window.ccFilterStudentsV30()};
+      window.ccClearAllV30=()=>{window.ccStudentsV30=[];window.ccFilterStudentsV30()};
+      window.saveClassMembersV30=async function(e){
+        e.preventDefault(); const ids=[...new Set(window.ccStudentsV30||[])];
+        const btn=document.getElementById('ccSaveMembersV30'); if(btn){btn.disabled=true;btn.textContent='Salvando...'}
+        try{
+          const {data:old,error:oe}=await sb.from('tic_class_students').select('id,student_id,status').eq('class_id',classId); if(oe)throw oe;
+          const oldMap=new Map((old||[]).map(x=>[x.student_id,x]));
+          const selected=new Set(ids);
+          const remove=(old||[]).filter(x=>x.status==='active'&&!selected.has(x.student_id)).map(x=>x.id);
+          if(remove.length){const r=await sb.from('tic_class_students').delete().in('id',remove);if(r.error)throw r.error}
+          const add=ids.filter(id=>!oldMap.has(id)).map(student_id=>({class_id:classId,student_id,status:'active'}));
+          if(add.length){const r=await sb.from('tic_class_students').insert(add);if(r.error)throw r.error}
+          const reactivate=ids.filter(id=>oldMap.has(id)&&oldMap.get(id).status!=='active').map(id=>oldMap.get(id).id);
+          if(reactivate.length){const r=await sb.from('tic_class_students').update({status:'active'}).in('id',reactivate);if(r.error)throw r.error}
+          closeModal(); toast('Alunos da turma atualizados.','success');
+          if(typeof openClassCommandCenter==='function') await openClassCommandCenter(classId); else if(typeof loadView==='function') await loadView('classes');
+        }catch(err){toast('Não foi possível atualizar os alunos: '+(err?.message||err),'error');if(btn){btn.disabled=false;btn.textContent='Salvar alunos'}}
+      };
+      openModal(`👥 Alunos · ${escV30(cls.name)}`,`<div class="cc-sm-box" style="padding:20px">
+        <div class="cc-sm-head"><div><h3 style="margin:0">Alunos da turma</h3><small>Adicione vários alunos do seu cadastro à mesma turma.</small></div><span class="cc-sm-count"><span id="ccSelectedCountV30">${window.ccStudentsV30.length}</span> selecionados</span></div>
+        <input id="ccStudentSearchV30" class="cc-sm-search" placeholder="🔎 Buscar por nome ou e-mail..." oninput="ccFilterStudentsV30()">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button type="button" class="btn sm ghost" onclick="ccSelectAllV30()">Selecionar todos</button><button type="button" class="btn sm ghost" onclick="ccClearAllV30()">Limpar seleção</button></div>
+        <form onsubmit="saveClassMembersV30(event)"><div id="ccStudentListV30" class="cc-sm-list">${render('')}</div>
+        <div class="modal-actions" style="margin-top:16px"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button id="ccSaveMembersV30" class="btn primary">Salvar alunos</button></div></form>
+      </div>`);
+    }catch(err){toast('Não foi possível carregar os alunos: '+(err?.message||err),'error')}
+  };
+})();
+</script>
+
+</body></html>`;
   }
-  return `<!doctype html><html><head>${css}</head><body><div style="white-space:pre-wrap">${esc(c)}</div></body></html>`;
+  return `<!doctype html><html><head>${css}</head><body><div style="white-space:pre-wrap">${esc(c)}</div>
+<!-- V30 PATCH: robust multi-student class manager; additive, preserves existing platform -->
+<style>
+.cc-student-manager{display:grid;grid-template-columns:1fr 1fr;gap:18px}.cc-sm-box{border:1px solid #e7e3f5;border-radius:18px;padding:16px;background:#fff}.cc-sm-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.cc-sm-search{width:100%;border:1px solid #ddd7ef;border-radius:12px;padding:11px 13px;margin-bottom:12px;outline:none}.cc-sm-list{max-height:430px;overflow:auto;display:grid;gap:8px}.cc-sm-row{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid #eeeaf7;border-radius:12px;cursor:pointer;transition:.18s}.cc-sm-row:hover{transform:translateY(-1px);box-shadow:0 5px 14px #5b38c41a;border-color:#cfc4ff}.cc-sm-row input{width:18px;height:18px}.cc-sm-avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#eee8ff;color:#6238d8;font-weight:800}.cc-sm-meta{flex:1;min-width:0}.cc-sm-meta b{display:block}.cc-sm-meta small{color:#7c7690}.cc-sm-selected{border-color:#b9a7ff;background:#faf8ff}.cc-sm-empty{padding:28px;text-align:center;color:#88829a}.cc-sm-count{font-size:12px;padding:5px 9px;border-radius:999px;background:#f0ecff;color:#5d39d5;font-weight:700}@media(max-width:760px){.cc-student-manager{grid-template-columns:1fr}.cc-sm-list{max-height:300px}}
+</style>
+<script>
+(function(){
+  const escV30=x=>typeof esc==='function'?esc(x??''):String(x??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
+  window.openClassMembers=async function(classId){
+    try{
+      const [{data:cls,error:ce},{data:students,error:se},{data:members,error:me}]=await Promise.all([
+        sb.from('tic_classes').select('id,name,level,teacher_id').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle(),
+        sb.from('tic_students').select('id,display_name,current_level,target_level,email,status').eq('teacher_id',session.user.id).eq('status','active').order('display_name'),
+        sb.from('tic_class_students').select('id,student_id,status').eq('class_id',classId)
+      ]);
+      if(ce) throw ce; if(se) throw se; if(me) throw me; if(!cls) return toast('Turma não encontrada.','error');
+      const current=new Set((members||[]).filter(x=>x.status==='active').map(x=>x.student_id));
+      const render=filter=>{
+        const q=(filter||'').toLowerCase().trim();
+        return (students||[]).filter(st=>!q || [st.display_name,st.email,st.current_level,st.target_level].filter(Boolean).join(' ').toLowerCase().includes(q)).map(st=>`
+          <label class="cc-sm-row ${current.has(st.id)?'cc-sm-selected':''}" data-student-row="${st.id}">
+            <input type="checkbox" value="${st.id}" ${current.has(st.id)?'checked':''} onchange="window.ccToggleStudentV30(this,'${st.id}')">
+            <span class="cc-sm-avatar">${escV30((st.display_name||'?').trim().charAt(0).toUpperCase())}</span>
+            <span class="cc-sm-meta"><b>${escV30(st.display_name)}</b><small>${escV30(st.current_level||'—')} ${st.target_level?'→ '+escV30(st.target_level):''} ${st.email?' · '+escV30(st.email):''}</small></span>
+          </label>`).join('') || '<div class="cc-sm-empty">Nenhum aluno encontrado.</div>';
+      };
+      window.ccStudentsV30=[...current];
+      window.ccAllStudentsV30=(students||[]).map(x=>x.id);
+      window.ccToggleStudentV30=(el,id)=>{
+        const set=new Set(window.ccStudentsV30||[]); el.checked?set.add(id):set.delete(id); window.ccStudentsV30=[...set];
+        const row=document.querySelector(`[data-student-row="${id}"]`); if(row) row.classList.toggle('cc-sm-selected',el.checked);
+        const c=document.getElementById('ccSelectedCountV30'); if(c)c.textContent=String(window.ccStudentsV30.length);
+      };
+      window.ccFilterStudentsV30=()=>{const q=document.getElementById('ccStudentSearchV30')?.value||'';const list=document.getElementById('ccStudentListV30');if(list)list.innerHTML=render(q);const c=document.getElementById('ccSelectedCountV30');if(c)c.textContent=String(window.ccStudentsV30.length)};
+      window.ccSelectAllV30=()=>{window.ccStudentsV30=[...new Set([...(window.ccStudentsV30||[]),...(window.ccAllStudentsV30||[])])];window.ccFilterStudentsV30()};
+      window.ccClearAllV30=()=>{window.ccStudentsV30=[];window.ccFilterStudentsV30()};
+      window.saveClassMembersV30=async function(e){
+        e.preventDefault(); const ids=[...new Set(window.ccStudentsV30||[])];
+        const btn=document.getElementById('ccSaveMembersV30'); if(btn){btn.disabled=true;btn.textContent='Salvando...'}
+        try{
+          const {data:old,error:oe}=await sb.from('tic_class_students').select('id,student_id,status').eq('class_id',classId); if(oe)throw oe;
+          const oldMap=new Map((old||[]).map(x=>[x.student_id,x]));
+          const selected=new Set(ids);
+          const remove=(old||[]).filter(x=>x.status==='active'&&!selected.has(x.student_id)).map(x=>x.id);
+          if(remove.length){const r=await sb.from('tic_class_students').delete().in('id',remove);if(r.error)throw r.error}
+          const add=ids.filter(id=>!oldMap.has(id)).map(student_id=>({class_id:classId,student_id,status:'active'}));
+          if(add.length){const r=await sb.from('tic_class_students').insert(add);if(r.error)throw r.error}
+          const reactivate=ids.filter(id=>oldMap.has(id)&&oldMap.get(id).status!=='active').map(id=>oldMap.get(id).id);
+          if(reactivate.length){const r=await sb.from('tic_class_students').update({status:'active'}).in('id',reactivate);if(r.error)throw r.error}
+          closeModal(); toast('Alunos da turma atualizados.','success');
+          if(typeof openClassCommandCenter==='function') await openClassCommandCenter(classId); else if(typeof loadView==='function') await loadView('classes');
+        }catch(err){toast('Não foi possível atualizar os alunos: '+(err?.message||err),'error');if(btn){btn.disabled=false;btn.textContent='Salvar alunos'}}
+      };
+      openModal(`👥 Alunos · ${escV30(cls.name)}`,`<div class="cc-sm-box" style="padding:20px">
+        <div class="cc-sm-head"><div><h3 style="margin:0">Alunos da turma</h3><small>Adicione vários alunos do seu cadastro à mesma turma.</small></div><span class="cc-sm-count"><span id="ccSelectedCountV30">${window.ccStudentsV30.length}</span> selecionados</span></div>
+        <input id="ccStudentSearchV30" class="cc-sm-search" placeholder="🔎 Buscar por nome ou e-mail..." oninput="ccFilterStudentsV30()">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button type="button" class="btn sm ghost" onclick="ccSelectAllV30()">Selecionar todos</button><button type="button" class="btn sm ghost" onclick="ccClearAllV30()">Limpar seleção</button></div>
+        <form onsubmit="saveClassMembersV30(event)"><div id="ccStudentListV30" class="cc-sm-list">${render('')}</div>
+        <div class="modal-actions" style="margin-top:16px"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button id="ccSaveMembersV30" class="btn primary">Salvar alunos</button></div></form>
+      </div>`);
+    }catch(err){toast('Não foi possível carregar os alunos: '+(err?.message||err),'error')}
+  };
+})();
+</script>
+
+</body></html>`;
 }
 
 /* TIC FINAL CONNECTIVITY LAYER — appended intentionally so it overrides broken/legacy viewer versions without removing existing features. */
@@ -2507,77 +2767,71 @@ async function sendStudentMessageV18(e){
   `;document.head.appendChild(st);
 })();
 </script>
-<style id="student-my-class-v30-css">
-.student-myclass-wrap{display:grid;gap:16px}
-.student-myclass-hero{background:linear-gradient(135deg,#241c38,#4a2a73);color:#fff;border-radius:22px;padding:24px;display:flex;justify-content:space-between;gap:20px;align-items:center;box-shadow:0 18px 45px rgba(45,28,78,.16)}
-.student-myclass-hero h1{margin:5px 0;font-size:25px}.student-myclass-hero p{margin:0;color:#ddd3e9;font-size:12px}.student-myclass-hero .badge{background:#fff2;color:#fff;border-color:#fff3}
-.student-class-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.student-class-card{background:#fff;border:1px solid #e8e1f4;border-radius:18px;padding:18px;cursor:pointer;transition:.2s;box-shadow:0 8px 24px rgba(39,22,70,.05)}.student-class-card:hover{transform:translateY(-3px);box-shadow:0 16px 35px rgba(39,22,70,.1);border-color:#cfc1ef}.student-class-card h3{margin:10px 0 4px;font-size:18px}.student-class-card small{color:var(--muted)}.student-class-card .class-card-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.student-class-card .class-card-kpis div{background:#faf8ff;border-radius:11px;padding:10px;text-align:center}.student-class-card .class-card-kpis b{display:block;font-size:18px}.student-class-card .class-card-kpis span{font-size:9px;color:var(--muted)}
-.student-class-shell{display:grid;gap:14px}.student-class-top{display:flex;justify-content:space-between;align-items:center;gap:14px;background:#fff;border:1px solid #e8e1f4;border-radius:20px;padding:18px}.student-class-top h1{margin:6px 0 2px;font-size:24px}.student-class-top p{margin:0;color:var(--muted);font-size:11px}.student-class-tabs{display:flex;gap:7px;overflow-x:auto;padding:3px 0 8px;scrollbar-width:thin}.student-class-tabs button{white-space:nowrap;border:1px solid #e6dff1;background:#fff;border-radius:12px;padding:10px 13px;font-weight:700;font-size:11px;color:#665b78;cursor:pointer}.student-class-tabs button:hover{background:#faf7ff;color:#5d3bc8}.student-class-tabs button.active{background:#6d4aff;color:#fff;border-color:#6d4aff}.student-class-body{min-height:0}.student-class-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.student-class-kpi{background:#fff;border:1px solid #e8e1f4;border-radius:16px;padding:14px}.student-class-kpi b{display:block;font-size:23px;margin-top:5px}.student-class-kpi small{color:var(--muted);font-size:9px}.student-class-panel{background:#fff;border:1px solid #e8e1f4;border-radius:18px;padding:18px}.student-class-panel h3{margin:0}.student-class-panel-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:14px}.student-class-list{display:grid;gap:9px}.student-class-item{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border:1px solid #eee9f5;border-radius:13px;background:#fcfbfe}.student-class-item h4{margin:0;font-size:12px}.student-class-item p{margin:4px 0 0;color:var(--muted);font-size:10px}.student-class-item .date{font-size:10px;color:#6b5c80;white-space:nowrap}.student-class-board{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:12px;overflow-x:auto;padding-bottom:6px}.student-class-column{background:#f8f6fc;border:1px solid #e8e1f4;border-radius:15px;padding:12px;min-height:230px}.student-class-column h4{margin:0 0 10px;font-size:12px}.student-class-board-card{background:#fff;border:1px solid #e8e1f4;border-left:4px solid var(--card-color,#6d4aff);border-radius:12px;padding:11px;margin-bottom:8px}.student-class-board-card b{font-size:11px}.student-class-board-card small{display:block;color:var(--muted);margin-top:5px;font-size:9px}.student-class-material-tabs{display:flex;gap:7px;overflow-x:auto;margin-bottom:12px}.student-class-material-tabs button{white-space:nowrap;border:1px solid #e5def0;background:#fff;border-radius:999px;padding:8px 11px;font-size:10px;cursor:pointer}.student-class-material-tabs button.active{background:#efe9ff;color:#5d3bc8;border-color:#d8cbfa}.student-class-material-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.student-class-material{border:1px solid #e8e1f4;border-radius:14px;padding:13px;background:#fff}.student-class-material b{font-size:12px}.student-class-material small{display:block;color:var(--muted);margin:5px 0 10px}.student-class-material a{display:inline-flex}.student-class-recent{display:grid;gap:8px}.student-class-recent-item{display:grid;grid-template-columns:95px 1fr auto;gap:10px;align-items:center;padding:11px;border-bottom:1px solid #eeeaf4}.student-class-recent-item:last-child{border-bottom:0}.student-class-recent-item time{font-size:9px;color:var(--muted)}.student-class-recent-item b{font-size:11px}.student-class-recent-item span{font-size:9px;color:#6d4aff}.student-class-empty{text-align:center;padding:30px;color:var(--muted);border:1px dashed #dcd3e8;border-radius:14px}.student-class-back{display:inline-flex;align-items:center;gap:7px}
-@media(max-width:1000px){.student-class-kpis{grid-template-columns:repeat(3,1fr)}.student-class-material-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.student-class-board{grid-template-columns:repeat(4,260px)}}
-@media(max-width:700px){.student-myclass-hero,.student-class-top{flex-direction:column;align-items:flex-start}.student-class-grid{grid-template-columns:1fr}.student-class-kpis{grid-template-columns:repeat(2,1fr)}.student-class-material-grid{grid-template-columns:1fr}.student-class-recent-item{grid-template-columns:1fr}.student-class-top .actions{width:100%}.student-class-top .actions .btn{width:100%}}
-</style><script id="student-my-class-v30-js">
+
+<!-- V30 PATCH: robust multi-student class manager; additive, preserves existing platform -->
+<style>
+.cc-student-manager{display:grid;grid-template-columns:1fr 1fr;gap:18px}.cc-sm-box{border:1px solid #e7e3f5;border-radius:18px;padding:16px;background:#fff}.cc-sm-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.cc-sm-search{width:100%;border:1px solid #ddd7ef;border-radius:12px;padding:11px 13px;margin-bottom:12px;outline:none}.cc-sm-list{max-height:430px;overflow:auto;display:grid;gap:8px}.cc-sm-row{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid #eeeaf7;border-radius:12px;cursor:pointer;transition:.18s}.cc-sm-row:hover{transform:translateY(-1px);box-shadow:0 5px 14px #5b38c41a;border-color:#cfc4ff}.cc-sm-row input{width:18px;height:18px}.cc-sm-avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#eee8ff;color:#6238d8;font-weight:800}.cc-sm-meta{flex:1;min-width:0}.cc-sm-meta b{display:block}.cc-sm-meta small{color:#7c7690}.cc-sm-selected{border-color:#b9a7ff;background:#faf8ff}.cc-sm-empty{padding:28px;text-align:center;color:#88829a}.cc-sm-count{font-size:12px;padding:5px 9px;border-radius:999px;background:#f0ecff;color:#5d39d5;font-weight:700}@media(max-width:760px){.cc-student-manager{grid-template-columns:1fr}.cc-sm-list{max-height:300px}}
+</style>
+<script>
 (function(){
-  const originalLoadView=window.loadView;
-  const originalSetPage=window.setPage;
-  const v30Esc=v=>typeof esc==='function'?esc(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const v30Fmt=d=>{try{return d?new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date(d)):'—'}catch{return '—'}};
-  const v30Date=d=>{try{return d?new Intl.DateTimeFormat('pt-BR',{dateStyle:'medium'}).format(new Date(d)):'—'}catch{return '—'}};
-  const v30TypeIcon=t=>({youtube:'▶️',drive:'📁',docs:'📄',pdf:'📕',audio:'🎧',website:'🌐',link:'🔗'}[String(t||'').toLowerCase()]||'🔗');
-  const v30TypeLabel=t=>({youtube:'YouTube',drive:'Google Drive',docs:'Google Docs',pdf:'PDF',audio:'Áudio',website:'Website',link:'Link'}[String(t||'').toLowerCase()]||'Link');
-  function ensureStudentClassNav(){
-    const b=document.querySelector('[data-view="studentTasks"]');
-    if(!b||document.querySelector('[data-view="studentClass"]'))return;
-    const n=document.createElement('button'); n.setAttribute('data-view','studentClass'); n.innerHTML='🏫 <span>My Class</span>';
-    b.parentNode.insertBefore(n,b);
-    n.addEventListener('click',()=>window.loadView('studentClass'));
-  }
-  async function getStudent(){
-    const {data:s,error}=await sb.from('tic_students').select('id,display_name,teacher_id,current_level,target_level').eq('auth_user_id',session.user.id).maybeSingle();
-    if(error)throw error; return s;
-  }
-  async function getClassesForStudent(){
-    const s=await getStudent(); if(!s)return {s:null,classes:[]};
-    const {data:members,error}=await sb.from('tic_class_students').select('class_id,status').eq('student_id',s.id).eq('status','active');
-    if(error)throw error; const ids=(members||[]).map(x=>x.class_id); if(!ids.length)return {s,classes:[]};
-    const {data:classes,error:ce}=await sb.from('tic_classes').select('id,name,level,status,schedule_text,meeting_url').in('id',ids).eq('status','active').order('name');
-    if(ce)throw ce; return {s,classes:classes||[]};
-  }
-  async function getClassData(classId){
-    const s=await getStudent();
-    if(!s)throw new Error('Conta de aluno não vinculada.');
-    const {data:membership}=await sb.from('tic_class_students').select('class_id,status').eq('class_id',classId).eq('student_id',s.id).eq('status','active').maybeSingle();
-    if(!membership)throw new Error('Você não pertence a esta turma.');
-    const [cr,br,mr,sr,tr,pr]=await Promise.all([
-      sb.from('tic_classes').select('id,name,level,status,schedule_text,meeting_url').eq('id',classId).maybeSingle(),
-      sb.from('tic_class_board_items').select('*').eq('class_id',classId).order('position'),
-      sb.from('tic_class_material_links').select('*').eq('class_id',classId).order('position').order('created_at',{ascending:false}),
-      sb.from('tic_class_sessions').select('*').eq('class_id',classId).order('session_date',{ascending:false}),
-      sb.from('tic_task_assignments').select('id,status,assigned_at,assignment_id,tic_assignments(id,title,instructions,due_at,points,assignment_type,skill,cefr_level,class_id)').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false}),
-      sb.from('tic_progress').select('skill,level,progress').eq('student_id',s.id)
-    ]);
-    for(const r of [cr,br,mr,sr,tr,pr])if(r.error)throw r.error;
-    return {s,c:cr.data,b:br.data||[],ma:mr.data||[],sessions:sr.data||[],tasks:(tr.data||[]).filter(x=>x.tic_assignments?.class_id===classId),progress:pr.data||[]};
-  }
-  function classKpis(d){return `<div class="student-class-kpis"><div class="student-class-kpi">👥<b>${d.membersCount??'—'}</b><small>alunos</small></div><div class="student-class-kpi">📚<b>${d.sessions.length}</b><small>aulas</small></div><div class="student-class-kpi">📝<b>${d.tasks.length}</b><small>minhas tasks</small></div><div class="student-class-kpi">🔗<b>${d.ma.length}</b><small>materiais</small></div><div class="student-class-kpi">📌<b>${d.b.length}</b><small>atividades</small></div></div>`}
-  function recent(d){const rows=[...(d.sessions||[]).map(x=>({d:x.session_date||x.created_at,icon:'🗓️',t:'Aula ministrada',x:x.lesson_title||'Aula',s:x.status||''})),...(d.b||[]).map(x=>({d:x.updated_at||x.created_at,icon:'📌',t:'Atividade',x:x.title,s:x.status||''})),...(d.ma||[]).map(x=>({d:x.updated_at||x.created_at,icon:v30TypeIcon(x.material_type),t:'Material',x:x.title,s:v30TypeLabel(x.material_type)})),...(d.tasks||[]).map(x=>({d:x.assigned_at,icon:'📝',t:'Task atribuída',x:x.tic_assignments?.title||'Task',s:x.status||''}))].sort((a,b)=>new Date(b.d)-new Date(a.d)).slice(0,5);return `<div class="student-class-recent">${rows.map(r=>`<div class="student-class-recent-item"><time>${v30Fmt(r.d)}</time><div><b>${r.icon} ${v30Esc(r.x)}</b></div><span>${v30Esc(r.t)} · ${v30Esc(r.s)}</span></div>`).join('')||'<div class="student-class-empty">Nenhuma atividade registrada ainda.</div>'}</div>`}
-  async function renderStudentClassOverview(id){const d=await getClassData(id);const members=await sb.from('tic_class_students').select('student_id').eq('class_id',id).eq('status','active');d.membersCount=(members.data||[]).length;const last=d.sessions[0],next=d.sessions.filter(x=>new Date(x.session_date)>new Date()).sort((a,b)=>new Date(a.session_date)-new Date(b.session_date))[0];$('studentClassBodyV30').innerHTML=`${classKpis(d)}<div class="grid cols2 section"><div class="student-class-panel"><div class="student-class-panel-head"><h3>🕘 Última aula</h3><span>${last?v30Date(last.session_date):'—'}</span></div>${last?`<div class="student-class-item"><div><h4>${v30Esc(last.lesson_title||'Aula ministrada')}</h4><p>${v30Esc(last.topic||last.summary||'Conteúdo da aula')}</p></div><span class="date">${v30Esc(last.status||'completed')}</span></div>`:'<div class="student-class-empty">Nenhuma aula registrada.</div>'}</div><div class="student-class-panel"><div class="student-class-panel-head"><h3>🎯 Próxima aula</h3><span>${next?v30Date(next.session_date):'—'}</span></div>${next?`<div class="student-class-item"><div><h4>${v30Esc(next.lesson_title||'Próxima aula')}</h4><p>${v30Esc(next.topic||next.summary||'Conteúdo planejado')}</p></div><span class="date">${v30Fmt(next.session_date)}</span></div>`:'<div class="student-class-empty">Nenhuma próxima aula registrada.</div>'}</div></div><div class="student-class-panel"><div class="student-class-panel-head"><h3>🕘 Atividade recente</h3><button class="btn sm ghost" onclick="studentClassTabV30('history','${id}')">Ver tudo</button></div>${recent(d)}</div>`}
-  async function renderBoard(id){const d=await getClassData(id);const cols=[['planned','📋 Planejado'],['preparing','🔵 Preparação'],['in_progress','🟡 Em andamento'],['completed','🟢 Concluído']];$('studentClassBodyV30').innerHTML=`<div class="student-class-panel"><div class="student-class-panel-head"><h3>📌 Board da turma</h3><span>Somente visualização</span></div><div class="student-class-board">${cols.map(([st,label])=>`<div class="student-class-column"><h4>${label}</h4>${d.b.filter(x=>x.status===st).map(x=>`<article class="student-class-board-card" style="--card-color:${v30Esc(x.color||'#6d4aff')}"><b>${v30Esc(x.title)}</b><small>${v30Esc(x.skill||x.item_type||'Atividade')} ${x.due_at?'· '+v30Date(x.due_at):''}</small></article>`).join('')||'<div class="student-class-empty">Nenhum item.</div>'}</div>`).join('')}</div></div>`}
-  async function renderSessions(id){const d=await getClassData(id);$('studentClassBodyV30').innerHTML=`<div class="student-class-panel"><div class="student-class-panel-head"><h3>🗓️ Aulas ministradas e próximas</h3><span>${d.sessions.length} registros</span></div><div class="student-class-list">${d.sessions.map(x=>`<div class="student-class-item"><div><h4>${v30Esc(x.lesson_title||'Aula')}</h4><p>${v30Esc(x.topic||'')}${x.summary?' · '+v30Esc(x.summary):''}</p></div><span class="date">${v30Fmt(x.session_date)}<br>${v30Esc(x.status||'')}</span></div>`).join('')||'<div class="student-class-empty">Nenhuma aula registrada.</div>'}</div></div>`}
-  async function renderTopics(id){const d=await getClassData(id);const topics=[...new Set(d.sessions.flatMap(x=>Array.isArray(x.topics)?x.topics:(x.topic?[x.topic]:[])).filter(Boolean))];$('studentClassBodyV30').innerHTML=`<div class="student-class-panel"><div class="student-class-panel-head"><h3>📚 Assuntos & Tópicos</h3><span>${topics.length} tópicos</span></div><div class="student-class-grid">${topics.map(x=>`<div class="student-class-card" style="cursor:default"><span class="badge blue">Tópico</span><h3>${v30Esc(x)}</h3><small>Conteúdo registrado pelo Teacher</small></div>`).join('')||'<div class="student-class-empty">Nenhum tópico registrado.</div>'}</div></div>`}
-  async function renderTasks(id){const d=await getClassData(id);$('studentClassBodyV30').innerHTML=`<div class="student-class-panel"><div class="student-class-panel-head"><h3>📝 Minhas Tasks nesta turma</h3><span>${d.tasks.length}</span></div><div class="student-class-list">${d.tasks.map(x=>`<div class="student-class-item"><div><h4>${v30Esc(x.tic_assignments?.title||'Task')}</h4><p>${v30Esc(x.tic_assignments?.skill||'')} ${x.tic_assignments?.due_at?'· Prazo '+v30Date(x.tic_assignments.due_at):''}</p></div><button class="btn sm primary" onclick="openStudentTask('${x.id}')">Abrir</button></div>`).join('')||'<div class="student-class-empty">Nenhuma Task atribuída nesta turma.</div>'}</div></div>`}
-  async function renderMaterials(id,type='all'){const d=await getClassData(id);const types=['all','youtube','drive','docs','pdf','audio','website','link'];const visible=type==='all'?d.ma:d.ma.filter(x=>String(x.material_type||'link').toLowerCase()===type);$('studentClassBodyV30').innerHTML=`<div class="student-class-panel"><div class="student-class-panel-head"><h3>🔗 Materiais da turma</h3><span>${d.ma.length} links</span></div><div class="student-class-material-tabs">${types.map(t=>`<button class="${t===type?'active':''}" onclick="studentClassMaterialsV30('${id}','${t}')">${t==='all'?'Todos':v30TypeLabel(t)}</button>`).join('')}</div><div class="student-class-material-grid">${visible.map(x=>`<article class="student-class-material"><b>${v30TypeIcon(x.material_type)} ${v30Esc(x.title)}</b><small>${v30TypeLabel(x.material_type)}</small><a class="btn sm secondary" target="_blank" rel="noopener" href="${v30Esc(x.url)}">Abrir</a></article>`).join('')||'<div class="student-class-empty">Nenhum material nesta categoria.</div>'}</div></div>`}
-  async function renderProgress(id){const d=await getClassData(id);const skills=['overall','grammar','vocabulary','listening','reading','writing','speaking','pronunciation'];$('studentClassBodyV30').innerHTML=`<div class="student-class-panel"><div class="student-class-panel-head"><h3>📈 Meu progresso na turma</h3><span>${v30Esc(d.s.current_level||'')}</span></div>${skills.map(k=>{const v=Number(d.progress.find(x=>x.skill===k&&x.level===d.s.current_level)?.progress||0);return `<div class="mini"><span>${k}</span><b>${v}%</b></div><div class="progress" style="margin-bottom:12px"><i style="width:${Math.min(100,v)}%"></i></div>`}).join('')}</div>`}
-  async function renderHistory(id){const d=await getClassData(id);$('studentClassBodyV30').innerHTML=`<div class="student-class-panel"><div class="student-class-panel-head"><h3>📜 Histórico da turma</h3><span>Datas visíveis</span></div>${recent({...d,b:d.b.slice(0,100),ma:d.ma.slice(0,100),tasks:d.tasks.slice(0,100),sessions:d.sessions.slice(0,100)})}</div>`}
-  window.studentClassMaterialsV30=(id,type)=>renderMaterials(id,type);
-  window.studentClassTabV30=async function(tab,id){document.querySelectorAll('[data-sctab]').forEach(b=>b.classList.toggle('active',b.dataset.sctab===tab));const map={overview:renderStudentClassOverview,board:renderBoard,sessions:renderSessions,topics:renderTopics,tasks:renderTasks,materials:renderMaterials,progress:renderProgress,history:renderHistory};try{await (map[tab]||renderStudentClassOverview)(id)}catch(e){$('studentClassBodyV30').innerHTML=`<div class="student-class-empty">Não foi possível carregar esta área.<br><small>${v30Esc(e.message||e)}</small></div>`}}
-  window.studentClassOpenV30=async function(id,tab='overview'){try{const d=await getClassData(id);$('content').innerHTML=`<div class="student-class-shell"><div class="student-class-top"><div><button class="btn sm ghost student-class-back" onclick="loadView('studentClass')">← My Classes</button><div style="margin-top:10px"><span class="badge blue">${v30Esc(d.c?.level||'A1')}</span><h1>🏫 ${v30Esc(d.c?.name||'Minha turma')}</h1><p>${v30Esc(d.c?.schedule_text||'Horário não definido')}${d.c?.meeting_url?' · Aula online disponível':''}</p></div></div><div class="actions">${d.c?.meeting_url?`<a class="btn primary" target="_blank" rel="noopener" href="${v30Esc(d.c.meeting_url)}">🎥 Entrar na aula</a>`:''}</div></div><div class="student-class-tabs">${[['overview','📊 Visão geral'],['board','📌 Board'],['sessions','🗓️ Aulas'],['topics','📚 Assuntos'],['tasks','📝 Tasks'],['materials','🔗 Materiais'],['progress','📈 Meu progresso'],['history','📜 Histórico']].map(([t,l])=>`<button data-sctab="${t}" onclick="studentClassTabV30('${t}','${id}')">${l}</button>`).join('')}</div><div id="studentClassBodyV30" class="student-class-body"><div class="student-class-empty">Carregando...</div></div></div>`;document.querySelector('[data-sctab="'+tab+'"]')?.classList.add('active');await studentClassTabV30(tab,id);setPage('My Class',d.c?.name||'Turma') }catch(e){$('content').innerHTML=`<div class="card empty">${v30Esc(e.message||e)}</div>`}}
-  window.studentClassPageV30=async function(){try{const {s,classes}=await getClassesForStudent();setPage('My Class','Turmas em que você está matriculado.');$('content').innerHTML=`<div class="student-myclass-wrap"><div class="student-myclass-hero"><div><span>LEARNING COMMUNITY</span><h1>🏫 My Class</h1><p>${classes.length?`Você está em ${classes.length} turma(s).`:'O Teacher ainda não adicionou você a uma turma.'}</p></div><div><span class="badge">${v30Esc(s?.current_level||'—')} → ${v30Esc(s?.target_level||'—')}</span></div></div><div class="student-class-grid">${classes.map(c=>`<article class="student-class-card" onclick="studentClassOpenV30('${c.id}')"><span class="badge blue">${v30Esc(c.level||'A1')}</span><h3>🏫 ${v30Esc(c.name)}</h3><small>${v30Esc(c.schedule_text||'Horário não definido')}</small><div class="class-card-kpis"><div><b>→</b><span>Entrar</span></div><div><b>📚</b><span>Aulas</span></div><div><b>📝</b><span>Tasks</span></div></div></article>`).join('')||'<div class="student-class-empty">Nenhuma turma foi atribuída a você ainda.<br>Quando o Teacher adicionar seu cadastro a uma Class, ela aparecerá aqui.</div>'}</div></div>`}catch(e){$('content').innerHTML=`<div class="card empty">Não foi possível carregar suas turmas.<br><small>${v30Esc(e.message||e)}</small></div>`}}
-  window.loadView=function(v){if(v==='studentClass')return window.studentClassPageV30();return originalLoadView.apply(this,arguments)};
-  function boot(){ensureStudentClassNav();const role=typeof session!=='undefined'&&session?.user?document.querySelector('[data-view="student"]')?.classList.contains('active'):false;if(role||document.querySelector('[data-view="studentTasks"]'))ensureStudentClassNav()}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-  setTimeout(ensureStudentClassNav,600);
+  const escV30=x=>typeof esc==='function'?esc(x??''):String(x??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
+  window.openClassMembers=async function(classId){
+    try{
+      const [{data:cls,error:ce},{data:students,error:se},{data:members,error:me}]=await Promise.all([
+        sb.from('tic_classes').select('id,name,level,teacher_id').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle(),
+        sb.from('tic_students').select('id,display_name,current_level,target_level,email,status').eq('teacher_id',session.user.id).eq('status','active').order('display_name'),
+        sb.from('tic_class_students').select('id,student_id,status').eq('class_id',classId)
+      ]);
+      if(ce) throw ce; if(se) throw se; if(me) throw me; if(!cls) return toast('Turma não encontrada.','error');
+      const current=new Set((members||[]).filter(x=>x.status==='active').map(x=>x.student_id));
+      const render=filter=>{
+        const q=(filter||'').toLowerCase().trim();
+        return (students||[]).filter(st=>!q || [st.display_name,st.email,st.current_level,st.target_level].filter(Boolean).join(' ').toLowerCase().includes(q)).map(st=>`
+          <label class="cc-sm-row ${current.has(st.id)?'cc-sm-selected':''}" data-student-row="${st.id}">
+            <input type="checkbox" value="${st.id}" ${current.has(st.id)?'checked':''} onchange="window.ccToggleStudentV30(this,'${st.id}')">
+            <span class="cc-sm-avatar">${escV30((st.display_name||'?').trim().charAt(0).toUpperCase())}</span>
+            <span class="cc-sm-meta"><b>${escV30(st.display_name)}</b><small>${escV30(st.current_level||'—')} ${st.target_level?'→ '+escV30(st.target_level):''} ${st.email?' · '+escV30(st.email):''}</small></span>
+          </label>`).join('') || '<div class="cc-sm-empty">Nenhum aluno encontrado.</div>';
+      };
+      window.ccStudentsV30=[...current];
+      window.ccAllStudentsV30=(students||[]).map(x=>x.id);
+      window.ccToggleStudentV30=(el,id)=>{
+        const set=new Set(window.ccStudentsV30||[]); el.checked?set.add(id):set.delete(id); window.ccStudentsV30=[...set];
+        const row=document.querySelector(`[data-student-row="${id}"]`); if(row) row.classList.toggle('cc-sm-selected',el.checked);
+        const c=document.getElementById('ccSelectedCountV30'); if(c)c.textContent=String(window.ccStudentsV30.length);
+      };
+      window.ccFilterStudentsV30=()=>{const q=document.getElementById('ccStudentSearchV30')?.value||'';const list=document.getElementById('ccStudentListV30');if(list)list.innerHTML=render(q);const c=document.getElementById('ccSelectedCountV30');if(c)c.textContent=String(window.ccStudentsV30.length)};
+      window.ccSelectAllV30=()=>{window.ccStudentsV30=[...new Set([...(window.ccStudentsV30||[]),...(window.ccAllStudentsV30||[])])];window.ccFilterStudentsV30()};
+      window.ccClearAllV30=()=>{window.ccStudentsV30=[];window.ccFilterStudentsV30()};
+      window.saveClassMembersV30=async function(e){
+        e.preventDefault(); const ids=[...new Set(window.ccStudentsV30||[])];
+        const btn=document.getElementById('ccSaveMembersV30'); if(btn){btn.disabled=true;btn.textContent='Salvando...'}
+        try{
+          const {data:old,error:oe}=await sb.from('tic_class_students').select('id,student_id,status').eq('class_id',classId); if(oe)throw oe;
+          const oldMap=new Map((old||[]).map(x=>[x.student_id,x]));
+          const selected=new Set(ids);
+          const remove=(old||[]).filter(x=>x.status==='active'&&!selected.has(x.student_id)).map(x=>x.id);
+          if(remove.length){const r=await sb.from('tic_class_students').delete().in('id',remove);if(r.error)throw r.error}
+          const add=ids.filter(id=>!oldMap.has(id)).map(student_id=>({class_id:classId,student_id,status:'active'}));
+          if(add.length){const r=await sb.from('tic_class_students').insert(add);if(r.error)throw r.error}
+          const reactivate=ids.filter(id=>oldMap.has(id)&&oldMap.get(id).status!=='active').map(id=>oldMap.get(id).id);
+          if(reactivate.length){const r=await sb.from('tic_class_students').update({status:'active'}).in('id',reactivate);if(r.error)throw r.error}
+          closeModal(); toast('Alunos da turma atualizados.','success');
+          if(typeof openClassCommandCenter==='function') await openClassCommandCenter(classId); else if(typeof loadView==='function') await loadView('classes');
+        }catch(err){toast('Não foi possível atualizar os alunos: '+(err?.message||err),'error');if(btn){btn.disabled=false;btn.textContent='Salvar alunos'}}
+      };
+      openModal(`👥 Alunos · ${escV30(cls.name)}`,`<div class="cc-sm-box" style="padding:20px">
+        <div class="cc-sm-head"><div><h3 style="margin:0">Alunos da turma</h3><small>Adicione vários alunos do seu cadastro à mesma turma.</small></div><span class="cc-sm-count"><span id="ccSelectedCountV30">${window.ccStudentsV30.length}</span> selecionados</span></div>
+        <input id="ccStudentSearchV30" class="cc-sm-search" placeholder="🔎 Buscar por nome ou e-mail..." oninput="ccFilterStudentsV30()">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button type="button" class="btn sm ghost" onclick="ccSelectAllV30()">Selecionar todos</button><button type="button" class="btn sm ghost" onclick="ccClearAllV30()">Limpar seleção</button></div>
+        <form onsubmit="saveClassMembersV30(event)"><div id="ccStudentListV30" class="cc-sm-list">${render('')}</div>
+        <div class="modal-actions" style="margin-top:16px"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button id="ccSaveMembersV30" class="btn primary">Salvar alunos</button></div></form>
+      </div>`);
+    }catch(err){toast('Não foi possível carregar os alunos: '+(err?.message||err),'error')}
+  };
 })();
 </script>
+
 </body>
 </html>
 
@@ -2839,207 +3093,4 @@ window.ticCCTab=function(tab,btn,id){return window._ticCCTab(tab,btn,id)};window
 })();
 
 window.ticEditStudentFromClass=async id=>{const {data}=await sb.from('tic_students').select('*').eq('id',id).maybeSingle();if(data&&typeof openStudentForm==='function')openStudentForm(data)};
-</script>
-
-<style id="tic-v29-classes">
-/* V29 — Classes full-screen workspace, persistent context, material subtabs and activity overview */
-.modal.tic-class-fullscreen-modal{padding:0!important;place-items:stretch!important}
-.modal.tic-class-fullscreen-modal .modal-card{width:100vw!important;max-width:none!important;height:100vh!important;max-height:none!important;border-radius:0!important;padding:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
-.modal.tic-class-fullscreen-modal .modal-head{display:none!important}
-.modal.tic-class-fullscreen-modal #modalBody{height:100%;min-height:0;overflow:hidden!important;padding:0!important}
-.class-center-v28{height:100vh!important;min-height:0!important}
-.class-center-body-v28{scrollbar-gutter:stable;overscroll-behavior:contain}
-.class-center-tabs{scrollbar-width:thin;scroll-behavior:smooth}
-.cc-subtabs-v29{display:flex;gap:7px;flex-wrap:wrap;margin:-2px 0 15px;padding:5px;background:#f7f5fb;border:1px solid #e8e2f2;border-radius:13px}
-.cc-subtabs-v29 button{border:1px solid transparent;background:transparent;color:#6e657d;border-radius:9px;padding:8px 11px;font-size:11px;font-weight:800;cursor:pointer;transition:.16s}
-.cc-subtabs-v29 button:hover{transform:translateY(-1px);background:#fff;border-color:#ddd5ef}
-.cc-subtabs-v29 button.active{background:#6d4aff;color:#fff;box-shadow:0 6px 15px #6d4aff25}
-.cc-material-toolbar-v29{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
-.cc-material-grid-v29{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.cc-material-type-v29{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:900;background:#f0ecff;color:#5e3ad1}
-.cc-material-date-v29{font-size:10px;color:#91899e;margin-left:6px}
-.cc-activity-v29{display:grid;gap:8px;margin-top:15px}
-.cc-activity-item-v29{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;border:1px solid #ebe7f2;background:#fff;border-radius:12px;padding:10px 12px}
-.cc-activity-icon-v29{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:16px;background:#f0ecff}
-.cc-activity-item-v29 h4{margin:0;font-size:13px}.cc-activity-item-v29 small{display:block;color:#81798e;margin-top:3px;font-size:10px}.cc-activity-date-v29{font-size:10px;font-weight:800;color:#6c6378;white-space:nowrap}
-.cc-activity-more-v29{margin-top:10px;text-align:right}
-.cc-multi-link-row-v29{display:grid;grid-template-columns:1.1fr 150px 1.5fr 36px;gap:8px;align-items:center;border:1px solid #ebe7f2;padding:9px;border-radius:11px;background:#faf9fd;margin-bottom:8px}
-.cc-multi-link-row-v29 input,.cc-multi-link-row-v29 select{border:1px solid #ded8ea;border-radius:9px;padding:9px;background:#fff;width:100%}
-.cc-multi-link-remove-v29{border:0;background:#ffe9ed;color:#c93650;border-radius:8px;height:36px;cursor:pointer;font-weight:900}
-@media(max-width:850px){.cc-material-grid-v29{grid-template-columns:1fr}.cc-multi-link-row-v29{grid-template-columns:1fr 1fr}.cc-multi-link-row-v29 input:nth-child(3){grid-column:1/-1}.cc-multi-link-remove-v29{grid-column:2;grid-row:1}}
-@media(max-width:700px){.class-center-tabs{padding-bottom:5px}.cc-subtabs-v29{overflow-x:auto;flex-wrap:nowrap}.cc-subtabs-v29 button{flex:0 0 auto}.cc-activity-item-v29{grid-template-columns:36px 1fr}.cc-activity-date-v29{grid-column:2}.cc-multi-link-row-v29{grid-template-columns:1fr}.cc-multi-link-row-v29 input:nth-child(3){grid-column:auto}.cc-multi-link-remove-v29{grid-column:auto}}
-</style>
-<script>
-/* V29 — additive patch. Existing platform code remains intact. */
-(function(){
-  const V29={context:null, materialFilter:'all'};
-  window.ticClassContextV29=V29;
-  function remember(id,tab){V29.context={id,tab:tab||V29.context?.tab||'overview'};}
-  function clear(){V29.context=null;}
-  window.ticClearClassContextV29=clear;
-
-  // Clear class context only when the Teacher intentionally navigates to another main page.
-  document.addEventListener('click',function(e){
-    const b=e.target.closest('#teacherNav button[data-view]');
-    if(b) clear();
-  },true);
-
-  // Full-screen class workspace; original class functions and tabs remain available.
-  window.ticOpenClassCenterV29=async function(id,tab='overview'){
-    const {data:c,error}=await sb.from('tic_classes').select('*').eq('id',id).eq('teacher_id',session.user.id).maybeSingle();
-    if(error||!c)return toast('Turma não encontrada.','error');
-    remember(id,tab);
-    openModal('',`<div class="class-center-v28">
-      <div class="class-center-head-v28">
-        <div class="class-center-title">
-          <div><span class="badge blue">${esc(c.level||'A1')}</span><h2>🏫 ${esc(c.name)}</h2><small>${esc(c.schedule_text||'Horário não definido')} · ${c.meeting_url?`<a href="${esc(c.meeting_url)}" target="_blank" rel="noopener">Aula online ↗</a>`:'Sem aula online'}</small></div>
-          <div class="actions"><button class="btn sm secondary" onclick="openClassMembers('${id}')">👥 Alunos</button><button class="btn sm primary" onclick="openClassAssign('${id}')">📤 Atribuir</button><button class="btn sm ghost" onclick="closeModal()">Fechar</button></div>
-        </div>
-        <div class="class-center-tabs">
-          ${[['overview','📊 Visão geral'],['board','📌 Board'],['sessions','🗓️ Aulas'],['topics','📚 Assuntos & Tópicos'],['students','👥 Alunos'],['tasks','📝 Tasks'],['materials','🔗 Materiais'],['notes','🧠 Observações'],['progress','📈 Progresso'],['history','📜 Histórico']].map(([k,l])=>`<button data-cc="${k}" class="${tab===k?'active':''}" onclick="ticCCTabV29('${k}',this,'${id}')">${l}</button>`).join('')}
-        </div>
-      </div>
-      <div class="class-center-body-v28" id="ccBodyV28"><div class="loading">Carregando...</div></div>
-    </div>`);
-    $('modal').classList.add('tic-class-fullscreen-modal');
-    await window.ticCCTabV29(tab,document.querySelector(`[data-cc="${tab}"]`),id);
-  };
-  // Keep old entry point, but upgrade it to the full-screen version.
-  window.ticOpenClassCenterV28=window.ticOpenClassCenterV29;
-
-  // ESC and close cleanup for the class workspace.
-  const oldClose=window.closeModal;
-  window.closeModal=function(){
-    $('modal')?.classList.remove('tic-class-fullscreen-modal');
-    return oldClose.apply(this,arguments);
-  };
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('modal')?.classList.contains('hidden')){if($('modal')?.classList.contains('tic-class-fullscreen-modal')){e.preventDefault();closeModal();}}});
-
-  window.ticCCTabV29=async function(tab,btn,id){
-    remember(id,tab);
-    document.querySelectorAll('[data-cc]').forEach(x=>x.classList.toggle('active',x===btn));
-    const b=$('ccBodyV28');if(!b)return;b.innerHTML='<div class="loading">Carregando...</div>';
-    if(tab==='materials')return window.ccMaterialsV29(id,'all');
-    // Delegate all other existing tabs to the original V28 router.
-    return window.ticCCTab(tab,btn,id);
-  };
-  // Existing V28 tab buttons that call ticCCTab continue to work; this function is used by V29 UI.
-
-  function colV29(status,title,items,id){const a=(items||[]).filter(x=>x.status===status);return `<div class="cc-col" ondragover="event.preventDefault()" ondrop="ticDropCC(event,'${id}','${status}')"><div class="cc-col-head"><b>${title}</b><span class="badge blue">${a.length}</span></div><div class="cc-drop">${a.map(x=>`<article class="cc-card" draggable="true" ondragstart="event.dataTransfer.setData('text/plain','${x.id}')" style="--card-color:${({Lesson:'#6d4aff',Task:'#3b82f6',Material:'#10b981',Topic:'#f59e0b',Plan:'#8b5cf6',Session:'#ef4444'})[x.item_type]||'#64748b'}"><b>${esc(x.title)}</b><small>${esc(x.item_type||'Task')}</small>${x.description?`<small>${esc(String(x.description).slice(0,100))}</small>`:''}<div class="cc-card-actions"><button onclick="editCCCard('${x.id}','${id}')">✏️</button><button onclick="deleteCCCard('${x.id}','${id}')">🗑️</button></div></article>`).join('')||'<div class="cc-empty">Arraste cards para cá.</div>'}</div></div>`}
-
-  // Overview with at least five dated recent activities.
-  window.ccOverviewV29=async function(id){
-    const [{data:m},{data:b},{data:s},{data:n},{data:ma}]=await Promise.all([
-      sb.from('tic_class_students').select('student_id').eq('class_id',id).eq('status','active'),
-      sb.from('tic_class_board_items').select('id,title,status,item_type,created_at').eq('class_id',id).order('created_at',{ascending:false}),
-      sb.from('tic_class_sessions').select('id,lesson_title,status,session_date,duration_minutes,summary').eq('class_id',id).order('session_date',{ascending:false}),
-      sb.from('tic_class_notes').select('id,title,note,created_at').eq('class_id',id).order('created_at',{ascending:false}),
-      sb.from('tic_class_material_links').select('id,title,material_type,created_at,url').eq('class_id',id).order('created_at',{ascending:false})
-    ]);
-    const acts=[...(s||[]).map(x=>({d:x.session_date,icon:'🗓️',type:'Aula',title:x.lesson_title,detail:x.status})),...(b||[]).map(x=>({d:x.created_at,icon:'📌',type:'Board',title:x.title,detail:x.status})),...(n||[]).map(x=>({d:x.created_at,icon:'🧠',type:'Observação',title:x.title,detail:x.note})),...(ma||[]).map(x=>({d:x.created_at,icon:'🔗',type:'Material',title:x.title,detail:x.material_type}))].sort((a,b)=>new Date(b.d)-new Date(a.d)).slice(0,5);
-    const last=(s||[])[0],next=(s||[]).find(x=>x.status==='planned');
-    const planned=(b||[]).filter(x=>x.status==='planned').length,progress=(b||[]).filter(x=>x.status==='in_progress').length,done=(b||[]).filter(x=>x.status==='completed').length;
-    $('ccBodyV28').innerHTML=`<div class="cc-kpis"><div class="cc-kpi"><small>👥 Alunos</small><b>${(m||[]).length}</b></div><div class="cc-kpi"><small>📋 Planejados</small><b>${planned}</b></div><div class="cc-kpi"><small>🟡 Em andamento</small><b>${progress}</b></div><div class="cc-kpi"><small>🟢 Concluídos</small><b>${done}</b></div><div class="cc-kpi"><small>🔗 Materiais</small><b>${(ma||[]).length}</b></div></div>
-      <div class="cc-layout"><section class="cc-panel"><div class="cc-panel-head"><div><h3>📌 Board da turma</h3><small>Planejado → Preparação → Em andamento → Concluído</small></div><button class="btn sm primary" onclick="newCCCard('${id}')">+ Card</button></div><div class="cc-board">${colV29('planned','📋 Planejado',b||[],id)}${colV29('preparing','🔵 Preparação',b||[],id)}${colV29('in_progress','🟡 Em andamento',b||[],id)}${colV29('completed','🟢 Concluído',b||[],id)}</div></section>
-      <section class="cc-panel"><div class="cc-panel-head"><h3>🗓️ Aulas</h3><button class="btn sm primary" onclick="newCCSession('${id}')">+ Aula</button></div><div class="cc-list"><div class="cc-list-item"><div><h4>Última aula</h4><small>${last?`${esc(last.lesson_title)} · ${fmtDate(last.session_date)}`:'Ainda não registrada'}</small></div>${last?badge(last.status||'completed'):''}</div><div class="cc-list-item"><div><h4>Próxima aula</h4><small>${next?`${esc(next.lesson_title)} · ${fmtDate(next.session_date)}`:'Não planejada'}</small></div></div></div></section></div>
-      <section class="cc-panel" style="margin-top:16px"><div class="cc-panel-head"><div><h3>🕘 Atividade recente</h3><small>Os 5 últimos registros da turma, com data e hora.</small></div><button class="btn sm ghost" onclick="ticCCTabV29('history',document.querySelector('[data-cc=history]'),'${id}')">Ver histórico completo</button></div><div class="cc-activity-v29">${acts.map(a=>`<div class="cc-activity-item-v29"><div class="cc-activity-icon-v29">${a.icon}</div><div><h4>${esc(a.title||'Registro')}</h4><small>${esc(a.type)} · ${esc(String(a.detail||'').slice(0,120))}</small></div><div class="cc-activity-date-v29">${fmtDate(a.d)}</div></div>`).join('')||'<div class="cc-empty">Nenhuma atividade registrada ainda.</div>'}</div></section>`;
-  };
-
-  // Material subtabs + multiple link insertion.
-  const typeMap={all:'Todos',youtube:'YouTube',drive:'Google Drive',docs:'Google Docs',pdf:'PDF',audio:'Áudio',web:'Website',link:'Link'};
-  function normType(t){const x=String(t||'').toLowerCase();if(x.includes('youtube'))return'youtube';if(x.includes('drive'))return'drive';if(x.includes('docs'))return'docs';if(x.includes('pdf'))return'pdf';if(x.includes('áudio')||x.includes('audio'))return'audio';if(x.includes('website'))return'web';return'link'}
-  window.ccMaterialsV29=async function(id,filter='all'){
-    V29.materialFilter=filter;
-    const {data}=await sb.from('tic_class_material_links').select('*').eq('class_id',id).order('position').order('created_at',{ascending:false});
-    const rows=(data||[]).filter(x=>filter==='all'||normType(x.material_type)===filter);
-    const counts={all:(data||[]).length};Object.keys(typeMap).filter(k=>k!=='all').forEach(k=>counts[k]=(data||[]).filter(x=>normType(x.material_type)===k).length);
-    $('ccBodyV28').innerHTML=`<div class="cc-panel"><div class="cc-material-toolbar"><div><h3 style="margin:0">🔗 Materiais da turma</h3><small>Vários links organizados em subabas.</small></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn primary" onclick="newCCMaterialsMultiV29('${id}')">＋ Vários links</button><button class="btn secondary" onclick="newCCMaterial('${id}')">＋ Material</button></div></div><div class="cc-subtabs-v29">${Object.entries(typeMap).map(([k,l])=>`<button class="${filter===k?'active':''}" onclick="ccMaterialsV29('${id}','${k}')">${l} <span style="opacity:.7">${counts[k]||0}</span></button>`).join('')}</div><div class="cc-material-grid-v29">${rows.map(x=>`<article class="cc-list-item" style="display:flex;flex-direction:column"><div style="width:100%"><div><span class="cc-material-type-v29">${esc(x.material_type||'Link')}</span><span class="cc-material-date-v29">${fmtDate(x.created_at)}</span></div><h4 style="margin-top:8px">${esc(x.title)}</h4><small>${esc(x.note||'')}</small><div style="margin-top:7px;overflow-wrap:anywhere"><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.url)}</a></div></div><div style="display:flex;gap:7px;margin-top:10px"><button class="btn sm ghost" onclick="editCCMaterial('${x.id}','${id}')">✏️ Editar</button><button class="btn sm danger" onclick="deleteCCMaterial('${x.id}','${id}')">🗑️ Remover</button></div></article>`).join('')||'<div class="cc-empty" style="grid-column:1/-1">Nenhum link nesta subaba.</div>'}</div></div>`;
-  };
-  window.ticAddMaterialRowV29=function(){const box=$('v29LinkRows');if(!box)return;box.insertAdjacentHTML('beforeend',`<div class="cc-multi-link-row-v29"><input class="v29-link-title" placeholder="Título do material" required><select class="v29-link-type">${['YouTube','Google Drive','Google Docs','PDF','Áudio','Website','Link'].map(v=>`<option>${v}</option>`).join('')}</select><input class="v29-link-url" type="url" placeholder="https://..." required><button type="button" class="cc-multi-link-remove-v29" onclick="this.parentElement.remove()">×</button></div>`)};
-  window.newCCMaterialsMultiV29=function(id){
-    const row=`<div class="cc-multi-link-row-v29"><input class="v29-link-title" placeholder="Título do material" required><select class="v29-link-type">${['YouTube','Google Drive','Google Docs','PDF','Áudio','Website','Link'].map(v=>`<option>${v}</option>`).join('')}</select><input class="v29-link-url" type="url" placeholder="https://..." required><button type="button" class="cc-multi-link-remove-v29" onclick="this.parentElement.remove()">×</button></div>`;
-    openModal('🔗 Adicionar vários links',`<form class="form" onsubmit="saveCCMaterialsMultiV29(event,'${id}')"><div class="notice">Adicione vários links de uma vez. Depois eles ficam separados nas subabas por tipo.</div><div id="v29LinkRows">${row}${row}</div><div style="display:flex;gap:8px"><button type="button" class="btn secondary" onclick="ticAddMaterialRowV29()">＋ Adicionar outra linha</button></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar links</button></div></form>`);
-  };
-  window.saveCCMaterialsMultiV29=async function(e,id){
-    e.preventDefault();const rows=[...document.querySelectorAll('#v29LinkRows .cc-multi-link-row-v29')];const payload=rows.map((r,i)=>({teacher_id:session.user.id,class_id:id,title:r.querySelector('.v29-link-title').value.trim(),material_type:r.querySelector('.v29-link-type').value,url:r.querySelector('.v29-link-url').value.trim(),position:i})).filter(x=>x.title&&x.url);if(!payload.length)return toast('Adicione pelo menos um link.','error');const r=await sb.from('tic_class_material_links').insert(payload);if(r.error)return toast(r.error.message,'error');closeModal();remember(id,'materials');await ccMaterialsV29(id,'all');toast(`${payload.length} link(s) adicionados.`,'success');
-  };
-
-  // Keep the active class/tab after programmatic loadView calls triggered by saves.
-  const originalLoadView=window.loadView;
-  if(originalLoadView&&!window.__ticLoadViewV29){
-    window.__ticLoadViewV29=true;
-    window.loadView=async function(v){
-      const ctx=V29.context;
-      if(ctx && v!=='classes' && v!=='studentView' && !document.querySelector('.tic-class-fullscreen-modal')) clear();
-      const result=await originalLoadView.apply(this,arguments);
-      if(ctx && V29.context && document.querySelector('.tic-class-fullscreen-modal')){
-        return result;
-      }
-      return result;
-    };
-  }
-  // Restore class workspace after actions that accidentally call loadView('overview').
-  document.addEventListener('tic:class-refresh',()=>{const c=V29.context;if(c&&!$('modal')?.classList.contains('hidden'))ticOpenClassCenterV29(c.id,c.tab)});
-
-  // Replace V28 overview router only for the first tab, without touching the other existing tabs.
-  const originalTab=window.ticCCTab;
-  window.ticCCTabV29=async function(tab,btn,id){
-    remember(id,tab);document.querySelectorAll('[data-cc]').forEach(x=>x.classList.toggle('active',x===btn));
-    if(tab==='overview')return ccOverviewV29(id);
-    if(tab==='materials')return ccMaterialsV29(id,V29.materialFilter||'all');
-    return originalTab(tab,btn,id);
-  };
-})();
-</script>
-
-<script>
-/* V29.1 — nested dialogs return to the active Class instead of Home/Overview. */
-(function(){
-  const C=window.ticClassContextV29;
-  if(!C)return;
-  const originals={
-    closeModal:window.closeModal,
-    openClassMembers:window.openClassMembers,
-    openClassAssign:window.openClassAssign,
-    openClassSubmissions:window.openClassSubmissions,
-    openClassProgress:window.openClassProgress,
-    openAssignmentForm:window.openAssignmentForm,
-    newCCCard:window.newCCCard,
-    newCCSession:window.newCCSession,
-    newCCMaterial:window.newCCMaterial,
-    newCCNote:window.newCCNote
-  };
-  C.returnAfterClose=null;
-  function nested(tab){ if(C.context) C.returnAfterClose={id:C.context.id,tab:tab||C.context.tab||'overview'}; }
-  window.closeModal=function(){
-    const ret=C.returnAfterClose;
-    C.returnAfterClose=null;
-    const result=originals.closeModal.apply(this,arguments);
-    if(ret){setTimeout(()=>window.ticOpenClassCenterV29(ret.id,ret.tab),0)}
-    return result;
-  };
-  window.openClassMembers=async function(id){nested(C.context?.tab||'students');$('modal')?.classList.remove('tic-class-fullscreen-modal');return originals.openClassMembers.apply(this,arguments)};
-  window.openClassAssign=async function(id){nested(C.context?.tab||'tasks');$('modal')?.classList.remove('tic-class-fullscreen-modal');return originals.openClassAssign.apply(this,arguments)};
-  window.openClassSubmissions=async function(id){nested('tasks');$('modal')?.classList.remove('tic-class-fullscreen-modal');return originals.openClassSubmissions.apply(this,arguments)};
-  window.openClassProgress=async function(id){nested('progress');$('modal')?.classList.remove('tic-class-fullscreen-modal');return originals.openClassProgress.apply(this,arguments)};
-  window.openAssignmentForm=async function(x=null){nested('tasks');$('modal')?.classList.remove('tic-class-fullscreen-modal');const r=await originals.openAssignmentForm.apply(this,arguments);if(C.context&&!x&&$('a7type')){$('a7type').value='class';if(typeof renderAssignmentTarget==='function')renderAssignmentTarget();}return r};
-  window.newCCCard=function(id,x=null){nested('board');$('modal')?.classList.remove('tic-class-fullscreen-modal');return originals.newCCCard.apply(this,arguments)};
-  window.newCCSession=function(id,x=null){nested('sessions');$('modal')?.classList.remove('tic-class-fullscreen-modal');return originals.newCCSession.apply(this,arguments)};
-  window.newCCMaterial=function(id,x=null){nested('materials');$('modal')?.classList.remove('tic-class-fullscreen-modal');return originals.newCCMaterial.apply(this,arguments)};
-  window.newCCNote=function(id,x=null){nested('notes');$('modal')?.classList.remove('tic-class-fullscreen-modal');return originals.newCCNote.apply(this,arguments)};
-  // Multi-link dialog was created by V29; mark it as nested too.
-  const oldMulti=window.newCCMaterialsMultiV29;
-  window.newCCMaterialsMultiV29=function(id){nested('materials');$('modal')?.classList.remove('tic-class-fullscreen-modal');return oldMulti.apply(this,arguments)};
-  // If a save routine calls loadView('assignments') or another page, keep the teacher inside the class.
-  if(!window.__ticLoadViewV29Hard){
-    const oldLoad=window.loadView;window.__ticLoadViewV29Hard=true;
-    window.loadView=async function(v){
-      if(C.context && v!=='classes' && v!=='studentView' && v!=='studentDashboard' && v!=='studentCourses' && v!=='studentLessons'){
-        const ctx={...C.context};
-        return window.ticOpenClassCenterV29(ctx.id,ctx.tab||'overview');
-      }
-      return oldLoad.apply(this,arguments);
-    };
-  }
-})();
 </script>
