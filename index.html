@@ -1645,7 +1645,7 @@ async function submitInteractiveTask(taskAssignmentId,payload){
 }
 async function submitTaskViewerText(id){const t=$('taskViewerText')?.value.trim()||'';if(!t)return toast('Digite sua resposta antes de enviar.','info');await submitInteractiveTask(id,{text:t,fields:{source:'external_text'}})}
 async function openStudentTaskViewer(taskAssignmentId){
- const s=await studentRecord();if(!s)return;const {data:x,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id,status,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,video_url,audio_url,pdf_url,lesson_id)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+ const s=await studentRecord();if(!s)return;const {data:x,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id,status,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,lesson_id)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
  if(error||!x||x.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');const a=x.tic_assignments||{};
  const {data:subs}=await sb.from('tic_submissions').select('id,attempt,grade,submitted_at,answer_text,file_url,audio_url,video_url,response_data,status').eq('task_assignment_id',x.id).eq('student_id',s.id).order('attempt',{ascending:false});
  const latest=subs?.[0];const fids=(subs||[]).map(q=>q.id);const {data:fbs}=fids.length?await sb.from('tic_feedback').select('id,submission_id,comment,grade,private_note,improvement_skill,improvement_link,created_at').in('submission_id',fids).order('created_at',{ascending:false}):{data:[]};const fb=latest?fbs?.find(q=>q.submission_id===latest.id):null;
@@ -1657,7 +1657,7 @@ async function openStudentTaskViewer(taskAssignmentId){
  if(html){const f=$('ticTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
 }
 async function openStudentTaskTeacherView(taskAssignmentId){
- const {data:x,error}=await sb.from('tic_task_assignments').select('id,student_id,assignment_id,tic_assignments(id,title,instructions,resource_items,html_enabled,html_content,video_url,audio_url,pdf_url)').eq('id',taskAssignmentId).maybeSingle();if(error||!x)return toast(error?.message||'Task não encontrada.','error');const a=x.tic_assignments||{};
+ const {data:x,error}=await sb.from('tic_task_assignments').select('id,student_id,assignment_id,tic_assignments(id,title,instructions,resource_items,html_enabled,html_content)').eq('id',taskAssignmentId).maybeSingle();if(error||!x)return toast(error?.message||'Task não encontrada.','error');const a=x.tic_assignments||{};
  const {data:subs}=await sb.from('tic_submissions').select('id,attempt,answer_text,file_url,audio_url,video_url,submitted_at,grade,response_data,status').eq('task_assignment_id',x.id).eq('student_id',x.student_id).order('attempt',{ascending:false});
  openModal(`👁 ${esc(a.title||'Task')}`,`<div class="tic-full-viewer"><div class="notice"><b>Visualização do Teacher</b><br>${esc(a.instructions||'')}</div>${a.html_enabled&&a.html_content?`<div class="tic-viewer-toolbar"><b>🧩 HTML</b><span class="badge green">Preview</span></div><div class="tic-viewer-content" id="ticTeacherTaskHtmlWrap"><iframe id="ticTeacherTaskHtmlFrame" title="Task HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div>`:''}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderResourcesFinal(a)}</section><section class="viewer-panel"><div class="viewer-panel-head"><b>📨 Entregas</b></div>${(subs||[]).map(z=>`<div class="tic-attempt"><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:'Sem nota'}</small>${z.answer_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(z.answer_text)}</div>`:''}</div>`).join('')||'<div class="empty">Nenhuma entrega.</div>'}</section></div>`);
  if(a.html_enabled&&a.html_content){const f=$('ticTeacherTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
@@ -1826,7 +1826,7 @@ async function submitInteractiveTask(taskAssignmentId,payload){
 }
 async function submitTaskViewerText(id){const t=$('taskViewerText')?.value.trim()||'';if(!t)return toast('Digite sua resposta antes de enviar.','info');await submitInteractiveTask(id,{text:t,fields:{source:'external_text'}})}
 async function openStudentTaskViewer(taskAssignmentId){
- const s=await studentRecord();if(!s)return;const {data:x,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id,status,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,video_url,audio_url,pdf_url,lesson_id)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+ const s=await studentRecord();if(!s)return;const {data:x,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id,status,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,lesson_id)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
  if(error||!x||x.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');const a=x.tic_assignments||{};
  const {data:subs}=await sb.from('tic_submissions').select('id,attempt,grade,submitted_at,answer_text,file_url,audio_url,video_url,response_data,status').eq('task_assignment_id',x.id).eq('student_id',s.id).order('attempt',{ascending:false});
  const latest=subs?.[0];const fids=(subs||[]).map(q=>q.id);const {data:fbs}=fids.length?await sb.from('tic_feedback').select('id,submission_id,comment,grade,private_note,improvement_skill,improvement_link,created_at').in('submission_id',fids).order('created_at',{ascending:false}):{data:[]};const fb=latest?fbs?.find(q=>q.submission_id===latest.id):null;
@@ -1838,7 +1838,7 @@ async function openStudentTaskViewer(taskAssignmentId){
  if(html){const f=$('ticTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
 }
 async function openStudentTaskTeacherView(taskAssignmentId){
- const {data:x,error}=await sb.from('tic_task_assignments').select('id,student_id,assignment_id,tic_assignments(id,title,instructions,resource_items,html_enabled,html_content,video_url,audio_url,pdf_url)').eq('id',taskAssignmentId).maybeSingle();if(error||!x)return toast(error?.message||'Task não encontrada.','error');const a=x.tic_assignments||{};
+ const {data:x,error}=await sb.from('tic_task_assignments').select('id,student_id,assignment_id,tic_assignments(id,title,instructions,resource_items,html_enabled,html_content)').eq('id',taskAssignmentId).maybeSingle();if(error||!x)return toast(error?.message||'Task não encontrada.','error');const a=x.tic_assignments||{};
  const {data:subs}=await sb.from('tic_submissions').select('id,attempt,answer_text,file_url,audio_url,video_url,submitted_at,grade,response_data,status').eq('task_assignment_id',x.id).eq('student_id',x.student_id).order('attempt',{ascending:false});
  openModal(`👁 ${esc(a.title||'Task')}`,`<div class="tic-full-viewer"><div class="notice"><b>Visualização do Teacher</b><br>${esc(a.instructions||'')}</div>${a.html_enabled&&a.html_content?`<div class="tic-viewer-toolbar"><b>🧩 HTML</b><span class="badge green">Preview</span></div><div class="tic-viewer-content" id="ticTeacherTaskHtmlWrap"><iframe id="ticTeacherTaskHtmlFrame" title="Task HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div>`:''}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderResourcesFinal(a)}</section><section class="viewer-panel"><div class="viewer-panel-head"><b>📨 Entregas</b></div>${(subs||[]).map(z=>`<div class="tic-attempt"><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:'Sem nota'}</small>${z.answer_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(z.answer_text)}</div>`:''}</div>`).join('')||'<div class="empty">Nenhuma entrega.</div>'}</section></div>`);
  if(a.html_enabled&&a.html_content){const f=$('ticTeacherTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
@@ -2060,7 +2060,7 @@ async function submitInteractiveTask(taskAssignmentId,payload){
 }
 async function submitTaskViewerText(id){const t=$('taskViewerText')?.value.trim()||'';if(!t)return toast('Digite sua resposta antes de enviar.','info');await submitInteractiveTask(id,{text:t,fields:{source:'external_text'}})}
 async function openStudentTaskViewer(taskAssignmentId){
- const s=await studentRecord();if(!s)return;const {data:x,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id,status,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,video_url,audio_url,pdf_url,lesson_id)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+ const s=await studentRecord();if(!s)return;const {data:x,error}=await sb.from('tic_task_assignments').select('id,active,assignment_id,status,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,lesson_id)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
  if(error||!x||x.active===false)return toast(error?.message||'Task não encontrada ou removida.','error');const a=x.tic_assignments||{};
  const {data:subs}=await sb.from('tic_submissions').select('id,attempt,grade,submitted_at,answer_text,file_url,audio_url,video_url,response_data,status').eq('task_assignment_id',x.id).eq('student_id',s.id).order('attempt',{ascending:false});
  const latest=subs?.[0];const fids=(subs||[]).map(q=>q.id);const {data:fbs}=fids.length?await sb.from('tic_feedback').select('id,submission_id,comment,grade,private_note,improvement_skill,improvement_link,created_at').in('submission_id',fids).order('created_at',{ascending:false}):{data:[]};const fb=latest?fbs?.find(q=>q.submission_id===latest.id):null;
@@ -2072,7 +2072,7 @@ async function openStudentTaskViewer(taskAssignmentId){
  if(html){const f=$('ticTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
 }
 async function openStudentTaskTeacherView(taskAssignmentId){
- const {data:x,error}=await sb.from('tic_task_assignments').select('id,student_id,assignment_id,tic_assignments(id,title,instructions,resource_items,html_enabled,html_content,video_url,audio_url,pdf_url)').eq('id',taskAssignmentId).maybeSingle();if(error||!x)return toast(error?.message||'Task não encontrada.','error');const a=x.tic_assignments||{};
+ const {data:x,error}=await sb.from('tic_task_assignments').select('id,student_id,assignment_id,tic_assignments(id,title,instructions,resource_items,html_enabled,html_content)').eq('id',taskAssignmentId).maybeSingle();if(error||!x)return toast(error?.message||'Task não encontrada.','error');const a=x.tic_assignments||{};
  const {data:subs}=await sb.from('tic_submissions').select('id,attempt,answer_text,file_url,audio_url,video_url,submitted_at,grade,response_data,status').eq('task_assignment_id',x.id).eq('student_id',x.student_id).order('attempt',{ascending:false});
  openModal(`👁 ${esc(a.title||'Task')}`,`<div class="tic-full-viewer"><div class="notice"><b>Visualização do Teacher</b><br>${esc(a.instructions||'')}</div>${a.html_enabled&&a.html_content?`<div class="tic-viewer-toolbar"><b>🧩 HTML</b><span class="badge green">Preview</span></div><div class="tic-viewer-content" id="ticTeacherTaskHtmlWrap"><iframe id="ticTeacherTaskHtmlFrame" title="Task HTML" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div>`:''}<section class="viewer-panel"><div class="viewer-panel-head"><b>📚 Recursos</b></div>${ticRenderResourcesFinal(a)}</section><section class="viewer-panel"><div class="viewer-panel-head"><b>📨 Entregas</b></div>${(subs||[]).map(z=>`<div class="tic-attempt"><b>Tentativa ${z.attempt||1}</b><small>${fmtDate(z.submitted_at)} · ${z.grade!=null?'Nota '+z.grade:'Sem nota'}</small>${z.answer_text?`<div style="white-space:pre-wrap;margin-top:6px">${esc(z.answer_text)}</div>`:''}</div>`).join('')||'<div class="empty">Nenhuma entrega.</div>'}</section></div>`);
  if(a.html_enabled&&a.html_content){const f=$('ticTeacherTaskHtmlFrame');if(f)f.srcdoc=ticFrameHtml(a.html_content)+ticHtmlBridge();}
@@ -2616,7 +2616,7 @@ window.progressPage=async function(student=false){
   window.ticV33Device=function(mode){const w=document.getElementById('ticV33HtmlWrap');if(!w)return;w.classList.remove('tablet','mobile');if(mode!=='desktop')w.classList.add(mode)};
   window.openStudentTask=async function(taskAssignmentId){
     const s=await studentRecord();if(!s)return;
-    const {data:x,error}=await sb.from('tic_task_assignments').select('id,active,status,assignment_id,assigned_at,completed_at,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,video_url,audio_url,pdf_url,lesson_id)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+    const {data:x,error}=await sb.from('tic_task_assignments').select('id,active,status,assignment_id,assigned_at,completed_at,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,lesson_id)').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
     if(error||!x)return toast(error?.message||'Não foi possível abrir esta Task.','error');
     if(x.active===false)return toast('Esta Task foi encerrada pelo Teacher.','info');
     const a=x.tic_assignments||{};
@@ -2641,5 +2641,46 @@ window.progressPage=async function(student=false){
   window.submitStudentTaskV33=async function(taskAssignmentId){const text=document.getElementById('ticV33Answer')?.value.trim()||'';if(!text)return toast('Digite sua resposta antes de enviar.','info');await submitInteractiveTask(taskAssignmentId,{text,fields:{source:'student_fullscreen'}});if(document.getElementById('ticV33Status'))document.getElementById('ticV33Status').innerHTML='<b>✅ Enviado.</b> Sua resposta foi registrada.';setTimeout(()=>window.openStudentTask(taskAssignmentId),350)};
   window.openStudentTaskViewer=window.openStudentTask;
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.getElementById('ticStudentTaskFull')?.classList.contains('open'))closeV33()});
+})();
+</script>
+
+
+<script>
+/* V34 TASK ACCESS HARDENING — additive patch; preserves all previous functions. */
+(function(){
+  const originalOpen = window.openStudentTask;
+  async function openStudentTaskV34(taskAssignmentId){
+    try{
+      if(!taskAssignmentId){ return toast('Esta Task não possui uma atribuição válida.','error'); }
+      const s=await studentRecord();
+      if(!s){ return toast('Não foi possível identificar o aluno conectado. Entre novamente.','error'); }
+      /* IMPORTANT: tic_assignments does NOT contain video_url/audio_url/pdf_url in the current schema. */
+      const q=await sb.from('tic_task_assignments')
+        .select('id,active,status,assignment_id,assigned_at,completed_at,tic_assignments(id,title,instructions,due_at,points,html_enabled,html_content,allow_multiple_attempts,cover_image_url,resource_items,lesson_id)')
+        .eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();
+      if(q.error) return toast('Não foi possível abrir a Task: '+q.error.message,'error');
+      if(!q.data) return toast('Esta Task não está atribuída a este aluno ou foi encerrada.','error');
+      if(q.data.active===false) return toast('Esta Task foi encerrada pelo Teacher.','info');
+      /* Delegate rendering to the existing professional full-screen viewer after validating the assignment. */
+      if(typeof originalOpen==='function'){
+        try { return await originalOpen(taskAssignmentId); }
+        catch(e){ console.warn('V34 fallback:',e); }
+      }
+      /* If the previous renderer is unavailable, render a minimal but fully usable viewer from the validated data. */
+      const x=q.data,a=x.tic_assignments||{};
+      const el=document.getElementById('ticStudentTaskFull');
+      if(!el) return toast('Visualizador de Task não encontrado na página.','error');
+      const escx=v=>{try{return esc(v)}catch(e){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}};
+      const resources=Array.isArray(a.resource_items)?a.resource_items:[];
+      const resourceHtml=resources.map((r,i)=>{const u=r?.url||r?.href||r?.link||r?.value||'';return u?`<a class="tic-resource" href="${escx(ticSafeUrl(u))}" target="_blank" rel="noopener">🔗 ${escx(r.title||r.name||('Recurso '+(i+1)))}</a>`:''}).join('');
+      const viewer=(a.html_enabled&&a.html_content)?`<section class="tic-panel"><h3>🧩 Atividade interativa</h3><div id="ticV34HtmlWrap" class="tic-html-wrap"><iframe id="ticV34HtmlFrame" class="tic-html-frame" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div></section>`:'';
+      el.innerHTML=`<div class="tic-task-shell"><header class="tic-task-top"><div><small>Teacher Platform / My Tasks</small><h1>📝 ${escx(a.title||'Task')}</h1></div><button class="btn secondary tic-close" onclick="closeStudentTaskFull()">✕ Fechar</button></header><main class="tic-task-body"><div class="tic-task-inner"><div><section class="tic-panel"><div class="tic-status"><span class="badge green">🔓 Atribuição ativa</span><span class="badge blue">${a.points||0} pontos</span><span class="badge gray">${a.due_at?'Prazo: '+fmtDate(a.due_at):'Sem prazo'}</span></div>${a.instructions?`<div class="tic-instructions">${escx(a.instructions)}</div>`:''}</section>${viewer}</div><aside><section class="tic-panel"><h3>📚 Recursos</h3>${resourceHtml||'<div class="empty">Nenhum recurso adicional.</div>'}</section></aside></div></main></div>`;
+      el.classList.add('open');el.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
+      if(a.html_enabled&&a.html_content){const f=document.getElementById('ticV34HtmlFrame');if(f)f.srcdoc=(typeof ticFrameHtml==='function'?ticFrameHtml(a.html_content):a.html_content)+(typeof ticHtmlBridge==='function'?ticHtmlBridge():'');}
+    }catch(e){console.error(e);toast('Erro ao abrir Task: '+(e?.message||e),'error');}
+  }
+  window.openStudentTask=openStudentTaskV34;
+  window.openStudentTaskViewer=openStudentTaskV34;
+  window.openStudentTaskFromAnyPlace=openStudentTaskV34;
 })();
 </script>
