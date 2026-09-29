@@ -335,6 +335,7 @@ body{overflow:hidden;}
   <button data-view="assignments">✅ <span>Assignments</span></button>
   <button data-view="feedback">📝 <span>Feedback & Corrections</span></button>
   <button data-view="materials">📂 <span>Materials</span></button>
+  <button data-view="resources">🧰 <span>Resources</span></button>
   <button data-view="calendar">📅 <span>Calendar</span></button>
   <button data-view="progress">📊 <span>Progress</span></button>
   <button data-view="studentRegistration">🔗 <span>Student Registration</span></button>
@@ -646,7 +647,7 @@ async function openClassCenter(classId,initialTab='overview'){
  const tasks=assignments||[],evs=events||[],boardItems=boardData||[];
  let counts={planned:tasks.filter(t=>t.active!==false).length,inProgress:0,done:0};
  if(tasks.length&&memberIds.length){const {data:tas}=await sb.from('tic_task_assignments').select('assignment_id,student_id,status,completed_at').in('assignment_id',tasks.map(t=>t.id));const by={};(tas||[]).forEach(x=>(by[x.assignment_id]??=[]).push(x));tasks.forEach(t=>{const a=by[t.id]||[];if(a.length&&a.every(x=>['completed','submitted','graded'].includes(String(x.status||'').toLowerCase())))counts.done++;else if(a.some(x=>['started','in_progress','submitted','graded'].includes(String(x.status||'').toLowerCase())))counts.inProgress++});counts.planned=Math.max(0,tasks.filter(t=>t.active!==false).length-counts.inProgress-counts.done)}
- const tabs=[['overview','📊 Visão geral'],['board','📌 Board'],['lessons','📚 Aulas'],['topics','📚 Assuntos & Tópicos'],['students','👥 Alunos'],['tasks','📝 Tasks'],['materials','🔗 Materiais'],['notes','💬 Observações'],['progress','📈 Progresso']];
+ const tabs=[['overview','📊 Visão geral'],['board','📌 Board'],['lessons','📚 Aulas'],['topics','📚 Assuntos & Tópicos'],['students','👥 Alunos'],['tasks','📝 Tasks'],['materials','🔗 Materiais'],['resources','🧰 Resources'],['notes','💬 Observações'],['progress','📈 Progresso']];
  /* V36: Class Center is a real full-page workspace, not a modal. Everything that already exists inside the Class Center is preserved. */
  const shell=`<div class="class-center-shell class-center-page" data-class-center="${classId}"><div class="class-center-top"><div class="class-center-title"><div><span class="badge blue">${esc(cls.level||'A1')}</span><h2>🏫 ${esc(cls.name)}</h2><small>${esc(cls.schedule_text||'Horário não definido')} · ${cls.meeting_url?'Aula online configurada':'Aula online não definida'}</small></div><div class="class-center-actions"><button class="btn secondary" onclick="openClassMembers('${classId}')">👥 Alunos</button><button class="btn primary" onclick="openClassAssign('${classId}')">📤 Atribuir</button><button class="btn ghost" onclick="openClassFormById('${classId}')">✏️ Editar</button><button class="btn ghost" onclick="loadView('classes')">← Voltar para Classes</button></div></div><div class="class-center-tabs">${tabs.map(([id,label])=>`<button data-tab="${id}" class="${initialTab===id?'active':''}" onclick="classCenterTab('${classId}','${id}')">${label}</button>`).join('')}</div></div><div id="classCenterBody" class="class-center-body"></div><div class="class-center-float"><button class="btn primary" onclick="openClassAssign('${classId}')">📤 Atribuir</button><button class="btn secondary" onclick="openClassMembers('${classId}')">👥 Alunos</button><button class="btn ghost" onclick="openClassFormById('${classId}')">⚙️ Editar</button><button class="btn ghost" onclick="loadView('classes')">← Classes</button></div></div>`;
  /* Leave the global modal untouched: Class Center now occupies the normal app workspace and can scroll naturally. */
@@ -666,6 +667,10 @@ async function classCenterTab(classId,tab){
  else if(tab==='students'){body.innerHTML=`<div class="class-center-panel"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><h3>👥 Alunos da turma</h3><p>${students.length} aluno(s) ativo(s). Agora você pode adicionar conteúdo para a turma inteira ou somente para um aluno.</p></div><button class="btn primary" onclick="openClassMembers('${classId}')">👥 Gerenciar alunos</button></div><div class="class-center-student-grid" style="margin-top:14px">${students.map(st=>`<article class="class-center-student-card"><div class="class-center-student-main"><span class="class-center-avatar">👤</span><div><b>${esc(st.display_name)}</b><small>${esc(st.current_level||'')} · ${esc(st.email||'')}</small><span class="badge green">${esc(st.status||'active')}</span></div></div><div class="class-center-student-actions"><button class="btn sm primary" onclick="openClassStudentContent('${classId}','${st.id}')">➕ Adicionar conteúdo</button><button class="btn sm secondary" onclick="openStudentView('${st.id}')">👤 Abrir aluno</button></div></article>`).join('')||'<div class="class-center-empty">Nenhum aluno vinculado.</div>'}</div></div>`}
  else if(tab==='tasks'||tab==='topics'){body.innerHTML=`<div class="class-center-panel"><h3>${tab==='tasks'?'📝 Tasks':'📚 Assuntos & Tópicos'}</h3><p>${tab==='tasks'?'Tarefas e atribuições desta turma.':'Conteúdos organizados por CEFR e skill.'}</p><button class="btn primary" onclick="openClassAssign('${classId}')">📤 Atribuir conteúdo</button><div class="class-center-list" style="margin-top:14px">${tasks.map(t=>`<div class="class-center-list-item"><div><b>${esc(t.title)}</b><small>${esc(t.assignment_type||'task')} · ${esc(t.skill||'')} · ${esc(t.cefr_level||cls.level||'')}</small></div><small>${fmt(t.due_at)}</small></div>`).join('')||'<div class="class-center-empty">Nenhum registro.</div>'}</div></div>`}
  else if(tab==='materials'){const rs=tasks.flatMap(t=>Array.isArray(t.resource_items)?t.resource_items.map(r=>({...r,task:t.title})):[]);body.innerHTML=`<div class="class-center-panel"><h3>🔗 Materiais e links</h3><p>Recursos preservados nas atribuições da turma.</p><div class="class-center-list">${rs.map(r=>`<div class="class-center-list-item"><div><b>${esc(r.title||'Recurso')}</b><small>${esc(r.type||'link')} · ${esc(r.task)}</small></div>${r.url?`<a class="btn sm secondary" href="${esc(r.url)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}</div>`).join('')||'<div class="class-center-empty">Nenhum recurso encontrado.</div>'}</div></div>`}
+ else if(tab==='resources'){
+  body.innerHTML=`<div class="class-center-panel"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><h3>🧰 Resources da turma</h3><p>Centralize links, PDFs, vídeos, áudios, Drive, Docs, worksheets e outros recursos. Você pode adicionar à turma inteira ou somente a um aluno.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" onclick="openResourceFormV39('${classId}')">+ Novo resource</button><button class="btn secondary" onclick="openResourcePickerV39('${classId}')">📚 Inserir existente</button></div></div><div id="classResourceListV39" class="class-resource-grid-v39"><div class="loading">Carregando resources...</div></div></div>`;
+  loadClassResourcesV39(classId);
+ }
  else if(tab==='notes'){body.innerHTML=`<div class="class-center-panel"><h3>💬 Observações</h3><p>Feedback, correções e observações do Teacher.</p><button class="btn primary" onclick="openClassSubmissions('${classId}')">📝 Feedback & correções</button><div class="notice" style="margin-top:14px">As observações registradas nas aulas ficam na aba <b>Aulas</b>.</div></div>`}
  else if(tab==='progress'){closeModal();setTimeout(()=>openClassProgress(classId),0)}
 }
@@ -3172,4 +3177,147 @@ window.progressPage=async function(student=false){
   window.openStudentTaskFromAnyPlace=openStudentTaskV34;
 })();
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.querySelector('.class-center-page')){e.preventDefault();loadView('classes')}});
+</script>
+
+<script>
+/* V39 — Resource Library: additive, reuses tic_materials/resource_items so existing data is preserved. */
+(function(){
+  const escR=v=>typeof esc==='function'?esc(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const iconR=t=>({pdf:'📕',video:'🎬',audio:'🎧',link:'🔗',drive:'📁',doc:'📄',worksheet:'📝',website:'🌐',file:'📎',other:'📦'})[String(t||'').toLowerCase()]||'🔗';
+  const typeLabelR=t=>({pdf:'PDF',video:'Vídeo',audio:'Áudio',link:'Link',drive:'Google Drive',doc:'Documento',worksheet:'Worksheet',website:'Website',file:'Arquivo',other:'Outro'})[String(t||'').toLowerCase()]||t||'Resource';
+
+  window.resourcesPageV39=async function(){
+    const [{data:materials,error:me},{data:folders,error:fe}]=await Promise.all([
+      sb.from('tic_materials').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false}),
+      sb.from('tic_material_folders').select('*').eq('teacher_id',session.user.id).order('name')
+    ]);
+    if(me)return $('content').innerHTML=`<div class="card attention">${escR(me.message)}</div>`;
+    const mats=materials||[], fs=folders||[];
+    const resources=[];
+    mats.forEach(m=>{
+      const rs=Array.isArray(m.resource_items)&&m.resource_items.length?m.resource_items:[(m.external_url||m.file_url)?{type:m.material_type||'link',title:m.title,url:m.external_url||m.file_url,description:m.description||''}:null].filter(Boolean);
+      rs.forEach((r,i)=>resources.push({...r,_material:m,_index:i,_id:`${m.id}:${i}`}));
+    });
+    const q=(window.__ticResourceSearchV39||'').toLowerCase();
+    const filtered=resources.filter(r=>`${r.title||''} ${r.description||''} ${r.type||''} ${r._material.title||''}`.toLowerCase().includes(q));
+    setPage('Resources','Biblioteca do Teacher: links, PDFs, vídeos, áudios, Drive, Docs e vários recursos.','<button class="btn primary" onclick="openResourceFormV39()">+ Novo resource</button>');
+    $('content').innerHTML=`<div class="resource-library-v39">
+      <div class="resource-overview-v39">
+        <div class="resource-stat-v39"><span>🧰 Resources</span><b>${resources.length}</b><small>recursos cadastrados</small></div>
+        <div class="resource-stat-v39"><span>📂 Materials</span><b>${mats.length}</b><small>materiais preservados</small></div>
+        <div class="resource-stat-v39"><span>📁 Pastas</span><b>${fs.length}</b><small>pastas disponíveis</small></div>
+        <div class="resource-stat-v39"><span>🔗 Links</span><b>${resources.filter(r=>String(r.type||'link').toLowerCase()==='link').length}</b><small>links e URLs</small></div>
+      </div>
+      <div class="resource-toolbar-v39"><input id="resourceSearchV39" value="${escR(window.__ticResourceSearchV39||'')}" placeholder="🔎 Buscar resource, material, tipo..." oninput="window.__ticResourceSearchV39=this.value;resourcesPageV39()"><button class="btn secondary" onclick="openResourceFormV39()">+ Adicionar resource</button><button class="btn ghost" onclick="loadView('materials')">📂 Materials</button></div>
+      <div class="resource-help-v39"><b>💡 Como usar:</b> crie um resource com quantos links/arquivos quiser. Depois use <b>Inserir na Class</b> para disponibilizar para toda a turma ou escolha um aluno específico.</div>
+      <div class="resource-grid-v39">${filtered.map(r=>`<article class="resource-card-v39"><div class="resource-card-top-v39"><span class="resource-big-icon-v39">${iconR(r.type)}</span><span class="badge blue">${escR(typeLabelR(r.type))}</span></div><h3>${escR(r.title||r._material.title||'Resource')}</h3><p>${escR(r.description||r._material.description||'')}</p><small>${escR(r._material.title)}${r._material.level?' · '+escR(r._material.level):''}</small><div class="resource-actions-v39"><a class="btn sm secondary" href="${escR(r.url||r.link||'#')}" target="_blank" rel="noopener">Abrir ↗</a><button class="btn sm primary" onclick="openResourceTargetV39('${r._material.id}')">📤 Inserir na Class</button><button class="btn sm ghost" onclick="openMaterialForm(${JSON.stringify(r._material).replace(/"/g,'&quot;')})">✏️ Editar</button></div></article>`).join('')||'<div class="card empty">Nenhum resource encontrado. Clique em “+ Novo resource” para começar.</div>'}</div>
+    </div>`;
+  };
+
+  window.openResourceFormV39=function(classId=''){
+    const formId='resourceV39Form';
+    openModal('🧰 Novo Resource',`<form class="form" id="${formId}" onsubmit="saveResourceV39(event,'${escR(classId)}')">
+      <div class="notice">Crie um recurso reutilizável. Você pode cadastrar vários links, PDFs, vídeos, áudios, Drive, Docs ou worksheets dentro do mesmo resource.</div>
+      <div class="field"><label>Nome do resource</label><input id="r39Title" required placeholder="Ex.: Listening — Travel A2"></div>
+      <div class="form-grid"><div class="field"><label>Nível</label><select id="r39Level"><option value="">—</option>${(typeof levels!=='undefined'?levels:['A0','A1','A2','B1','B2','C1','C2']).map(x=>`<option>${x}</option>`).join('')}</select></div><div class="field"><label>Cor</label><input id="r39Color" type="color" value="#6d4aff" style="width:70px;height:42px"></div></div>
+      <div class="field"><label>Descrição</label><textarea id="r39Desc" rows="2" placeholder="Como o Teacher deve usar este resource..."></textarea></div>
+      <div class="resource-box"><div class="resource-head"><b>🔗 Links e recursos</b><button type="button" class="btn secondary" onclick="addResourceRow('r39Rows')">+ Adicionar recurso</button></div><div id="r39Rows"></div><div class="resource-help">Adicione quantos recursos quiser. Cada linha pode ser PDF, vídeo, áudio, link, Drive, documento, worksheet etc.</div></div>
+      <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">💾 Salvar resource</button></div>
+    </form>`);
+    renderResourceRows('r39Rows',[]);
+  };
+
+  window.saveResourceV39=async function(e,classId=''){
+    e.preventDefault();
+    const title=$('r39Title')?.value.trim(); const rows=typeof collectResources==='function'?collectResources('r39Rows'):[];
+    if(!title)return toast('Informe o nome do resource.','error');
+    if(!rows.length)return toast('Adicione pelo menos um link ou recurso.','error');
+    const o={teacher_id:session.user.id,title,material_type:rows[0]?.type||'link',level:$('r39Level')?.value||null,description:$('r39Desc')?.value.trim()||null,resource_items:rows,color:$('r39Color')?.value||'#6d4aff'};
+    const {data:mat,error}=await sb.from('tic_materials').insert(o).select().single();
+    if(error)return toast('Não foi possível salvar o resource: '+error.message,'error');
+    closeModal();toast('Resource criado e preservado em Materials.','success');
+    if(classId){await assignResourceMaterialToClassV39(classId,mat.id);return;}
+    resourcesPageV39();
+  };
+
+  window.openResourceTargetV39=async function(materialId){
+    const {data:classes}=await sb.from('tic_classes').select('id,name,level').eq('teacher_id',session.user.id).eq('status','active').order('name');
+    if(!classes?.length)return toast('Crie uma Class antes de inserir o resource.','info');
+    openModal('📤 Inserir Resource na Class',`<div class="form"><div class="field"><label>Class</label><select id="r39Class">${classes.map(c=>`<option value="${c.id}">${escR(c.name)} · ${escR(c.level||'')}</option>`).join('')}</select></div><div class="notice">Depois de escolher a Class, você poderá disponibilizar para <b>todos os alunos</b> ou somente para um aluno.</div><div class="modal-actions"><button class="btn primary" onclick="const cid=$('r39Class').value;closeModal();openResourceAudienceV39(cid,'${materialId}')">Continuar →</button></div></div>`);
+  };
+
+  window.openResourceAudienceV39=async function(classId,materialId){
+    const {data:students}=await sb.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active');
+    const ids=(students||[]).map(x=>x.student_id); const {data:people}=ids.length?await sb.from('tic_students').select('id,display_name,current_level').in('id',ids).order('display_name'):({data:[]});
+    openModal('👥 Quem receberá este Resource?',`<div class="form"><div class="notice">Escolha <b>toda a turma</b> ou selecione alunos específicos.</div><div class="field"><label>Destino</label><select id="r39Audience" onchange="document.getElementById('r39StudentBox').style.display=this.value==='students'?'block':'none'"><option value="class">👥 Todos os alunos da Class</option><option value="students">👤 Alunos específicos</option></select></div><div id="r39StudentBox" style="display:none" class="field"><label>Alunos</label><select id="r39Students" multiple size="8">${(people||[]).map(x=>`<option value="${x.id}">${escR(x.display_name)} · ${escR(x.current_level||'')}</option>`).join('')}</select></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="assignResourceAudienceV39('${classId}','${materialId}')">📤 Inserir</button></div></div>`);
+  };
+
+  window.assignResourceAudienceV39=async function(classId,materialId){
+    const mode=$('r39Audience')?.value||'class'; let studentIds=[];
+    if(mode==='students')studentIds=[...($('r39Students')?.selectedOptions||[])].map(x=>x.value);
+    else {const {data}=await sb.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active');studentIds=[...(data||[])].map(x=>x.student_id);}
+    if(!studentIds.length)return toast('Selecione pelo menos um aluno.','error');
+    await assignResourceMaterialToClassV39(classId,materialId,studentIds); closeModal();
+  };
+
+  async function assignResourceMaterialToClassV39(classId,materialId,studentIds=null){
+    const {data:source,error:se}=await sb.from('tic_materials').select('*').eq('id',materialId).eq('teacher_id',session.user.id).maybeSingle();
+    if(se||!source)return toast('Resource não encontrado.','error');
+    if(!studentIds){const {data}=await sb.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active');studentIds=(data||[]).map(x=>x.student_id);}
+    if(!studentIds.length)return toast('A Class não possui alunos ativos.','error');
+    const payload={teacher_id:session.user.id,class_id:classId,title:source.title,instructions:source.description||'',assignment_type:'material',due_at:null,points:0,priority:'normal',resource_items:Array.isArray(source.resource_items)?source.resource_items:[],cover_image_url:source.cover_image_url||null,source_type:'material',source_id:source.id};
+    const {data:a,error:ae}=await sb.from('tic_assignments').insert(payload).select().single();
+    if(ae)return toast('Não foi possível inserir na Class: '+ae.message,'error');
+    const {error:te}=await sb.from('tic_task_assignments').insert(studentIds.map(student_id=>({assignment_id:a.id,student_id,status:'pending'})));
+    if(te){await sb.from('tic_assignments').delete().eq('id',a.id);return toast('Não foi possível disponibilizar para os alunos: '+te.message,'error');}
+    toast(`Resource “${source.title}” disponibilizado para ${studentIds.length} aluno(s).`,'success');
+    if(document.querySelector(`.class-center-shell[data-class-center="${classId}"]`))setTimeout(()=>openClassCenter(classId,'resources'),250);
+  }
+  window.assignResourceMaterialToClassV39=assignResourceMaterialToClassV39;
+
+  window.openResourcePickerV39=async function(classId){
+    const {data,error}=await sb.from('tic_materials').select('id,title,level,material_type,resource_items,description').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+    if(error)return toast(error.message,'error');
+    openModal('📚 Inserir Resources existentes',`<div class="form"><div class="field"><label>Resources / Materials <span style="font-weight:500;color:var(--muted)">— selecione vários</span></label><select id="r39Pick" multiple size="10" style="min-height:230px">${(data||[]).map(x=>`<option value="${x.id}">${escR(x.title)} · ${escR(x.level||'')} · ${escR(x.material_type||'resource')}</option>`).join('')||'<option value="">Nenhum resource cadastrado</option>'}</select><small style="color:var(--muted)">Ctrl/Cmd para selecionar vários.</small></div><div class="field"><label>Destino</label><select id="r39PickAudience"><option value="class">👥 Todos os alunos da Class</option><option value="student">👤 Um aluno específico</option></select></div><div id="r39PickStudentBox"></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="insertPickedResourcesV39('${classId}')">📤 Inserir selecionados</button></div></div>`);
+    $('r39PickAudience').addEventListener('change',async()=>{
+      if($('r39PickAudience').value!=='student'){ $('r39PickStudentBox').innerHTML=''; return; }
+      const {data:m}=await sb.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active'); const ids=(m||[]).map(x=>x.student_id); const {data:st}=ids.length?await sb.from('tic_students').select('id,display_name,current_level').in('id',ids).order('display_name'):({data:[]});
+      $('r39PickStudentBox').innerHTML=`<div class="field"><label>Aluno</label><select id="r39PickStudent">${(st||[]).map(x=>`<option value="${x.id}">${escR(x.display_name)} · ${escR(x.current_level||'')}</option>`).join('')}</select></div>`;
+    });
+  };
+  window.insertPickedResourcesV39=async function(classId){
+    const ids=[...($('r39Pick')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);if(!ids.length)return toast('Selecione pelo menos um resource.','error');
+    const target=$('r39PickAudience')?.value||'class';let studentIds=null;
+    if(target==='student')studentIds=[$('r39PickStudent')?.value].filter(Boolean);
+    for(const id of ids)await assignResourceMaterialToClassV39(classId,id,studentIds);
+    closeModal();setTimeout(()=>openClassCenter(classId,'resources'),250);
+  };
+
+  window.loadClassResourcesV39=async function(classId){
+    const box=$('classResourceListV39');if(!box)return;
+    const {data,error}=await sb.from('tic_assignments').select('id,title,assignment_type,resource_items,created_at,source_id').eq('class_id',classId).eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+    if(error){box.innerHTML=`<div class="class-center-empty">${escR(error.message)}</div>`;return;}
+    const rows=[];(data||[]).forEach(a=>(Array.isArray(a.resource_items)?a.resource_items:[]).forEach(r=>rows.push({...r,assignment:a})));
+    box.innerHTML=rows.map(r=>`<article class="class-resource-card-v39"><div class="resource-big-icon-v39">${iconR(r.type)}</div><div style="flex:1"><b>${escR(r.title||r.assignment.title)}</b><small>${escR(typeLabelR(r.type))} · inserido em ${new Date(r.assignment.created_at).toLocaleDateString('pt-BR')}</small>${r.description?`<p>${escR(r.description)}</p>`:''}</div><a class="btn sm secondary" href="${escR(r.url||r.link||'#')}" target="_blank" rel="noopener">Abrir ↗</a></article>`).join('')||'<div class="class-center-empty">Nenhum resource inserido nesta Class ainda.</div>';
+  };
+})();
+</script>
+<style id="tic-resource-library-v39">
+.resource-library-v39{display:flex;flex-direction:column;gap:16px}.resource-overview-v39{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.resource-stat-v39{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px}.resource-stat-v39 span{font-size:12px;color:var(--muted)}.resource-stat-v39 b{display:block;font-size:28px;margin-top:5px}.resource-stat-v39 small{color:var(--muted)}.resource-toolbar-v39{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.resource-toolbar-v39 input{flex:1;min-width:260px}.resource-help-v39{background:#f5f1ff;border:1px solid #e4d9ff;border-radius:14px;padding:13px;color:#62577b;font-size:12px}.resource-grid-v39{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.resource-card-v39,.class-resource-card-v39{background:#fff;border:1px solid var(--line);border-radius:17px;padding:16px;box-shadow:0 6px 18px rgba(35,24,65,.05)}.resource-card-top-v39{display:flex;justify-content:space-between;align-items:center}.resource-big-icon-v39{font-size:27px}.resource-card-v39 h3{margin:10px 0 5px;font-size:16px}.resource-card-v39 p,.class-resource-card-v39 p{font-size:12px;color:var(--muted);min-height:30px}.resource-card-v39>small,.class-resource-card-v39 small{color:var(--muted);display:block}.resource-actions-v39{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}.class-resource-grid-v39{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.class-resource-card-v39{display:flex;gap:12px;align-items:center}.class-resource-card-v39 .resource-big-icon-v39{flex:0 0 auto}.class-resource-card-v39 b{display:block}.class-resource-card-v39 small{margin-top:4px}.class-resource-card-v39 a{margin-left:auto}.class-center-tabs button[data-tab="resources"]{border-color:#cfc0ff}.class-center-tabs button[data-tab="resources"].active{box-shadow:0 8px 20px #6844d833}
+@media(max-width:950px){.resource-overview-v39{grid-template-columns:repeat(2,1fr)}.resource-grid-v39{grid-template-columns:repeat(2,minmax(0,1fr))}.class-resource-grid-v39{grid-template-columns:1fr}}@media(max-width:650px){.resource-overview-v39,.resource-grid-v39{grid-template-columns:1fr}.resource-toolbar-v39 input{min-width:100%}}
+</style>
+<script>
+/* V39 route: preserve the previous loadView and add Resources as a new teacher workspace. */
+(function(){
+ const previousLoadView=window.loadView;
+ window.loadView=async function(v){
+   if(v==='resources'){
+     currentView=v;toggleMobile();
+     document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+     const c=document.querySelector('.main>.container');if(c)c.scrollTo({top:0,left:0,behavior:'instant'});
+     return resourcesPageV39();
+   }
+   return previousLoadView(v);
+ };
+})();
 </script>
