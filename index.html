@@ -663,7 +663,7 @@ async function classCenterTab(classId,tab){
  const root=document.querySelector('.class-center-shell[data-class-center="'+classId+'"]');const body=root?.querySelector('#classCenterBody');if(!root||!body)return;root.querySelectorAll('.class-center-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));const s=window.__ticClassCenter||{},cls=s.cls||{},tasks=s.tasks||[],evs=s.evs||[],students=s.students||[],counts=s.counts||{};const fmt=d=>d?new Date(d).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';const k=`<div class="class-center-kpis"><div class="class-center-kpi"><span>👥 Alunos</span><b>${students.length}</b><span>ativos</span></div><div class="class-center-kpi"><span>📌 Planejados</span><b>${counts.planned||0}</b><span>cards</span></div><div class="class-center-kpi"><span>🟡 Em andamento</span><b>${counts.inProgress||0}</b><span>cards</span></div><div class="class-center-kpi"><span>🟢 Concluídos</span><b>${counts.done||0}</b><span>cards</span></div><div class="class-center-kpi"><span>🔗 Materiais</span><b>${tasks.reduce((n,t)=>n+(Array.isArray(t.resource_items)?t.resource_items.length:0),0)}</b><span>recursos</span></div></div>`;
  if(tab==='overview'||tab==='board'){body.innerHTML=k+(tab==='overview'?`<div class="class-center-grid"><div><div class="class-center-panel"><h3>📌 Board da turma</h3><p>Planejado → Em andamento → Concluído</p>${classCenterBoardHTML(tasks,counts)}</div></div><div><div class="class-center-panel"><h3>🕐 Últimas atividades</h3><p>Registros recentes com data.</p><div class="class-center-list">${[...evs,...tasks.map(t=>({title:t.title,created_at:t.created_at,event_type:'task'}))].sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)).slice(0,5).map(x=>`<div class="class-center-list-item"><div><b>${esc(x.title||'Registro')}</b><small>${esc(x.event_type||'atividade')}</small></div><small>${fmt(x.created_at)}</small></div>`).join('')||'<div class="class-center-empty">Nenhum registro.</div>'}</div></div><div class="class-center-panel"><h3>📚 Última aula</h3><p>${evs[0]?esc(evs[0].title):'Ainda não registrada'}</p><b>${evs[0]?fmt(evs[0].starts_at||evs[0].created_at):'—'}</b></div></div></div>`:`<div class="class-center-panel"><h3>📌 Trello da turma</h3><p>Visão completa do trabalho da turma, preservando as atribuições existentes.</p>${classCenterBoardHTML(tasks,counts)}</div>`)}
  else if(tab==='lessons'){body.innerHTML=`<div class="class-center-panel"><h3>📚 Aulas</h3><p>Últimas e próximas aulas registradas.</p><button class="btn primary" onclick="openClassLessonForm('${classId}')">+ Registrar aula</button><div class="class-center-list" style="margin-top:14px">${evs.map(e=>`<div class="class-center-list-item"><div><b>${esc(e.title)}</b><small>${esc(e.event_type||'aula')} · ${esc(e.notes||'')}</small></div><small>${fmt(e.starts_at||e.created_at)}</small></div>`).join('')||'<div class="class-center-empty">Nenhuma aula registrada.</div>'}</div></div>`}
- else if(tab==='students'){body.innerHTML=`<div class="class-center-panel"><h3>👥 Alunos</h3><p>${students.length} aluno(s) ativo(s).</p><button class="btn primary" onclick="openClassMembers('${classId}')">👥 Gerenciar alunos</button><div class="class-center-list" style="margin-top:14px">${students.map(st=>`<div class="class-center-list-item"><div><b>${esc(st.display_name)}</b><small>${esc(st.current_level||'')} · ${esc(st.email||'')}</small></div><span class="badge green">${esc(st.status||'active')}</span></div>`).join('')||'<div class="class-center-empty">Nenhum aluno vinculado.</div>'}</div></div>`}
+ else if(tab==='students'){body.innerHTML=`<div class="class-center-panel"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><h3>👥 Alunos da turma</h3><p>${students.length} aluno(s) ativo(s). Agora você pode adicionar conteúdo para a turma inteira ou somente para um aluno.</p></div><button class="btn primary" onclick="openClassMembers('${classId}')">👥 Gerenciar alunos</button></div><div class="class-center-student-grid" style="margin-top:14px">${students.map(st=>`<article class="class-center-student-card"><div class="class-center-student-main"><span class="class-center-avatar">👤</span><div><b>${esc(st.display_name)}</b><small>${esc(st.current_level||'')} · ${esc(st.email||'')}</small><span class="badge green">${esc(st.status||'active')}</span></div></div><div class="class-center-student-actions"><button class="btn sm primary" onclick="openClassStudentContent('${classId}','${st.id}')">➕ Adicionar conteúdo</button><button class="btn sm secondary" onclick="openStudentView('${st.id}')">👤 Abrir aluno</button></div></article>`).join('')||'<div class="class-center-empty">Nenhum aluno vinculado.</div>'}</div></div>`}
  else if(tab==='tasks'||tab==='topics'){body.innerHTML=`<div class="class-center-panel"><h3>${tab==='tasks'?'📝 Tasks':'📚 Assuntos & Tópicos'}</h3><p>${tab==='tasks'?'Tarefas e atribuições desta turma.':'Conteúdos organizados por CEFR e skill.'}</p><button class="btn primary" onclick="openClassAssign('${classId}')">📤 Atribuir conteúdo</button><div class="class-center-list" style="margin-top:14px">${tasks.map(t=>`<div class="class-center-list-item"><div><b>${esc(t.title)}</b><small>${esc(t.assignment_type||'task')} · ${esc(t.skill||'')} · ${esc(t.cefr_level||cls.level||'')}</small></div><small>${fmt(t.due_at)}</small></div>`).join('')||'<div class="class-center-empty">Nenhum registro.</div>'}</div></div>`}
  else if(tab==='materials'){const rs=tasks.flatMap(t=>Array.isArray(t.resource_items)?t.resource_items.map(r=>({...r,task:t.title})):[]);body.innerHTML=`<div class="class-center-panel"><h3>🔗 Materiais e links</h3><p>Recursos preservados nas atribuições da turma.</p><div class="class-center-list">${rs.map(r=>`<div class="class-center-list-item"><div><b>${esc(r.title||'Recurso')}</b><small>${esc(r.type||'link')} · ${esc(r.task)}</small></div>${r.url?`<a class="btn sm secondary" href="${esc(r.url)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}</div>`).join('')||'<div class="class-center-empty">Nenhum recurso encontrado.</div>'}</div></div>`}
  else if(tab==='notes'){body.innerHTML=`<div class="class-center-panel"><h3>💬 Observações</h3><p>Feedback, correções e observações do Teacher.</p><button class="btn primary" onclick="openClassSubmissions('${classId}')">📝 Feedback & correções</button><div class="notice" style="margin-top:14px">As observações registradas nas aulas ficam na aba <b>Aulas</b>.</div></div>`}
@@ -766,6 +766,59 @@ async function assignExistingTaskToClass(classId){
  const {data:existing}=await sb.from('tic_task_assignments').select('student_id').eq('assignment_id',assignmentId).in('student_id',ids);const have=new Set((existing||[]).map(x=>x.student_id));
  const rows=ids.filter(id=>!have.has(id)).map(student_id=>({assignment_id:assignmentId,student_id,status:'pending'}));if(!rows.length)return toast('Essa tarefa já está atribuída a todos os alunos da turma.','info');
  const {error}=await sb.from('tic_task_assignments').insert(rows);if(error)return toast(error.message,'error');closeModal();toast(`Tarefa atribuída para ${rows.length} aluno(s).`,'success');
+}
+
+
+async function openClassStudentContent(classId,studentId){
+ const [{data:cls},{data:student}]=await Promise.all([
+  sb.from('tic_classes').select('id,name,level').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle(),
+  sb.from('tic_students').select('id,display_name,current_level,email').eq('id',studentId).eq('teacher_id',session.user.id).maybeSingle()
+ ]);
+ if(!cls||!student)return toast('Aluno ou turma não encontrado.','error');
+ openModal(`➕ Conteúdo para ${student.display_name}`,`<div class="form">
+  <div class="notice"><b>${esc(student.display_name)}</b> receberá o conteúdo individualmente dentro da Class <b>${esc(cls.name)}</b>. Outros alunos da turma não receberão este conteúdo.</div>
+  <div class="field"><label>O que deseja adicionar?</label><select id="csaType" onchange="loadClassStudentContentOptions('${classId}','${studentId}')">
+   <option value="lesson">📚 Lesson</option><option value="plan">📋 Lesson Plan</option><option value="material">📂 Material</option><option value="assignment">✅ Task / Assignment</option>
+  </select></div>
+  <div id="csaContent"><div class="loading">Carregando...</div></div>
+  <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Fechar</button></div>
+ </div>`);
+ loadClassStudentContentOptions(classId,studentId);
+}
+async function loadClassStudentContentOptions(classId,studentId){
+ const type=$('csaType')?.value||'lesson',box=$('csaContent');if(!box)return;let html='';
+ if(type==='lesson'||type==='plan'){
+  const {data}=await sb.from('tic_lessons').select('*').eq('teacher_id',session.user.id).eq('lesson_type',type==='plan'?'plan':'lesson').order('created_at',{ascending:false});
+  html=`<div class="field"><label>${type==='plan'?'Lesson Plan':'Lesson'}</label><select id="csaSource">${(data||[]).map(x=>`<option value="${x.id}">${esc(x.title)} · ${esc(x.level||'')}</option>`).join('')||'<option value="">Nenhum conteúdo encontrado</option>'}</select></div><div class="field"><label>Mensagem para o aluno</label><textarea id="csaMessage" rows="2" placeholder="Ex.: Faça esta lesson antes da próxima aula."></textarea></div><div class="form-grid"><div class="field"><label>Prazo</label><input id="csaDue" type="datetime-local"></div><div class="field"><label>Pontos</label><input id="csaPoints" type="number" min="0" value="0"></div></div><button type="button" class="btn primary" onclick="assignClassContentToStudent('${classId}','${studentId}','${type}')">📤 Adicionar ao aluno</button>`;
+ }else if(type==='material'){
+  const {data}=await sb.from('tic_materials').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+  html=`<div class="field"><label>Material</label><select id="csaSource">${(data||[]).map(x=>`<option value="${x.id}">${esc(x.title)} · ${esc(x.level||'')} · ${esc(x.material_type||'material')}</option>`).join('')||'<option value="">Nenhum material encontrado</option>'}</select></div><div class="field"><label>Mensagem para o aluno</label><textarea id="csaMessage" rows="2" placeholder="Ex.: Abra este material e conclua as atividades."></textarea></div><div class="form-grid"><div class="field"><label>Prazo</label><input id="csaDue" type="datetime-local"></div><div class="field"><label>Pontos</label><input id="csaPoints" type="number" min="0" value="0"></div></div><button type="button" class="btn primary" onclick="assignClassContentToStudent('${classId}','${studentId}','material')">📤 Adicionar material ao aluno</button>`;
+ }else{
+  const {data}=await sb.from('tic_assignments').select('id,title,assignment_type,due_at,class_id').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+  html=`<div class="field"><label>Task / Assignment existente</label><select id="csaSource">${(data||[]).map(x=>`<option value="${x.id}">${esc(x.title)} · ${esc(x.assignment_type||'assignment')}${x.class_id===classId?' · desta turma':''}</option>`).join('')||'<option value="">Nenhuma tarefa encontrada</option>'}</select></div><div class="notice">A tarefa existente será preservada. Será criada apenas a atribuição para este aluno.</div><button type="button" class="btn primary" onclick="assignExistingTaskToStudent('${classId}','${studentId}')">📤 Adicionar tarefa ao aluno</button>`;
+ }
+ box.innerHTML=html;
+}
+async function assignClassContentToStudent(classId,studentId,type){
+ const sourceId=$('csaSource')?.value;if(!sourceId)return toast('Selecione um conteúdo.','error');
+ const sourceType=type==='plan'?'lesson':type,table=sourceType==='lesson'?'tic_lessons':'tic_materials';
+ const {data:source,error:se}=await sb.from(table).select('*').eq('id',sourceId).eq('teacher_id',session.user.id).maybeSingle();
+ if(se||!source)return toast('Conteúdo não encontrado.','error');
+ const payload={teacher_id:session.user.id,lesson_id:sourceType==='lesson'?source.id:null,class_id:classId,title:source.title,instructions:$('csaMessage')?.value.trim()||source.description||source.content||'',assignment_type:type==='plan'?'lesson_plan':sourceType==='lesson'?'lesson':'material',due_at:$('csaDue')?.value?new Date($('csaDue').value).toISOString():null,points:Number($('csaPoints')?.value||0),priority:'normal',resource_items:Array.isArray(source.resource_items)?source.resource_items:[],cover_image_url:source.cover_image_url||null,source_type:type==='plan'?'lesson_plan':sourceType,source_id:source.id};
+ const {data:a,error:ae}=await sb.from('tic_assignments').insert(payload).select().single();
+ if(ae)return toast('Não foi possível adicionar o conteúdo: '+ae.message,'error');
+ const {error:te}=await sb.from('tic_task_assignments').insert({assignment_id:a.id,student_id:studentId,status:'pending'});
+ if(te){await sb.from('tic_assignments').delete().eq('id',a.id);return toast('Não foi possível vincular ao aluno: '+te.message,'error');}
+ closeModal();toast(`${source.title} adicionado somente para o aluno.`,'success');setTimeout(()=>openClassCenter(classId,'students'),200);
+}
+async function assignExistingTaskToStudent(classId,studentId){
+ const assignmentId=$('csaSource')?.value;if(!assignmentId)return toast('Selecione uma tarefa.','error');
+ const {data:source,error:ae}=await sb.from('tic_assignments').select('*').eq('id',assignmentId).eq('teacher_id',session.user.id).maybeSingle();if(ae||!source)return toast('Tarefa não encontrada.','error');
+ const payload={teacher_id:session.user.id,lesson_id:source.lesson_id||null,class_id:classId,title:source.title,instructions:source.instructions||'',assignment_type:source.assignment_type||'assignment',due_at:source.due_at||null,points:Number(source.points||0),priority:source.priority||'normal',resource_items:Array.isArray(source.resource_items)?source.resource_items:[],cover_image_url:source.cover_image_url||null,source_type:source.source_type||'assignment',source_id:source.source_id||source.id,html_enabled:source.html_enabled||false,html_content:source.html_content||null,allow_multiple_attempts:source.allow_multiple_attempts!==false,active:source.active!==false,cefr_level:source.cefr_level||null,skill:source.skill||null,task_level:source.task_level||null,content_json:source.content_json||null};
+ const {data:copy,error:ce}=await sb.from('tic_assignments').insert(payload).select().single();if(ce)return toast('Não foi possível criar a cópia da tarefa na Class: '+ce.message,'error');
+ const {error:te}=await sb.from('tic_task_assignments').insert({assignment_id:copy.id,student_id:studentId,status:'pending'});
+ if(te){await sb.from('tic_assignments').delete().eq('id',copy.id);return toast('Não foi possível atribuir a tarefa ao aluno: '+te.message,'error');}
+ closeModal();toast(`${source.title} adicionado somente para o aluno. A tarefa original foi preservada.`,'success');setTimeout(()=>openClassCenter(classId,'students'),200);
 }
 
 function editGeneric(type,x){if(type==='classes')openClassForm(x);else if(type==='courses')openCourseForm(x);else openMaterialForm(x)}
@@ -1129,7 +1182,8 @@ async function studentClassPage(){
     const past=cs.filter(x=>new Date(x.session_date)<now).slice(0,6);
     const ml=(links||[]).filter(x=>x.class_id===c.id);
     const bi=(boards||[]).filter(x=>x.class_id===c.id);
-    const ca=(classAssignments||[]).filter(x=>x.class_id===c.id);
+    const myAssignmentIds=new Set(allTasks.map(t=>t.assignment_id).filter(Boolean));
+    const ca=(classAssignments||[]).filter(x=>x.class_id===c.id && myAssignmentIds.has(x.id));
     const myTasks=allTasks.map(t=>({ta:t,a:(classAssignments||[]).find(a=>a.id===t.assignment_id)})).filter(x=>x.a && x.a.class_id===c.id);
     const activities=ca.filter(x=>!['material','lesson'].includes(String(x.assignment_type||'').toLowerCase()));
     const contentAssignments=ca.filter(x=>['material','lesson'].includes(String(x.assignment_type||'').toLowerCase()));
@@ -2757,6 +2811,13 @@ async function sendStudentMessageV18(e){
   window.loadView=async function(v){if(v==='materials'){currentView=v;toggleMobile();const c=document.querySelector('.main>.container');if(c)c.scrollTo({top:0,left:0,behavior:'instant'});document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));setPage('Materials','PDF, links, vídeo, áudio e arquivos.','<button class="btn primary" onclick="openMaterialForm()">+ Novo material</button>');return materialsPage();}return oldLoadView(v);};
 })();
 </script>
+
+<style id="tic-class-student-content-v38">
+.class-center-student-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.class-center-student-card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:14px;display:flex;flex-direction:column;gap:14px;box-shadow:0 4px 14px rgba(35,20,75,.05)}
+.class-center-student-main{display:flex;gap:11px;align-items:center}.class-center-student-main b{display:block;font-size:14px}.class-center-student-main small{display:block;color:var(--muted);margin:4px 0 7px;font-size:11px}.class-center-avatar{width:40px;height:40px;border-radius:12px;background:#f0ebff;display:grid;place-items:center;font-size:20px}.class-center-student-actions{display:flex;gap:7px;flex-wrap:wrap}
+@media(max-width:760px){.class-center-student-grid{grid-template-columns:1fr}}
+</style>
 </body>
 </html>
 
