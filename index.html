@@ -728,7 +728,7 @@ async function loadClassContentOptions(classId){
   html=`<div class="field"><label>${type==='plan'?'Lesson Plan':'Lesson'}</label><select id="caSource">${(data||[]).map(x=>`<option value="${x.id}">${esc(x.title)} · ${esc(x.level||'')}</option>`).join('')||'<option value="">Nenhum conteúdo encontrado</option>'}</select></div><div class="field"><label>Mensagem para os alunos</label><textarea id="caMessage" rows="2" placeholder="Ex.: Estude este conteúdo antes da próxima aula."></textarea></div><div class="form-grid"><div class="field"><label>Prazo</label><input id="caDue" type="datetime-local"></div><div class="field"><label>Pontos</label><input id="caPoints" type="number" min="0" value="0"></div></div><button type="button" class="btn primary" onclick="assignClassContent('${classId}','${type}')">📤 Atribuir para a turma</button>`;
  }else if(type==='material'){
   const {data}=await sb.from('tic_materials').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
-  html=`<div class="field"><label>Material</label><select id="caSource">${(data||[]).map(x=>`<option value="${x.id}">${esc(x.title)} · ${esc(x.level||'')}</option>`).join('')||'<option value="">Nenhum material encontrado</option>'}</select></div><div class="field"><label>Mensagem para os alunos</label><textarea id="caMessage" rows="2" placeholder="Ex.: Abra o PDF e complete as atividades."></textarea></div><div class="form-grid"><div class="field"><label>Prazo</label><input id="caDue" type="datetime-local"></div><div class="field"><label>Pontos</label><input id="caPoints" type="number" min="0" value="0"></div></div><button type="button" class="btn primary" onclick="assignClassContent('${classId}','material')">📤 Atribuir para a turma</button>`;
+  html=`<div class="field"><label>Materiais <span style="font-weight:500;color:var(--muted)">— selecione um ou vários</span></label><select id="caSource" multiple size="8" style="min-height:190px">${(data||[]).map(x=>`<option value="${x.id}">${esc(x.title)} · ${esc(x.level||'')} · ${esc(x.material_type||'material')}</option>`).join('')||'<option value="">Nenhum material encontrado</option>'}</select><small style="color:var(--muted)">Use Ctrl/Cmd para selecionar vários materiais. Cada material selecionado será criado como um recurso separado na turma e ficará disponível para os alunos.</small></div><div class="field"><label>Mensagem para os alunos</label><textarea id="caMessage" rows="2" placeholder="Ex.: Abra o PDF e complete as atividades."></textarea></div><div class="form-grid"><div class="field"><label>Prazo</label><input id="caDue" type="datetime-local"></div><div class="field"><label>Pontos</label><input id="caPoints" type="number" min="0" value="0"></div></div><button type="button" class="btn primary" onclick="assignClassContent('${classId}','material')">📤 Adicionar materiais à turma</button>`;
  }else{
   const {data}=await sb.from('tic_assignments').select('id,title,assignment_type,due_at').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
   html=`<div class="field"><label>Task / Assignment</label><select id="caSource">${(data||[]).map(x=>`<option value="${x.id}">${esc(x.title)} · ${esc(x.assignment_type||'assignment')}</option>`).join('')||'<option value="">Nenhuma tarefa encontrada</option>'}</select></div><div class="notice">Isso distribui a tarefa existente para todos os alunos ativos da turma, preservando a tarefa original.</div><button type="button" class="btn primary" onclick="assignExistingTaskToClass('${classId}')">📤 Atribuir tarefa à turma</button>`;
@@ -736,16 +736,28 @@ async function loadClassContentOptions(classId){
  box.innerHTML=html;
 }
 async function assignClassContent(classId,type){
- const sourceId=$('caSource')?.value;if(!sourceId)return toast('Selecione um conteúdo.','error');
+ const selected=[...($('caSource')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
+ const sourceIds=selected.length?selected:($('caSource')?.value?[ $('caSource').value ]:[]);
+ if(!sourceIds.length)return toast(type==='material'?'Selecione pelo menos um material.':'Selecione um conteúdo.','error');
  const {data:members,error:me}=await sb.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active');if(me)return toast(me.message,'error');
  const studentIds=[...new Set((members||[]).map(x=>x.student_id))];if(!studentIds.length)return toast('Adicione alunos à turma antes de atribuir conteúdo.','error');
  const sourceType=type==='plan'?'lesson':type;
- const q=sourceType==='lesson'?sb.from('tic_lessons').select('*').eq('id',sourceId).eq('teacher_id',session.user.id).maybeSingle():sb.from('tic_materials').select('*').eq('id',sourceId).eq('teacher_id',session.user.id).maybeSingle();
- const {data:source,error}=await q;if(error||!source)return toast('Conteúdo não encontrado.','error');
- const payload={teacher_id:session.user.id,lesson_id:sourceType==='lesson'?source.id:null,class_id:classId,title:source.title,instructions:$('caMessage')?.value.trim()||source.description||source.content||'',assignment_type:type==='plan'?'lesson_plan':sourceType==='lesson'?'lesson':'material',due_at:$('caDue')?.value?new Date($('caDue').value).toISOString():null,points:Number($('caPoints')?.value||0),priority:'normal',resource_items:Array.isArray(source.resource_items)?source.resource_items:[],cover_image_url:source.cover_image_url||null,source_type:type==='plan'?'lesson_plan':sourceType,source_id:source.id};
- const {data:a,error:ae}=await sb.from('tic_assignments').insert(payload).select().single();if(ae)return toast(ae.message,'error');
- const {error:te}=await sb.from('tic_task_assignments').insert(studentIds.map(student_id=>({assignment_id:a.id,student_id,status:'pending'})));if(te){await sb.from('tic_assignments').delete().eq('id',a.id);return toast(te.message,'error')}
- closeModal();toast(`${source.title} atribuída para ${studentIds.length} aluno(s).`,'success');
+ const table=sourceType==='lesson'?'tic_lessons':'tic_materials';
+ const results=[];
+ for(const sourceId of sourceIds){
+  const {data:source,error}=await sb.from(table).select('*').eq('id',sourceId).eq('teacher_id',session.user.id).maybeSingle();
+  if(error||!source){toast(`Conteúdo não encontrado: ${sourceId}`,'error');continue;}
+  const payload={teacher_id:session.user.id,lesson_id:sourceType==='lesson'?source.id:null,class_id:classId,title:source.title,instructions:$('caMessage')?.value.trim()||source.description||source.content||'',assignment_type:type==='plan'?'lesson_plan':sourceType==='lesson'?'lesson':'material',due_at:$('caDue')?.value?new Date($('caDue').value).toISOString():null,points:Number($('caPoints')?.value||0),priority:'normal',resource_items:Array.isArray(source.resource_items)?source.resource_items:[],cover_image_url:source.cover_image_url||null,source_type:type==='plan'?'lesson_plan':sourceType,source_id:source.id};
+  const {data:a,error:ae}=await sb.from('tic_assignments').insert(payload).select().single();
+  if(ae){toast(`Não foi possível adicionar ${source.title}: ${ae.message}`,'error');continue;}
+  const {error:te}=await sb.from('tic_task_assignments').insert(studentIds.map(student_id=>({assignment_id:a.id,student_id,status:'pending'})));
+  if(te){await sb.from('tic_assignments').delete().eq('id',a.id);toast(`Não foi possível distribuir ${source.title}: ${te.message}`,'error');continue;}
+  results.push(source.title);
+ }
+ if(!results.length)return;
+ closeModal();
+ toast(type==='material'?`${results.length} material(is) adicionado(s) à turma e disponibilizado(s) para ${studentIds.length} aluno(s).`:`${results.length} conteúdo(s) atribuído(s) para ${studentIds.length} aluno(s).`,'success');
+ setTimeout(()=>openClassCenter(classId,type==='material'?'materials':'overview'),250);
 }
 async function assignExistingTaskToClass(classId){
  const assignmentId=$('caSource')?.value;if(!assignmentId)return toast('Selecione uma tarefa.','error');
