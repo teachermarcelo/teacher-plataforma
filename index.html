@@ -672,8 +672,11 @@ async function openClassProgress(classId){
 }
 
 async function genericTable(type){
+ const viewToken=window.__ticViewToken||0;
  const cfg={classes:['tic_classes','name','level','schedule_text'],courses:['tic_courses','title','level','description'],materials:['tic_materials','title','material_type','level']}[type];
  const {data}=await sb.from(cfg[0]).select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+ // Evita que uma consulta iniciada em uma aba anterior sobrescreva a aba que o Teacher acabou de abrir.
+ if((window.__ticViewToken||0)!==viewToken || currentView!==type)return;
  $('content').innerHTML=`<div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Nome</th><th>${cfg[2]}</th><th>${cfg[3]}</th><th>Ações</th></tr></thead><tbody>${(data||[]).map(x=>`<tr><td><b>${esc(x[cfg[1]])}</b></td><td>${esc(x[cfg[2]]||'—')}</td><td>${esc(x[cfg[3]]||'—')}</td><td><button onclick='editGeneric("${type}",${JSON.stringify(x)})'>Editar</button> ${type==='classes'?`<button onclick='openClassMembers("${x.id}")'>👥 Alunos</button><button onclick='openClassAssign("${x.id}")'>📤 Atribuir</button>`:''} ${type==='materials'?`<button onclick='openAssignContent("material",${JSON.stringify(x)})'>📤 Atribuir</button>`:''} <button onclick="deleteRow('${cfg[0]}','${x.id}','${type}')">Excluir</button></td></tr>`).join('')||`<tr><td colspan="4" class="empty">Nenhum registro.</td></tr>`}</tbody></table></div></div>`;
 }
 async function openClassMembers(classId){const [{data:cls},{data:students},{data:members}]=await Promise.all([sb.from('tic_classes').select('id,name,level').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle(),sb.from('tic_students').select('id,display_name,current_level').eq('teacher_id',session.user.id).eq('status','active').order('display_name'),sb.from('tic_class_students').select('student_id,status').eq('class_id',classId)]);if(!cls)return toast('Turma não encontrada.','error');const current=new Set((members||[]).filter(m=>m.status==='active').map(m=>m.student_id));openModal(`👥 Alunos · ${cls.name}`,`<form class="form" onsubmit="saveClassMembers(event,'${classId}')"><div class="notice">Selecione os alunos que pertencem à turma. Ao salvar, os vínculos são atualizados.</div><div class="field"><label>Alunos</label><select id="cmStudents" multiple size="10" style="min-height:220px">${(students||[]).map(st=>`<option value="${st.id}" ${current.has(st.id)?'selected':''}>${esc(st.display_name)} · ${esc(st.current_level)}</option>`).join('')}</select></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar alunos</button></div></form>`)}
@@ -1803,14 +1806,22 @@ async function moveLessonToFirstModule(lessonId,courseId){await __loadCourseData
 
 /* ---------- Reusable Task button in Assignments ---------- */
 async function assignmentsPage(){
- const {data,error}=await sb.from('tic_assignments').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});if(error){$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar as tarefas.</b><p>${esc(error.message)}</p></div>`;return}
- const ids=(data||[]).map(x=>x.id);let counts={};if(ids.length){const r=await sb.from('tic_task_assignments').select('assignment_id,student_id,active').in('assignment_id',ids);(r.data||[]).forEach(x=>{if(x.active!==false)counts[x.assignment_id]=(counts[x.assignment_id]||0)+1})}
+ const viewToken=window.__ticViewToken||0;
+ const {data,error}=await sb.from('tic_assignments').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});if(error){if((window.__ticViewToken||0)!==viewToken || currentView!=='assignments')return;$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar as tarefas.</b><p>${esc(error.message)}</p></div>`;return}
+ const ids=(data||[]).map(x=>x.id);let counts={};if(ids.length){const r=await sb.from('tic_task_assignments').select('assignment_id,student_id,active').in('assignment_id',ids);if((window.__ticViewToken||0)!==viewToken || currentView!=='assignments')return;(r.data||[]).forEach(x=>{if(x.active!==false)counts[x.assignment_id]=(counts[x.assignment_id]||0)+1})}
+ if((window.__ticViewToken||0)!==viewToken || currentView!=='assignments')return;
  $('content').innerHTML=`<div class="card"><div class="section-head"><div><h2>Assignments / Tasks</h2><span>${data?.length||0} tarefas · reutilizáveis para vários alunos</span></div><button class="btn primary" onclick="openAssignmentForm()">+ Nova tarefa</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Tarefa</th><th>Tipo</th><th>Alunos</th><th>Prazo</th><th>Prioridade</th><th>Ações</th></tr></thead><tbody>${(data||[]).map(x=>`<tr><td><b>${esc(x.title)}</b><br><small>${x.html_enabled?'🧩 HTML · ':''}${esc((x.instructions||'').replace(/<[^>]+>/g,'').slice(0,65))}</small></td><td>${esc(x.assignment_type||'assignment')}</td><td><span class="badge blue">${counts[x.id]||0}</span></td><td>${fmtDate(x.due_at)}</td><td>${badge(x.priority)}</td><td><div class="action-group"><button class="btn sm ghost" onclick='openAssignmentForm(${JSON.stringify(x)})'>Editar</button><button class="btn sm secondary" onclick="openReassignTask('${x.id}')">📤 Atribuir</button><button class="btn sm secondary" onclick="openAssignmentSubmissions('${x.id}')">📝 Entregas</button><button class="btn sm danger" onclick="deleteAssignment('${x.id}')">Excluir</button></div></td></tr>`).join('')||'<tr><td colspan="6" class="empty">Nenhuma tarefa.</td></tr>'}</tbody></table></div></div>`;
 }
 
 /* ---------- Routes: registration page + active nav ---------- */
 const __ticLoadViewBase=loadView;
-loadView=async function(v){if(v==='studentRegistration')return studentRegistrationPage();return __ticLoadViewBase(v)};
+loadView=async function(v){
+  // Cada clique inicia uma nova versão da navegação. Consultas antigas continuam podendo terminar,
+  // mas não recebem mais permissão para pintar o conteúdo da aba atual.
+  window.__ticViewToken=(window.__ticViewToken||0)+1;
+  if(v==='studentRegistration')return studentRegistrationPage();
+  return __ticLoadViewBase(v);
+};
 
 /* ---------- Public registration bootstrap ---------- */
 (function ticRegistrationBootstrap(){const token=new URLSearchParams(location.search).get('register');if(!token)return;const run=()=>{if(!$('login'))return;ticLoadRegistration(token)};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else setTimeout(run,0)})();
@@ -2543,6 +2554,115 @@ async function sendStudentMessageV18(e){
   if(r.error)return toast('Não foi possível enviar: '+r.error.message,'error');
   toast('Mensagem enviada ao Teacher.','success');messagesPage(true);
 }
+</script>
+
+<style id="tic-materials-workspace-v38">
+.materials-workspace{display:flex;flex-direction:column;gap:18px;min-height:calc(100vh - 180px)}
+.materials-overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.material-stat{background:#fff;border:1px solid var(--line,#e5e1ef);border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(35,24,65,.05)}
+.material-stat .num{font-size:28px;font-weight:900;color:#28243a;margin-top:5px}.material-stat small{color:var(--muted,#77748a)}
+.materials-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.materials-toolbar input{min-width:240px;flex:1}
+.material-tabs{display:flex;gap:8px;flex-wrap:wrap}.material-tab{border:1px solid #e4dfef;background:#fff;border-radius:12px;padding:10px 14px;font-weight:800;color:#68637a;cursor:pointer}.material-tab.active{background:#eee7ff;color:#6840db;border-color:#d9c9ff}
+.material-folder-strip{display:flex;gap:10px;overflow:auto;padding:2px 2px 8px}.material-folder-chip{min-width:150px;border:1px solid #e6e1ef;background:#fff;border-radius:16px;padding:13px;cursor:pointer;text-align:left}.material-folder-chip:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(35,24,65,.08)}.material-folder-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:7px}.material-folder-chip b{display:block;margin-top:7px}.material-folder-chip small{color:var(--muted,#77748a)}
+.materials-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.material-card{background:#fff;border:1px solid #e5e1ef;border-radius:20px;overflow:hidden;box-shadow:0 8px 25px rgba(35,24,65,.05);display:flex;flex-direction:column}.material-cover{height:105px;background:linear-gradient(135deg,#f2edff,#faf9fd);display:flex;align-items:center;justify-content:center;overflow:hidden}.material-cover img{width:100%;height:100%;object-fit:cover}.material-icon{font-size:42px}.material-card-body{padding:16px;display:flex;flex-direction:column;gap:9px;flex:1}.material-card-title{font-size:17px;font-weight:900}.material-meta{display:flex;gap:7px;flex-wrap:wrap}.material-card-desc{font-size:13px;color:var(--muted,#77748a);min-height:34px}.material-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto;padding-top:8px}.material-actions .btn{font-size:12px;padding:8px 10px}.material-created{font-size:11px;color:#8a8699}.material-section{background:#fff;border:1px solid #e5e1ef;border-radius:20px;padding:20px}.material-section-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:14px}.material-section-head h3{margin:0}.material-folder-admin{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.material-folder-admin-card{border:1px solid #e5e1ef;border-radius:16px;padding:15px;background:#fff}.material-folder-admin-card .folder-name{font-weight:900;display:flex;align-items:center;gap:8px}.material-empty{padding:35px;text-align:center;color:var(--muted,#77748a);border:1px dashed #d8d1e7;border-radius:16px}
+@media(max-width:950px){.materials-overview-grid{grid-template-columns:repeat(2,1fr)}.materials-grid{grid-template-columns:repeat(2,1fr)}.material-folder-admin{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.materials-overview-grid,.materials-grid,.material-folder-admin{grid-template-columns:1fr}.materials-toolbar input{min-width:100%}.material-section{padding:14px}}
+</style>
+<script>
+/* MATERIALS WORKSPACE V38 — additive: preserves existing materials, editing, deletion and assignment. */
+(function(){
+  const materialIcon=(type)=>({pdf:'📕',video:'🎬',audio:'🎧',link:'🔗',file:'📄',worksheet:'📝',other:'📦'})[type]||'📂';
+  const safeDate=v=>{try{return v?new Date(v).toLocaleDateString('pt-BR'):''}catch(e){return ''}};
+  const escm=v=>typeof esc==='function'?esc(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  let materialState={tab:'overview',folder:'',search:'',level:'',type:''};
+  window.ticMaterialState=materialState;
+
+  async function materialData(){
+    const [mr,fr]=await Promise.all([
+      sb.from('tic_materials').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false}),
+      sb.from('tic_material_folders').select('*').eq('teacher_id',session.user.id).order('name')
+    ]);
+    if(mr.error){toast('Não foi possível carregar os materiais: '+mr.error.message,'error');return {materials:[],folders:[]};}
+    if(fr.error){toast('Não foi possível carregar as pastas: '+fr.error.message,'error');return {materials:mr.data||[],folders:[]};}
+    return {materials:mr.data||[],folders:fr.data||[]};
+  }
+
+  window.materialsPage=async function(){
+    const token=window.__ticViewToken||0;
+    const {materials,folders}=await materialData();
+    if((window.__ticViewToken||0)!==token || currentView!=='materials')return;
+    const folderMap=new Map(folders.map(f=>[f.id,f]));
+    const legacyFolders=[...new Set(materials.map(m=>m.folder).filter(Boolean))].map(name=>({id:'legacy:'+name,name,color:'#6d4aff',legacy:true}));
+    const allFolders=[...folders,...legacyFolders.filter(l=>!folders.some(f=>f.name===l.name))];
+    const totalResources=materials.reduce((n,m)=>n+(Array.isArray(m.resource_items)?m.resource_items.length:((m.external_url||m.file_url)?1:0)),0);
+    const now=Date.now(),recent=materials.filter(m=>now-new Date(m.created_at).getTime()<30*864e5).length;
+    const types=[...new Set(materials.map(m=>m.material_type).filter(Boolean))].sort();
+    const levels=[...new Set(materials.map(m=>m.level).filter(Boolean))].sort();
+    const filtered=materials.filter(m=>{
+      const q=materialState.search.toLowerCase();
+      const folderOk=!materialState.folder || (m.folder_id===materialState.folder || m.folder===materialState.folder);
+      const tabOk=materialState.tab==='folders'?false:true;
+      return tabOk && folderOk && (!q||[m.title,m.description,m.material_type,m.level,m.folder].join(' ').toLowerCase().includes(q)) && (!materialState.level||m.level===materialState.level) && (!materialState.type||m.material_type===materialState.type);
+    });
+    const selectedFolder=allFolders.find(f=>f.id===materialState.folder || f.name===materialState.folder);
+    const tabs=`<div class="material-tabs">
+      <button class="material-tab ${materialState.tab==='overview'?'active':''}" onclick="ticMaterialTab('overview')">📊 Overview</button>
+      <button class="material-tab ${materialState.tab==='all'?'active':''}" onclick="ticMaterialTab('all')">📚 Todos os materiais</button>
+      <button class="material-tab ${materialState.tab==='folders'?'active':''}" onclick="ticMaterialTab('folders')">📁 Pastas</button>
+    </div>`;
+    $('content').innerHTML=`<div class="materials-workspace">
+      ${tabs}
+      ${materialState.tab==='folders'?renderFolderAdmin(allFolders,folders,materials):`
+      <div class="materials-overview-grid">
+        <div class="material-stat"><small>Materiais registrados</small><div class="num">${materials.length}</div><span>criados por você</span></div>
+        <div class="material-stat"><small>Pastas</small><div class="num">${folders.length+legacyFolders.filter(x=>!folders.some(f=>f.name===x.name)).length}</div><span>organização</span></div>
+        <div class="material-stat"><small>Recursos</small><div class="num">${totalResources}</div><span>links, PDFs, vídeos e áudios</span></div>
+        <div class="material-stat"><small>Últimos 30 dias</small><div class="num">${recent}</div><span>novos registros</span></div>
+      </div>
+      <div class="material-section">
+        <div class="material-section-head"><div><h3>📁 Pastas</h3><small>Organize por nome e cor.</small></div><button class="btn secondary" onclick="openMaterialFolderForm()">+ Nova pasta</button></div>
+        <div class="material-folder-strip"><button class="material-folder-chip" onclick="ticMaterialFolder('')"><span class="material-folder-dot" style="background:#8b84a0"></span><b>Todos</b><small>${materials.length} materiais</small></button>${allFolders.map(f=>{const count=materials.filter(m=>m.folder_id===f.id||m.folder===f.name).length;return `<button class="material-folder-chip" onclick="ticMaterialFolder('${escm(f.id)}')"><span class="material-folder-dot" style="background:${escm(f.color||'#6d4aff')}"></span><b>${escm(f.name)}</b><small>${count} material(is)</small></button>`}).join('')}</div>
+      </div>
+      <div class="material-section">
+        <div class="material-section-head"><div><h3>${selectedFolder?'📁 '+escm(selectedFolder.name):'📚 Materiais registrados'}</h3><small>Crie, edite, remova, organize e atribua.</small></div></div>
+        <div class="materials-toolbar"><input id="ticMaterialSearch" placeholder="🔎 Buscar material, descrição ou pasta..." value="${escm(materialState.search)}" oninput="ticMaterialFilter()"><select id="ticMaterialLevel" onchange="ticMaterialFilter()"><option value="">Todos os níveis</option>${levels.map(l=>`<option ${l===materialState.level?'selected':''}>${escm(l)}</option>`).join('')}</select><select id="ticMaterialType" onchange="ticMaterialFilter()"><option value="">Todos os tipos</option>${types.map(t=>`<option ${t===materialState.type?'selected':''}>${escm(t)}</option>`).join('')}</select></div>
+        <div id="ticMaterialResults" style="margin-top:16px">${renderMaterialCards(filtered,folderMap)}</div>
+      </div>`}
+    </div>`;
+  };
+
+  function renderMaterialCards(items,folderMap){
+    if(!items.length)return '<div class="material-empty">📂 Nenhum material encontrado com esses filtros.<br><button class="btn primary" style="margin-top:12px" onclick="openMaterialForm()">+ Criar material</button></div>';
+    return `<div class="materials-grid">${items.map(m=>{const folder=folderMap.get(m.folder_id);const folderName=folder?.name||m.folder||'Sem pasta';const folderColor=folder?.color||m.color||'#6d4aff';const url=m.external_url||m.file_url||((m.resource_items||[])[0]?.url);return `<article class="material-card" data-material-level="${escm(m.level||'')}" data-material-type="${escm(m.material_type||'')}"><div class="material-cover" style="border-top:5px solid ${escm(folderColor)}">${m.cover_image_url?`<img src="${escm(m.cover_image_url)}" alt="">`:`<span class="material-icon">${materialIcon(m.material_type)}</span>`}</div><div class="material-card-body"><div class="material-meta"><span class="badge blue">${escm(m.material_type||'material')}</span>${m.level?`<span class="badge gray">${escm(m.level)}</span>`:''}</div><div class="material-card-title">${escm(m.title)}</div><div class="material-card-desc">${escm(m.description||'Sem descrição')}</div><div><span class="material-folder-dot" style="background:${escm(folderColor)}"></span><small>${escm(folderName)}</small></div><div class="material-created">Criado em ${safeDate(m.created_at)}${m.updated_at&&m.updated_at!==m.created_at?' · atualizado '+safeDate(m.updated_at):''}</div><div class="material-actions">${url?`<a class="btn secondary" href="${escm(url)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}<button class="btn secondary" onclick='openMaterialForm(${JSON.stringify(m)})'>✏️ Editar</button><button class="btn secondary" onclick='openAssignContent("material",${JSON.stringify(m)})'>📤 Atribuir</button><button class="btn danger" onclick="deleteMaterialV38('${escm(m.id)}')">🗑️ Remover</button></div></div></article>`}).join('')}</div>`;
+  }
+
+  function renderFolderAdmin(allFolders,realFolders,materials){
+    if(!allFolders.length)return `<div class="material-section"><div class="material-section-head"><div><h3>📁 Pastas</h3><small>Nenhuma pasta criada ainda.</small></div><button class="btn primary" onclick="openMaterialFolderForm()">+ Nova pasta</button></div><div class="material-empty">Crie sua primeira pasta para organizar os materiais.</div></div>`;
+    return `<div class="material-section"><div class="material-section-head"><div><h3>📁 Gerenciar pastas</h3><small>Nome, cor, quantidade e ações.</small></div><button class="btn primary" onclick="openMaterialFolderForm()">+ Nova pasta</button></div><div class="material-folder-admin">${allFolders.map(f=>{const count=materials.filter(m=>m.folder_id===f.id||m.folder===f.name).length;return `<div class="material-folder-admin-card"><div class="folder-name"><span class="material-folder-dot" style="background:${escm(f.color||'#6d4aff')}"></span>${escm(f.name)}</div><small>${count} material(is) · ${f.legacy?'pasta antiga':''}</small><div class="material-actions">${!f.legacy?`<button class="btn secondary" onclick='openMaterialFolderForm(${JSON.stringify(f)})'>✏️ Editar</button><button class="btn danger" onclick="deleteMaterialFolderV38('${escm(f.id)}')">🗑️ Remover</button>`:`<button class="btn secondary" onclick="ticMaterialFolder('${escm(f.name)}')">Abrir</button>`}</div></div>`}).join('')}</div></div>`;
+  }
+
+  window.ticMaterialTab=function(tab){materialState.tab=tab;materialState.folder='';materialsPage();};
+  window.ticMaterialFolder=function(id){materialState.tab='all';materialState.folder=id||'';materialsPage();};
+  window.ticMaterialFilter=function(){materialState.search=$('ticMaterialSearch')?.value||'';materialState.level=$('ticMaterialLevel')?.value||'';materialState.type=$('ticMaterialType')?.value||'';const cards=[...document.querySelectorAll('.material-card')];if(!cards.length)return;const q=materialState.search.toLowerCase();cards.forEach(c=>{const text=c.innerText.toLowerCase();const okText=!q||text.includes(q);const okLevel=!materialState.level||c.dataset.materialLevel===materialState.level;const okType=!materialState.type||c.dataset.materialType===materialState.type;c.style.display=(okText&&okLevel&&okType)?'flex':'none';});};
+
+  window.openMaterialFolderForm=function(x=null){openModal(x?'Editar pasta':'Nova pasta',`<form class="form" onsubmit="saveMaterialFolderV38(event,'${x?.id||''}')"><div class="field"><label>Nome da pasta</label><input id="mfName" value="${escm(x?.name||'')}" placeholder="Ex.: A1, Listening, PDFs, Business English..." required></div><div class="field"><label>Cor da pasta</label><div style="display:flex;gap:12px;align-items:center"><input id="mfColor" type="color" value="${escm(x?.color||'#6d4aff')}" style="width:64px;height:44px;padding:3px"><input id="mfColorText" value="${escm(x?.color||'#6d4aff')}" oninput="document.getElementById('mfColor').value=this.value" placeholder="#6d4aff"></div></div><div class="notice">A pasta fica disponível para organizar seus materiais. Você poderá editar o nome e a cor depois.</div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar pasta</button></div></form>`);};
+  window.saveMaterialFolderV38=async function(e,id){e.preventDefault();const name=$('mfName').value.trim(),color=$('mfColor').value;if(!name)return toast('Informe o nome da pasta.','error');const o={teacher_id:session.user.id,name,color};const r=id?await sb.from('tic_material_folders').update({name,color,updated_at:new Date().toISOString()}).eq('id',id).eq('teacher_id',session.user.id):await sb.from('tic_material_folders').insert(o);if(r.error)return toast('Não foi possível salvar a pasta: '+r.error.message,'error');closeModal();toast(id?'Pasta atualizada.':'Pasta criada.','success');materialsPage();};
+  window.deleteMaterialFolderV38=async function(id){if(!confirm('Remover esta pasta? Os materiais serão mantidos e ficarão sem pasta.'))return;await sb.from('tic_materials').update({folder_id:null}).eq('folder_id',id).eq('teacher_id',session.user.id);const r=await sb.from('tic_material_folders').delete().eq('id',id).eq('teacher_id',session.user.id);if(r.error)return toast('Não foi possível remover a pasta: '+r.error.message,'error');toast('Pasta removida. Os materiais foram preservados.','success');materialsPage();};
+  window.deleteMaterialV38=async function(id){if(!confirm('Remover este material? Esta ação exclui apenas o registro do material.'))return;const r=await sb.from('tic_materials').delete().eq('id',id).eq('teacher_id',session.user.id);if(r.error)return toast('Não foi possível remover o material: '+r.error.message,'error');toast('Material removido.','success');materialsPage();};
+
+  const oldOpenMaterialForm=window.openMaterialForm;
+  window.openMaterialForm=function(x=null){
+    const oldFolder=x?.folder||'';
+    sb.from('tic_material_folders').select('*').eq('teacher_id',session.user.id).order('name').then(({data})=>{
+      const folders=data||[];
+      openModal(x?'Editar material':'Novo material',`<form class="form" onsubmit="saveMaterialV38(event,'${x?.id||''}')"><div class="field"><label>Título</label><input id="g1" value="${escm(x?.title||'')}" required></div><div class="form-grid"><div class="field"><label>Tipo principal</label><select id="g2">${['pdf','video','audio','link','file','worksheet','other'].map(l=>`<option value="${l}" ${l===x?.material_type?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Nível</label><select id="g3"><option value="">—</option>${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div></div><div class="form-grid"><div class="field"><label>Pasta</label><select id="gFolder"><option value="">📂 Sem pasta</option>${folders.map(f=>`<option value="${f.id}" ${f.id===x?.folder_id||f.name===oldFolder?'selected':''}>${escm(f.name)}</option>`).join('')}</select></div><div class="field"><label>Cor do material</label><input id="gColor" type="color" value="${escm(x?.color||'#6d4aff')}" style="width:70px;height:42px"></div></div><div style="display:flex;justify-content:flex-end;margin-top:-6px"><button type="button" class="btn secondary" onclick="openMaterialFolderForm()">+ Nova pasta</button></div><div class="field"><label>Imagem de capa (opcional)</label><div class="cover-upload"><input id="gCover" value="${escm(x?.cover_image_url||'')}" placeholder="URL da imagem ou upload"><input type="file" accept="image/*" onchange="uploadCover(this,'gCover')"></div></div><div class="field"><label>Descrição</label><textarea id="g5" rows="3">${escm(x?.description||'')}</textarea></div><div class="resource-box"><div class="resource-head"><b>📚 Recursos deste material</b><button type="button" class="btn secondary" onclick="addResourceRow('gResources')">+ Adicionar recurso</button></div><div id="gResources"></div><div class="resource-help">Um material pode conter quantos links, PDFs, vídeos, áudios ou atividades manuais você quiser.</div></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar material</button></div></form>`);renderResourceRows('gResources',x?.resource_items||((x?.external_url||x?.file_url)?[{type:x?.material_type||'link',title:x?.title||'Recurso',url:x?.external_url||x?.file_url}]:[]));
+    });
+  };
+  window.saveMaterialV38=async function(e,id){e.preventDefault();const folderId=$('gFolder')?.value||null;let folderName=null;if(folderId){const f=await sb.from('tic_material_folders').select('name').eq('id',folderId).eq('teacher_id',session.user.id).maybeSingle();folderName=f.data?.name||null;}const o={teacher_id:session.user.id,title:$('g1').value.trim(),material_type:$('g2').value,level:$('g3').value||null,description:$('g5').value.trim()||null,resource_items:collectResources('gResources'),cover_image_url:$('gCover').value.trim()||null,folder_id:folderId,color:$('gColor')?.value||'#6d4aff',folder:folderName};const first=o.resource_items[0];if(first?.url){if(o.material_type==='pdf')o.file_url=first.url;else o.external_url=first.url}const r=id?await sb.from('tic_materials').update(o).eq('id',id).eq('teacher_id',session.user.id):await sb.from('tic_materials').insert(o);if(r.error)return toast('Não foi possível salvar o material: '+r.error.message,'error');closeModal();toast(id?'Material atualizado.':'Material criado.','success');materialsPage();};
+
+  const oldLoadView=window.loadView;
+  window.loadView=async function(v){if(v==='materials'){currentView=v;toggleMobile();const c=document.querySelector('.main>.container');if(c)c.scrollTo({top:0,left:0,behavior:'instant'});document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));setPage('Materials','PDF, links, vídeo, áudio e arquivos.','<button class="btn primary" onclick="openMaterialForm()">+ Novo material</button>');return materialsPage();}return oldLoadView(v);};
+})();
 </script>
 </body>
 </html>
