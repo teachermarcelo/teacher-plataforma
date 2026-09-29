@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Teacher Platform</title>
+<title>Teacher Platform · V41 Class Center</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
@@ -329,6 +329,7 @@ body{overflow:hidden;}
   <button class="active" data-view="overview">🏠 <span>Overview</span></button>
   <button data-view="students">👨‍🎓 <span>Students</span></button>
   <button data-view="classes">🏫 <span>Classes</span></button>
+  <button data-view="classCenter">🎯 <span>Class Center</span></button>
   <button data-view="courses">📚 <span>Courses</span></button>
   <button data-view="lessons">📝 <span>Lessons</span></button>
   <button data-view="plans">📋 <span>Lesson Plans</span></button>
@@ -1992,219 +1993,7 @@ function ticResponsiveSrcdoc(content){
  if(!c)return '';
  const meta='<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">';
  if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}`);
- return '<!doctype html><html><head>'+meta+'</head><body>'+c+'
-<!-- V40 — Student Login & Activity Tracking
-     Additive: preserves all existing platform functionality.
-     Requires SQL migration in tic_student_activity.sql -->
-<style id="tic-student-activity-v40-css">
-.student-activity-grid-v40{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
-.student-activity-card-v40{background:#fff;border:1px solid var(--line);border-radius:15px;padding:15px}
-.student-activity-head-v40{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-.student-activity-name-v40{display:flex;gap:10px;align-items:center}
-.student-activity-avatar-v40{width:38px;height:38px;border-radius:12px;background:#eee8ff;color:var(--p);display:grid;place-items:center;font-weight:800}
-.student-activity-name-v40 b{display:block;font-size:13px}
-.student-activity-name-v40 small{display:block;color:var(--muted);font-size:10px;margin-top:2px}
-.student-activity-meta-v40{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}
-.student-activity-metric-v40{background:#faf9fd;border:1px solid #eeeaf4;border-radius:11px;padding:9px}
-.student-activity-metric-v40 span{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.5px}
-.student-activity-metric-v40 b{display:block;font-size:12px;margin-top:3px}
-.student-activity-status-v40{font-size:10px;font-weight:800;white-space:nowrap}
-.student-activity-online-v40{color:#13835d}
-.student-activity-offline-v40{color:#8b8795}
-.student-activity-toolbar-v40{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.student-activity-help-v40{font-size:11px;color:var(--muted)}
-@media(max-width:760px){.student-activity-grid-v40{grid-template-columns:1fr}.student-activity-meta-v40{grid-template-columns:1fr 1fr}}
-</style>
-<script>
-/* V40 — Student activity tracker. It creates one session row per login/tab and
-   periodically updates the active duration. It does not alter existing features. */
-(function(){
-  let activitySessionId=null;
-  let activityStudentId=null;
-  let activityTimer=null;
-  let activityStartedMs=0;
-  let activityLastFlushMs=0;
-  let activityRunning=false;
-
-  function ticActivityNow(){return new Date().toISOString();}
-  function ticActivityFormatSeconds(total){
-    total=Math.max(0,Number(total||0));
-    const h=Math.floor(total/3600),m=Math.floor((total%3600)/60),s=total%60;
-    if(h)return `${h}h ${String(m).padStart(2,'0')}min`;
-    if(m)return `${m}min ${String(s).padStart(2,'0')}s`;
-    return `${s}s`;
-  }
-  function ticActivityTime(v){
-    if(!v)return 'Nunca';
-    const d=new Date(v);
-    if(Number.isNaN(d.getTime()))return 'Nunca';
-    return d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
-  }
-  function ticActivityOnline(lastSeen){
-    if(!lastSeen)return false;
-    return Date.now()-new Date(lastSeen).getTime()<=130000;
-  }
-  window.ticActivityFormatSeconds=ticActivityFormatSeconds;
-  window.ticActivityTime=ticActivityTime;
-
-  async function ticActivityFlush(force=false){
-    if(!activitySessionId||!activityRunning)return;
-    const now=Date.now();
-    if(!force && now-activityLastFlushMs<15000)return;
-    const elapsed=Math.max(0,Math.floor((now-activityStartedMs)/1000));
-    activityLastFlushMs=now;
-    const r=await sb.from('tic_student_activity').update({
-      last_seen_at:ticActivityNow(),
-      duration_seconds:elapsed
-    }).eq('id',activitySessionId).eq('student_id',activityStudentId);
-    if(r.error)console.warn('Student activity flush:',r.error.message);
-  }
-
-  async function ticActivityStop(){
-    if(!activitySessionId)return;
-    activityRunning=false;
-    if(activityTimer){clearInterval(activityTimer);activityTimer=null;}
-    await ticActivityFlush(true);
-    activitySessionId=null;activityStudentId=null;activityStartedMs=0;activityLastFlushMs=0;
-  }
-
-  async function ticStartStudentActivityTracking(){
-    if(!window.sb||!window.session?.user?.id)return;
-    const {data:student,error}=await sb.from('tic_students')
-      .select('id,teacher_id,status')
-      .eq('auth_user_id',session.user.id)
-      .maybeSingle();
-    if(error||!student||student.status==='inactive')return;
-    if(activitySessionId)return;
-
-    const now=ticActivityNow();
-    const {data:row,error:ie}=await sb.from('tic_student_activity').insert({
-      student_id:student.id,
-      auth_user_id:session.user.id,
-      started_at:now,
-      last_seen_at:now,
-      duration_seconds:0,
-      user_agent:navigator.userAgent.slice(0,500)
-    }).select('id').single();
-    if(ie||!row){
-      console.warn('Student activity start:',ie?.message||'não foi possível criar a sessão');
-      return;
-    }
-
-    activitySessionId=row.id;
-    activityStudentId=student.id;
-    activityStartedMs=Date.now();
-    activityLastFlushMs=Date.now();
-    activityRunning=true;
-
-    /* Register the actual login moment on the student record only when
-       the optional column exists. Failure is intentionally non-blocking. */
-    try{
-      await sb.from('tic_students').update({last_login_at:now}).eq('id',student.id);
-    }catch(_){}
-
-    activityTimer=setInterval(()=>ticActivityFlush(false),60000);
-    document.addEventListener('visibilitychange',async()=>{
-      if(document.visibilityState==='hidden')await ticActivityFlush(true);
-      else if(activitySessionId){activityStartedMs=Date.now()-((Date.now()-activityStartedMs));activityLastFlushMs=0;}
-    },{passive:true});
-
-    window.addEventListener('beforeunload',()=>{ticActivityFlush(true);},{capture:true});
-  }
-
-  /* Expose a manual refresh for the teacher dashboard. */
-  window.ticRefreshStudentActivity=async function(studentIds){
-    const ids=(studentIds||[]).filter(Boolean);
-    if(!ids.length)return {};
-    const {data,error}=await sb.from('tic_student_activity')
-      .select('student_id,started_at,last_seen_at,duration_seconds')
-      .in('student_id',ids)
-      .order('started_at',{ascending:false});
-    if(error){console.warn('Student activity read:',error.message);return {}}
-    const map={};
-    (data||[]).forEach(r=>{
-      const id=r.student_id;
-      if(!map[id])map[id]={last_login:r.started_at,total_seconds:0,last_seen:r.last_seen_at};
-      map[id].total_seconds+=Number(r.duration_seconds||0);
-      if(new Date(r.started_at)>new Date(map[id].last_login||0))map[id].last_login=r.started_at;
-      if(new Date(r.last_seen_at||0)>new Date(map[id].last_seen||0))map[id].last_seen=r.last_seen_at;
-    });
-    return map;
-  };
-
-  /* Add the activity information to the existing Class Center > Alunos tab.
-     Other tabs continue using the original classCenterTab implementation. */
-  const originalClassCenterTab=window.classCenterTab;
-  window.classCenterTab=async function(classId,tab){
-    if(tab!=='students')return originalClassCenterTab.apply(this,arguments);
-    const root=document.querySelector('.class-center-shell[data-class-center="'+classId+'"]');
-    const body=root?.querySelector('#classCenterBody');
-    if(!root||!body)return;
-    root.querySelectorAll('.class-center-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-    const s=window.__ticClassCenter||{};
-    const students=s.students||[];
-    const ids=students.map(x=>x.id);
-    const activity=await ticRefreshStudentActivity(ids);
-    const fmtActivity=(st)=>{
-      const a=activity[st.id]||{};
-      const online=ticActivityOnline(a.last_seen);
-      return `<article class="class-center-student-card">
-        <div class="class-center-student-main">
-          <span class="class-center-avatar">👤</span>
-          <div>
-            <b>${esc(st.display_name)}</b>
-            <small>${esc(st.current_level||'')} · ${esc(st.email||'')}</small>
-            <span class="badge ${online?'green':'gray'}">${online?'● Online agora':'○ Offline'}</span>
-          </div>
-        </div>
-        <div class="student-activity-meta-v40">
-          <div class="student-activity-metric-v40"><span>Último login</span><b>${ticActivityTime(a.last_login)}</b></div>
-          <div class="student-activity-metric-v40"><span>Tempo de atividade</span><b>${ticActivityFormatSeconds(a.total_seconds||0)}</b></div>
-        </div>
-        <div class="class-center-student-actions" style="margin-top:10px">
-          <button class="btn sm primary" onclick="openClassStudentContent('${classId}','${st.id}')">➕ Adicionar conteúdo</button>
-          <button class="btn sm secondary" onclick="openStudentView('${st.id}')">👤 Abrir aluno</button>
-        </div>
-      </article>`;
-    };
-    body.innerHTML=`<div class="class-center-panel">
-      <div class="student-activity-toolbar-v40">
-        <div><h3>👥 Alunos da turma</h3><p>Último login e tempo acumulado de atividade na plataforma.</p></div>
-        <button class="btn primary" onclick="openClassMembers('${classId}')">👥 Gerenciar alunos</button>
-      </div>
-      <div class="student-activity-help-v40">O tempo é contabilizado enquanto a sessão do aluno permanece ativa na plataforma. A atualização ocorre automaticamente.</div>
-      <div class="class-center-student-grid" style="margin-top:14px">
-        ${students.map(fmtActivity).join('')||'<div class="class-center-empty">Nenhum aluno vinculado.</div>'}
-      </div>
-    </div>`;
-  };
-
-  /* Start/stop tracking according to the authenticated user. */
-  if(window.sb?.auth){
-    sb.auth.onAuthStateChange(async(event,s)=>{
-      if(s?.user){
-        setTimeout(async()=>{
-          const {data:p}=await sb.from('tic_profiles').select('role').eq('id',s.user.id).maybeSingle();
-          if(p?.role==='student')await ticStartStudentActivityTracking();
-          else await ticActivityStop();
-        },250);
-      }else{
-        await ticActivityStop();
-      }
-    });
-  }
-  window.addEventListener('load',()=>{
-    setTimeout(async()=>{
-      if(window.session?.user?.id){
-        const {data:p}=await sb.from('tic_profiles').select('role').eq('id',session.user.id).maybeSingle();
-        if(p?.role==='student')await ticStartStudentActivityTracking();
-      }
-    },700);
-  });
-})();
-</script>
-
-</body></html>';
+ return '<!doctype html><html><head>'+meta+'</head><body>'+c+'</body></html>';
 }
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
@@ -3538,5 +3327,599 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
    }
    return previousLoadView(v);
  };
+})();
+</script>
+
+
+<style id="tic-class-center-v41-css">
+/* V41 — Class Center: dedicated Teacher workspace + reliable student activity */
+.class-center-v41{display:flex;flex-direction:column;gap:16px}
+.class-center-v41 .v41-hero{background:linear-gradient(135deg,#4d24a8,#7650df);color:#fff;border-radius:22px;padding:22px;box-shadow:0 14px 35px rgba(76,36,168,.18)}
+.class-center-v41 .v41-hero h1{margin:5px 0 6px;font:800 28px 'Plus Jakarta Sans'}
+.class-center-v41 .v41-hero p{margin:0;opacity:.84;font-size:12px}
+.v41-class-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.v41-class-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 5px 18px rgba(35,20,75,.05);display:flex;flex-direction:column;gap:12px}
+.v41-class-card h3{margin:0;font:800 17px 'Plus Jakarta Sans'}
+.v41-class-card .v41-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.v41-class-card .v41-meta div{background:#faf9fd;border:1px solid #eee9f6;border-radius:11px;padding:9px}
+.v41-class-card .v41-meta span{display:block;color:var(--muted);font-size:10px}
+.v41-class-card .v41-meta b{display:block;margin-top:3px;font-size:12px}
+.v41-class-actions{display:flex;gap:7px;flex-wrap:wrap}
+.v41-toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.v41-toolbar input{flex:1;min-width:240px}
+.v41-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}
+.v41-kpi{background:#fff;border:1px solid var(--line);border-radius:15px;padding:14px}
+.v41-kpi span{display:block;color:var(--muted);font-size:11px}
+.v41-kpi b{display:block;font:800 25px 'Plus Jakarta Sans';margin-top:5px}
+.v41-class-shell{background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.v41-class-head{padding:20px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff,#fbfaff)}
+.v41-class-head-main{display:flex;justify-content:space-between;gap:15px;align-items:flex-start;flex-wrap:wrap}
+.v41-class-head h2{margin:6px 0 4px;font:800 25px 'Plus Jakarta Sans'}
+.v41-class-head small{color:var(--muted)}
+.v41-class-head-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.v41-tabs{display:flex;gap:6px;overflow-x:auto;padding:13px 20px 0;scrollbar-width:thin}
+.v41-tabs button{border:1px solid transparent;background:#f5f2fc;color:#625b73;border-radius:10px;padding:9px 12px;white-space:nowrap;font-weight:800;font-size:11px;cursor:pointer}
+.v41-tabs button.active{background:var(--p);color:#fff;box-shadow:0 7px 18px rgba(104,68,216,.18)}
+.v41-body{padding:18px 20px 30px}
+.v41-panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.v41-panel h3{margin:0 0 5px;font:800 16px 'Plus Jakarta Sans'}
+.v41-panel>p{margin:0 0 13px;color:var(--muted);font-size:12px}
+.v41-student-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.v41-student-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.v41-student-top{display:flex;gap:11px;align-items:center}
+.v41-student-avatar{width:42px;height:42px;border-radius:13px;background:#f0ebff;display:grid;place-items:center;font-size:21px;flex:0 0 auto}
+.v41-student-top b{display:block;font-size:14px}
+.v41-student-top small{display:block;color:var(--muted);margin-top:3px;font-size:10px;word-break:break-word}
+.v41-activity-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
+.v41-activity-box{border:1px solid #eee9f6;background:#faf9fd;border-radius:11px;padding:9px}
+.v41-activity-box span{display:block;color:var(--muted);font-size:9px}
+.v41-activity-box b{display:block;margin-top:3px;font-size:11px}
+.v41-online{color:#198754!important}.v41-offline{color:#7a7288!important}
+.v41-student-actions{display:flex;gap:7px;flex-wrap:wrap}
+.v41-empty{border:1px dashed #d9d2e6;border-radius:14px;padding:30px;text-align:center;color:var(--muted);background:#fbfaff}
+.v41-list{display:grid;gap:8px}
+.v41-list-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:11px;border:1px solid var(--line);border-radius:11px}
+.v41-board{display:grid;grid-template-columns:repeat(4,minmax(210px,1fr));gap:11px;overflow-x:auto}
+.v41-board-col{background:#f7f5fb;border:1px solid #e7e1f2;border-radius:14px;padding:10px;min-height:220px}
+.v41-board-head{display:flex;justify-content:space-between;font-weight:800;font-size:11px;margin-bottom:9px}
+.v41-board-card{background:#fff;border:1px solid var(--line);border-left:4px solid var(--p);border-radius:11px;padding:10px;margin-bottom:8px;cursor:grab}
+.v41-board-card b{font-size:11px}.v41-board-card small{display:block;color:var(--muted);margin-top:4px;font-size:9px}
+.v41-board-drop{min-height:120px}
+.v41-loading{padding:25px;text-align:center;color:var(--muted)}
+@media(max-width:1050px){.v41-class-grid{grid-template-columns:repeat(2,1fr)}.v41-kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){.v41-class-grid,.v41-student-grid{grid-template-columns:1fr}.v41-kpis{grid-template-columns:1fr 1fr}.v41-body{padding:14px 12px 25px}.v41-class-head{padding:15px}.v41-tabs{padding-left:12px;padding-right:12px}.v41-class-head h2{font-size:20px}.v41-activity-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:450px){.v41-kpis{grid-template-columns:1fr}.v41-activity-grid{grid-template-columns:1fr}}
+</style>
+
+<script id="tic-class-center-v41-js">
+(function(){
+  'use strict';
+
+  const escV41 = v => {
+    try { return typeof esc==='function' ? esc(v ?? '') : String(v ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    catch(e){ return String(v ?? ''); }
+  };
+  const fmtV41 = v => {
+    if(!v) return '—';
+    const d = new Date(v);
+    if(Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+  };
+  const fmtDateV41 = v => {
+    if(!v) return '—';
+    const d=new Date(v); if(Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('pt-BR');
+  };
+  const fmtDurationV41 = sec => {
+    sec=Math.max(0,Math.round(Number(sec)||0));
+    const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=sec%60;
+    if(h) return `${h}h ${String(m).padStart(2,'0')}min`;
+    if(m) return `${m}min`;
+    return `${s}s`;
+  };
+  const onlineV41 = last => {
+    if(!last) return false;
+    const ms=Date.now()-new Date(last).getTime();
+    return ms>=0 && ms<=120000;
+  };
+
+  /* ---------- Student activity tracking ---------- */
+  let activityRowV41=null;
+  let activityStudentV41=null;
+  let activityTimerV41=null;
+  let activityLastTickV41=0;
+  let activityAccumV41=0;
+  let activityStartingV41=false;
+
+  async function findStudentForSessionV41(){
+    if(!session?.user?.id) return null;
+    const {data,error}=await sb.from('tic_students')
+      .select('id,teacher_id,auth_user_id,display_name,status')
+      .eq('auth_user_id',session.user.id)
+      .maybeSingle();
+    if(error){ console.warn('[V41 activity]',error.message); return null; }
+    return data||null;
+  }
+
+  async function flushActivityV41(force=false){
+    if(!activityRowV41 || !activityStudentV41) return;
+    const now=Date.now();
+    if(document.visibilityState!=='visible' && !force){
+      return;
+    }
+    if(activityLastTickV41){
+      const delta=Math.max(0,Math.min(120,Math.floor((now-activityLastTickV41)/1000)));
+      if(delta>0) activityAccumV41 += delta;
+    }
+    activityLastTickV41=now;
+    const payload={
+      last_seen_at:new Date(now).toISOString(),
+      duration_seconds:Math.round(activityAccumV41)
+    };
+    const {error}=await sb.from('tic_student_activity').update(payload).eq('id',activityRowV41);
+    if(error) console.warn('[V41 activity flush]',error.message);
+    activityAccumV41=0;
+  }
+
+  async function stopActivityV41(){
+    if(activityTimerV41){clearInterval(activityTimerV41);activityTimerV41=null;}
+    if(activityRowV41){
+      await flushActivityV41(true);
+    }
+    activityRowV41=null;activityStudentV41=null;activityLastTickV41=0;activityAccumV41=0;
+  }
+
+  async function startActivityV41(){
+    if(activityStartingV41 || activityRowV41 || !session?.user?.id) return;
+    activityStartingV41=true;
+    try{
+      const st=await findStudentForSessionV41();
+      if(!st){activityStartingV41=false;return;}
+      activityStudentV41=st;
+      const now=new Date().toISOString();
+      const {data,error}=await sb.from('tic_student_activity').insert({
+        student_id:st.id,
+        auth_user_id:session.user.id,
+        started_at:now,
+        last_seen_at:now,
+        duration_seconds:0,
+        user_agent:navigator.userAgent.slice(0,500)
+      }).select('id').single();
+      if(error){console.warn('[V41 activity start]',error.message);activityStartingV41=false;return;}
+      activityRowV41=data.id;
+      activityLastTickV41=Date.now();
+      activityAccumV41=0;
+      if(activityTimerV41)clearInterval(activityTimerV41);
+      activityTimerV41=setInterval(()=>{ if(document.visibilityState==='visible') flushActivityV41(false); },30000);
+      activityStartingV41=false;
+    }catch(e){
+      console.warn('[V41 activity]',e);
+      activityStartingV41=false;
+    }
+  }
+
+  document.addEventListener('visibilitychange',()=>{
+    if(!activityRowV41) return;
+    if(document.visibilityState==='hidden'){
+      flushActivityV41(true);
+    }else{
+      activityLastTickV41=Date.now();
+    }
+  });
+
+  window.addEventListener('beforeunload',()=>{ try{ flushActivityV41(true); }catch(_){} });
+  window.ticStartStudentActivityV41=startActivityV41;
+  window.ticStopStudentActivityV41=stopActivityV41;
+
+  /* Supabase can fire INITIAL_SESSION after this module loads. */
+  if(window.sb?.auth){
+    sb.auth.onAuthStateChange((event,s)=>{
+      if(s && s.user){
+        setTimeout(()=>{
+          if(profile?.role==='student') startActivityV41();
+        },400);
+      }else{
+        stopActivityV41();
+      }
+    });
+  }
+  setTimeout(()=>{ if(profile?.role==='student' && session?.user?.id) startActivityV41(); },700);
+
+  /* ---------- Activity aggregation for Teacher ---------- */
+  async function getActivityMapV41(studentIds){
+    const ids=[...(new Set(studentIds||[]))].filter(Boolean);
+    const map={};
+    ids.forEach(id=>map[id]={last_login:null,last_seen:null,total_seconds:0,sessions:0});
+    if(!ids.length) return map;
+    const {data,error}=await sb.from('tic_student_activity')
+      .select('id,student_id,started_at,last_seen_at,duration_seconds')
+      .in('student_id',ids)
+      .order('started_at',{ascending:false})
+      .limit(10000);
+    if(error){
+      console.warn('[V41 activity read]',error.message);
+      return map;
+    }
+    (data||[]).forEach(row=>{
+      const x=map[row.student_id]||(map[row.student_id]={last_login:null,last_seen:null,total_seconds:0,sessions:0});
+      x.sessions++;
+      x.total_seconds += Number(row.duration_seconds)||0;
+      if(!x.last_login || new Date(row.started_at)>new Date(x.last_login)) x.last_login=row.started_at;
+      if(!x.last_seen || new Date(row.last_seen_at)>new Date(x.last_seen)) x.last_seen=row.last_seen_at;
+    });
+    return map;
+  }
+  window.ticRefreshStudentActivityV41=async function(studentIds){
+    const map=await getActivityMapV41(studentIds);
+    const s=window.__ticClassCenterV41;
+    if(s?.classId && Array.isArray(s.students)) renderStudentsV41(s.classId,s.students,map);
+    return map;
+  };
+
+  function activityStatusHtmlV41(a){
+    return onlineV41(a?.last_seen)
+      ? '<span class="badge green">🟢 Online</span>'
+      : '<span class="badge gray">⚪ Offline</span>';
+  }
+
+  function renderStudentsV41(classId,students,activityMap){
+    const body=document.getElementById('ticV41StudentsBody');
+    if(!body)return;
+    const rows=(students||[]).map(st=>{
+      const a=activityMap?.[st.id]||{};
+      return `<article class="v41-student-card">
+        <div class="v41-student-top">
+          <span class="v41-student-avatar">👤</span>
+          <div style="min-width:0;flex:1">
+            <b>${escV41(st.display_name||'Aluno')}</b>
+            <small>${escV41(st.current_level||'')} ${st.email?'· '+escV41(st.email):''}</small>
+            <div style="margin-top:6px">${activityStatusHtmlV41(a)}</div>
+          </div>
+        </div>
+        <div class="v41-activity-grid">
+          <div class="v41-activity-box"><span>🕐 Último login</span><b>${fmtV41(a.last_login)}</b></div>
+          <div class="v41-activity-box"><span>👀 Última atividade</span><b>${fmtV41(a.last_seen)}</b></div>
+          <div class="v41-activity-box"><span>⏱️ Tempo ativo</span><b>${fmtDurationV41(a.total_seconds)}</b></div>
+          <div class="v41-activity-box"><span>🔁 Sessões</span><b>${a.sessions||0}</b></div>
+        </div>
+        <div class="v41-student-actions">
+          <button class="btn sm primary" onclick="openClassStudentContent('${classId}','${st.id}')">➕ Conteúdo</button>
+          <button class="btn sm secondary" onclick="openStudentView('${st.id}')">👤 Abrir aluno</button>
+        </div>
+      </article>`;
+    }).join('');
+    body.innerHTML=rows||'<div class="v41-empty">Nenhum aluno ativo nesta Class.</div>';
+  }
+
+  /* ---------- Dedicated Class Center home ---------- */
+  async function classCenterHomeV41(){
+    currentView='classCenter';
+    document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='classCenter'));
+    if(typeof setPage==='function') setPage('Class Center','Gerencie turmas, alunos, conteúdo, Board e atividade em um único workspace.','<button class="btn primary" onclick="openClassForm()">+ Nova Class</button>');
+    const content=$('content');
+    content.innerHTML='<div class="class-center-v41"><div class="v41-loading">Carregando Class Center...</div></div>';
+    const {data:classes,error}=await sb.from('tic_classes').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+    if(error){
+      content.innerHTML=`<div class="card attention"><b>Não foi possível carregar o Class Center.</b><p>${escV41(error.message)}</p><button class="btn primary" onclick="window.classCenterHomeV41()">Tentar novamente</button></div>`;
+      return;
+    }
+    const ids=(classes||[]).map(c=>c.id);
+    let members=[];
+    if(ids.length){
+      const r=await sb.from('tic_class_students').select('class_id,student_id,status').in('class_id',ids);
+      if(!r.error) members=r.data||[];
+    }
+    const counts={}; (members||[]).forEach(m=>{if(m.status==='active')counts[m.class_id]=(counts[m.class_id]||0)+1;});
+    const q=(window.__ticV41ClassSearch||'').toLowerCase().trim();
+    const filtered=(classes||[]).filter(c=>`${c.name||''} ${c.level||''} ${c.schedule_text||''}`.toLowerCase().includes(q));
+    content.innerHTML=`<div class="class-center-v41">
+      <section class="v41-hero"><small>TEACHER COMMAND CENTER</small><h1>🎯 Class Center</h1><p>Um espaço completo para administrar cada turma, seus alunos e o que acontece dentro da Class.</p></section>
+      <div class="v41-kpis">
+        <div class="v41-kpi"><span>🏫 Classes</span><b>${classes?.length||0}</b></div>
+        <div class="v41-kpi"><span>👥 Alunos vinculados</span><b>${members.filter(m=>m.status==='active').length}</b></div>
+        <div class="v41-kpi"><span>🟢 Classes ativas</span><b>${classes.filter(c=>c.status==='active').length}</b></div>
+        <div class="v41-kpi"><span>📚 Níveis</span><b>${new Set(classes.map(c=>c.level).filter(Boolean)).size}</b></div>
+        <div class="v41-kpi"><span>📅 Com horário</span><b>${classes.filter(c=>c.schedule_text).length}</b></div>
+      </div>
+      <div class="v41-toolbar">
+        <input value="${escV41(window.__ticV41ClassSearch||'')}" placeholder="🔎 Buscar Class por nome, nível ou horário..." oninput="window.__ticV41ClassSearch=this.value;window.classCenterHomeV41()">
+        <button class="btn secondary" onclick="openClassForm()">+ Nova Class</button>
+        <button class="btn ghost" onclick="loadView('classes')">📋 Ver lista Classes</button>
+      </div>
+      <div class="v41-class-grid">
+        ${filtered.map(c=>`<article class="v41-class-card">
+          <div><span class="badge blue">${escV41(c.level||'A1')}</span><h3>${escV41(c.name||'Class')}</h3><small>${escV41(c.schedule_text||'Horário não definido')}</small></div>
+          <div class="v41-meta">
+            <div><span>👥 Alunos</span><b>${counts[c.id]||0}</b></div>
+            <div><span>🔗 Aula online</span><b>${c.meeting_url?'Configurada':'Não definida'}</b></div>
+          </div>
+          <div>${c.status==='active'?'<span class="badge green">Ativa</span>':'<span class="badge gray">'+escV41(c.status||'inactive')+'</span>'}</div>
+          <div class="v41-class-actions">
+            <button class="btn sm primary" onclick="openClassCenterV41('${c.id}')">🎯 Abrir Class Center</button>
+            <button class="btn sm secondary" onclick="openClassMembers('${c.id}')">👥 Alunos</button>
+            <button class="btn sm ghost" onclick="openClassFormById('${c.id}')">✏️ Editar</button>
+          </div>
+        </article>`).join('')||'<div class="v41-empty">Nenhuma Class encontrada. Clique em “Nova Class” para criar a primeira.</div>'}
+      </div>
+    </div>`;
+  }
+
+  async function openClassCenterV41(classId,initialTab='overview'){
+    const {data:cls,error}=await sb.from('tic_classes').select('*').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle();
+    if(error||!cls)return toast(error?.message||'Class não encontrada.','error');
+
+    const {data:members,error:memberError}=await sb.from('tic_class_students')
+      .select('student_id,status').eq('class_id',classId);
+    if(memberError)return toast('Não foi possível carregar os alunos da Class: '+memberError.message,'error');
+
+    const activeIds=(members||[]).filter(x=>x.status==='active').map(x=>x.student_id);
+    const [{data:students,error:se},{data:assignments,error:ae},{data:events,error:ee}]=await Promise.all([
+      activeIds.length?sb.from('tic_students').select('id,display_name,current_level,email,status').in('id',activeIds).order('display_name'):Promise.resolve({data:[],error:null}),
+      sb.from('tic_assignments').select('id,title,instructions,due_at,points,assignment_type,active,created_at,task_level,cefr_level,skill,resource_items,class_id').eq('class_id',classId).eq('teacher_id',session.user.id).order('created_at',{ascending:false}),
+      sb.from('tic_events').select('id,title,event_type,starts_at,ends_at,notes,meeting_url,status,created_at').eq('class_id',classId).eq('teacher_id',session.user.id).order('starts_at',{ascending:false})
+    ]);
+    if(se)return toast('Erro ao carregar alunos: '+se.message,'error');
+    if(ae)return toast('Erro ao carregar conteúdo da Class: '+ae.message,'error');
+    if(ee)return toast('Erro ao carregar aulas da Class: '+ee.message,'error');
+
+    /* Board is optional here: if the table/policy has an issue, the rest of Class Center still opens. */
+    let boardItems=[];
+    const br=await sb.from('tic_class_board_items').select('id,title,description,item_type,status,position,source_type,source_id,created_at,updated_at').eq('class_id',classId).eq('teacher_id',session.user.id).order('position').order('created_at');
+    if(!br.error) boardItems=br.data||[];
+
+    window.__ticClassCenterV41={classId,cls,students:students||[],tasks:assignments||[],evs:events||[],boardItems};
+    const tabs=[
+      ['overview','📊 Visão geral'],['board','📌 Board'],['lessons','📚 Aulas'],
+      ['students','👥 Alunos'],['tasks','📝 Tasks'],['materials','🔗 Materiais'],
+      ['resources','🧰 Resources'],['notes','💬 Observações'],['progress','📈 Progresso']
+    ];
+    $('content').innerHTML=`<div class="v41-class-shell" data-v41-class="${escV41(classId)}">
+      <header class="v41-class-head">
+        <div class="v41-class-head-main">
+          <div><span class="badge blue">${escV41(cls.level||'A1')}</span><h2>🎯 ${escV41(cls.name||'Class')}</h2><small>${escV41(cls.schedule_text||'Horário não definido')} · ${cls.meeting_url?'Aula online configurada':'Aula online não definida'}</small></div>
+          <div class="v41-class-head-actions">
+            <button class="btn secondary" onclick="openClassMembers('${classId}')">👥 Alunos</button>
+            <button class="btn primary" onclick="openClassAssign('${classId}')">📤 Atribuir</button>
+            <button class="btn ghost" onclick="openClassFormById('${classId}')">✏️ Editar</button>
+            <button class="btn ghost" onclick="classCenterHomeV41()">← Class Center</button>
+          </div>
+        </div>
+        <div class="v41-tabs">${tabs.map(([id,label])=>`<button data-tab="${id}" class="${initialTab===id?'active':''}" onclick="classCenterTabV41('${classId}','${id}')">${label}</button>`).join('')}</div>
+      </header>
+      <main id="ticV41ClassBody" class="v41-body"><div class="v41-loading">Carregando...</div></main>
+    </div>`;
+    await classCenterTabV41(classId,initialTab);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function boardHtmlV41(s){
+    const tasks=s.tasks||[], items=s.boardItems||[];
+    const statusMap=new Map(items.map(x=>[x.source_id,x.status]));
+    const cols=[['planned','📋 Planejado'],['doing','🔵 Em andamento'],['review','🟡 Revisão'],['done','🟢 Concluído']];
+    const fallback=t=>t.active===false?'done':'planned';
+    return `<div class="v41-board">${cols.map(([key,label])=>{
+      const list=tasks.filter(t=>(statusMap.get(t.id)||fallback(t))===key);
+      return `<section class="v41-board-col" data-v41-board="${key}" ondragover="event.preventDefault();this.style.background='#eee8fb'" ondragleave="this.style.background=''" ondrop="ticV41BoardDrop(event,'${key}')">
+        <div class="v41-board-head"><span>${label}</span><span>${list.length}</span></div>
+        <div class="v41-board-drop">${list.map(t=>`<article class="v41-board-card" draggable="true" ondragstart="ticV41BoardStart(event,'${t.id}')"><b>${escV41(t.title)}</b><small>${escV41(t.assignment_type||'task')}${t.cefr_level?' · '+escV41(t.cefr_level):''}</small></article>`).join('')||'<div class="v41-empty">Solte aqui</div>'}</div>
+      </section>`;
+    }).join('')}</div>`;
+  }
+
+  window.ticV41BoardStart=(e,id)=>{window.__ticV41Drag=id;try{e.dataTransfer.setData('text/plain',id);e.dataTransfer.effectAllowed='move'}catch(_){}};
+  window.ticV41BoardDrop=async(e,status)=>{
+    e.preventDefault();
+    const id=e.dataTransfer?.getData('text/plain')||window.__ticV41Drag;
+    const s=window.__ticClassCenterV41||{};
+    if(!id||!s.classId)return;
+    const task=(s.tasks||[]).find(x=>x.id===id);if(!task)return;
+    const map={planned:'planned',doing:'doing',review:'review',done:'done'};
+    const newStatus=map[status];if(!newStatus)return;
+    const existing=(s.boardItems||[]).find(x=>x.source_id===id);
+    let r;
+    if(existing){
+      r=await sb.from('tic_class_board_items').update({status:newStatus,updated_at:new Date().toISOString()}).eq('id',existing.id).eq('teacher_id',session.user.id);
+    }else{
+      r=await sb.from('tic_class_board_items').insert({teacher_id:session.user.id,class_id:s.classId,title:task.title,description:task.instructions||null,item_type:task.assignment_type||'task',status:newStatus,position:Date.now(),source_type:'assignment',source_id:id});
+    }
+    if(r.error)return toast('Não foi possível salvar o Board: '+r.error.message,'error');
+    await openClassCenterV41(s.classId,'board');
+  };
+
+  async function classCenterTabV41(classId,tab){
+    const s=window.__ticClassCenterV41||{};
+    if(s.classId!==classId)return;
+    const body=document.getElementById('ticV41ClassBody');if(!body)return;
+    document.querySelectorAll('.v41-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+    const tasks=s.tasks||[],evs=s.evs||[],students=s.students||[],cls=s.cls||{};
+    const kpis=`<div class="v41-kpis">
+      <div class="v41-kpi"><span>👥 Alunos</span><b>${students.length}</b></div>
+      <div class="v41-kpi"><span>📝 Conteúdos</span><b>${tasks.length}</b></div>
+      <div class="v41-kpi"><span>📚 Aulas</span><b>${evs.length}</b></div>
+      <div class="v41-kpi"><span>🧰 Resources</span><b>${tasks.reduce((n,t)=>n+(Array.isArray(t.resource_items)?t.resource_items.length:0),0)}</b></div>
+      <div class="v41-kpi"><span>📅 Nível</span><b>${escV41(cls.level||'—')}</b></div>
+    </div>`;
+
+    if(tab==='overview'){
+      body.innerHTML=kpis+`<div class="v41-panel"><h3>📊 Resumo da Class</h3><p>O conteúdo abaixo pertence à Class e permanece registrado mesmo quando ainda não existem alunos ativos.</p>${boardHtmlV41(s)}</div>
+      <div class="v41-panel"><h3>🕐 Últimas atividades</h3><div class="v41-list">${[...evs.map(x=>({...x,_date:x.starts_at||x.created_at})),...tasks.map(x=>({...x,_date:x.created_at,event_type:'content'}))].sort((a,b)=>new Date(b._date||0)-new Date(a._date||0)).slice(0,8).map(x=>`<div class="v41-list-row"><div><b>${escV41(x.title||'Registro')}</b><small>${escV41(x.event_type||'atividade')}</small></div><small>${fmtV41(x._date)}</small></div>`).join('')||'<div class="v41-empty">Nenhum registro ainda.</div>'}</div></div>`;
+      return;
+    }
+    if(tab==='board'){
+      body.innerHTML=kpis+`<div class="v41-panel"><h3>📌 Board da Class</h3><p>Arraste os conteúdos entre as colunas. O status é salvo no Supabase.</p>${boardHtmlV41(s)}</div>`;
+      return;
+    }
+    if(tab==='lessons'){
+      body.innerHTML=kpis+`<div class="v41-panel"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3>📚 Aulas</h3><p>Registre aulas ministradas e próximas aulas.</p></div><button class="btn primary" onclick="openClassLessonForm('${classId}')">+ Registrar aula</button></div><div class="v41-list">${evs.map(e=>`<div class="v41-list-row"><div><b>${escV41(e.title)}</b><small>${escV41(e.event_type||'aula')} · ${escV41(e.notes||'')}</small></div><small>${fmtV41(e.starts_at||e.created_at)}</small></div>`).join('')||'<div class="v41-empty">Nenhuma aula registrada.</div>'}</div></div>`;
+      return;
+    }
+    if(tab==='students'){
+      body.innerHTML=kpis+`<div class="v41-panel"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3>👥 Alunos da Class</h3><p>Veja último login, última atividade e tempo ativo. A Class pode existir sem alunos.</p></div><button class="btn primary" onclick="openClassMembers('${classId}')">👥 Gerenciar alunos</button></div><div id="ticV41StudentsBody" class="v41-student-grid" style="margin-top:14px"><div class="v41-loading">Carregando atividade...</div></div></div>`;
+      const activity=await getActivityMapV41(students.map(x=>x.id));
+      renderStudentsV41(classId,students,activity);
+      return;
+    }
+    if(tab==='tasks'){
+      body.innerHTML=kpis+`<div class="v41-panel"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3>📝 Tasks / Conteúdos</h3><p>Registro de tudo que foi publicado nesta Class.</p></div><button class="btn primary" onclick="openClassAssign('${classId}')">📤 Atribuir conteúdo</button></div><div class="v41-list">${tasks.map(t=>`<div class="v41-list-row"><div><b>${escV41(t.title)}</b><small>${escV41(t.assignment_type||'task')} ${t.skill?'· '+escV41(t.skill):''} ${t.cefr_level?'· '+escV41(t.cefr_level):''}</small></div><small>${t.due_at?'Prazo '+fmtV41(t.due_at):'Sem prazo'}</small></div>`).join('')||'<div class="v41-empty">Nenhum conteúdo registrado nesta Class.</div>'}</div></div>`;
+      return;
+    }
+    if(tab==='materials'){
+      const resources=tasks.flatMap(t=>(Array.isArray(t.resource_items)?t.resource_items:[]).map(r=>({...r,_task:t.title})));
+      body.innerHTML=kpis+`<div class="v41-panel"><h3>🔗 Materiais</h3><p>Recursos preservados dentro das atribuições da Class.</p><div class="v41-list">${resources.map(r=>`<div class="v41-list-row"><div><b>${escV41(r.title||'Recurso')}</b><small>${escV41(r.type||'link')} · ${escV41(r._task)}</small></div>${r.url||r.link?`<a class="btn sm secondary" href="${escV41(r.url||r.link)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}</div>`).join('')||'<div class="v41-empty">Nenhum material encontrado.</div>'}</div></div>`;
+      return;
+    }
+    if(tab==='resources'){
+      body.innerHTML=kpis+`<div class="v41-panel"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3>🧰 Resources</h3><p>Biblioteca reutilizável e publicação na Class.</p></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn primary" onclick="openResourceFormV39('${classId}')">+ Novo resource</button><button class="btn secondary" onclick="openResourcePickerV39('${classId}')">📚 Inserir existente</button></div></div><div id="classResourceListV39" class="resource-grid-v39"><div class="v41-loading">Carregando...</div></div></div>`;
+      if(typeof loadClassResourcesV39==='function') loadClassResourcesV39(classId);
+      return;
+    }
+    if(tab==='notes'){
+      body.innerHTML=kpis+`<div class="v41-panel"><h3>💬 Observações</h3><p>Use Feedback & Corrections para registrar devolutivas. As observações de aula aparecem na aba Aulas.</p><button class="btn primary" onclick="openClassSubmissions('${classId}')">📝 Feedback & Corrections</button></div>`;
+      return;
+    }
+    if(tab==='progress'){
+      body.innerHTML=kpis+`<div class="v41-panel"><h3>📈 Progresso</h3><p>Acompanhe o progresso dos alunos atualmente vinculados.</p><button class="btn primary" onclick="openClassProgress('${classId}')">Abrir progresso</button></div>`;
+      return;
+    }
+  }
+
+  window.classCenterHomeV41=classCenterHomeV41;
+  window.openClassCenterV41=openClassCenterV41;
+  window.classCenterTabV41=classCenterTabV41;
+
+  /* Make the new sidebar item functional without disturbing the existing router. */
+  const previousLoadViewV41=window.loadView;
+  window.loadView=async function(v){
+    if(v==='classCenter') return classCenterHomeV41();
+    return previousLoadViewV41(v);
+  };
+
+  /* Keep existing Class Center buttons working, but route them to the corrected workspace. */
+  window.openClassCenter=openClassCenterV41;
+  window.classCenterTab=classCenterTabV41;
+
+  /* ---------- Fix: Class-level assignment must work with ZERO active students ---------- */
+  window.assignClassContentV41=async function(classId,type){
+    const selected=[...($('caSource')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
+    const sourceIds=selected.length?selected:($('caSource')?.value?[ $('caSource').value ]:[]);
+    if(!sourceIds.length)return toast(type==='material'?'Selecione pelo menos um material.':'Selecione um conteúdo.','error');
+
+    const sourceType=type==='plan'?'lesson':type;
+    const table=sourceType==='lesson'?'tic_lessons':'tic_materials';
+    let created=0,distributed=0;
+
+    const {data:members,error:me}=await sb.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active');
+    if(me)return toast('Não foi possível ler os alunos da Class: '+me.message,'error');
+    const studentIds=[...new Set((members||[]).map(x=>x.student_id).filter(Boolean))];
+
+    for(const sourceId of sourceIds){
+      const {data:source,error:se}=await sb.from(table).select('*').eq('id',sourceId).eq('teacher_id',session.user.id).maybeSingle();
+      if(se||!source){toast(`Conteúdo não encontrado: ${sourceId}`,'error');continue;}
+
+      const payload={
+        teacher_id:session.user.id,
+        lesson_id:sourceType==='lesson'?source.id:null,
+        class_id:classId,
+        title:source.title,
+        instructions:$('caMessage')?.value.trim()||source.description||source.content||'',
+        assignment_type:type==='plan'?'lesson_plan':sourceType==='lesson'?'lesson':'material',
+        due_at:$('caDue')?.value?new Date($('caDue').value).toISOString():null,
+        points:Number($('caPoints')?.value||0),
+        priority:'normal',
+        resource_items:Array.isArray(source.resource_items)?source.resource_items:[],
+        cover_image_url:source.cover_image_url||null,
+        source_type:type==='plan'?'lesson_plan':sourceType,
+        source_id:source.id
+      };
+      const {data:a,error:ae}=await sb.from('tic_assignments').insert(payload).select().single();
+      if(ae){toast(`Não foi possível registrar ${source.title}: ${ae.message}`,'error');continue;}
+      created++;
+      if(studentIds.length){
+        const rows=studentIds.map(student_id=>({assignment_id:a.id,student_id,status:'pending',active:true}));
+        const {error:te}=await sb.from('tic_task_assignments').insert(rows);
+        if(te){
+          await sb.from('tic_assignments').delete().eq('id',a.id);
+          toast(`${source.title} foi criado, mas não foi possível distribuir aos alunos: ${te.message}`,'error');
+          created--; continue;
+        }
+        distributed+=studentIds.length;
+      }
+    }
+
+    if(!created)return;
+    closeModal();
+    const message=studentIds.length
+      ? `${created} conteúdo(s) registrado(s) na Class e disponibilizado(s) para ${distributed} vínculo(s).`
+      : `${created} conteúdo(s) registrado(s) na Class. A Class está sem alunos ativos; quando alunos forem vinculados, o conteúdo continuará registrado na turma.`;
+    toast(message,'success');
+    setTimeout(()=>openClassCenterV41(classId,type==='material'?'materials':'overview'),250);
+  };
+
+  window.assignExistingTaskToClassV41=async function(classId){
+    const assignmentId=$('caSource')?.value;
+    if(!assignmentId)return toast('Selecione uma tarefa.','error');
+    const {data:task,error:te}=await sb.from('tic_assignments').select('id,title,class_id').eq('id',assignmentId).eq('teacher_id',session.user.id).maybeSingle();
+    if(te||!task)return toast('Tarefa não encontrada.','error');
+
+    const {data:members,error:me}=await sb.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active');
+    if(me)return toast(me.message,'error');
+    const ids=[...new Set((members||[]).map(x=>x.student_id).filter(Boolean))];
+    if(!ids.length){
+      const r=await sb.from('tic_assignments').update({class_id:classId}).eq('id',assignmentId).eq('teacher_id',session.user.id);
+      if(r.error)return toast('Não foi possível registrar a tarefa na Class: '+r.error.message,'error');
+      closeModal();toast('Tarefa registrada na Class, mesmo sem alunos ativos.','success');
+      setTimeout(()=>openClassCenterV41(classId,'tasks'),250);
+      return;
+    }
+    const {data:existing}=await sb.from('tic_task_assignments').select('student_id').eq('assignment_id',assignmentId).in('student_id',ids);
+    const have=new Set((existing||[]).map(x=>x.student_id));
+    const rows=ids.filter(id=>!have.has(id)).map(student_id=>({assignment_id:assignmentId,student_id,status:'pending',active:true}));
+    if(rows.length){
+      const r=await sb.from('tic_task_assignments').insert(rows);
+      if(r.error)return toast(r.error.message,'error');
+    }
+    await sb.from('tic_assignments').update({class_id:classId}).eq('id',assignmentId).eq('teacher_id',session.user.id);
+    closeModal();toast(`Tarefa registrada na Class e vinculada a ${rows.length} aluno(s).`,'success');
+    setTimeout(()=>openClassCenterV41(classId,'tasks'),250);
+  };
+
+  /* Replace the existing functions used by the Class Center assignment UI. */
+  window.assignClassContent=window.assignClassContentV41;
+  window.assignExistingTaskToClass=window.assignExistingTaskToClassV41;
+
+  /* ---------- Fix: member management reactivates existing rows instead of inserting duplicates ---------- */
+  window.saveClassMembers=async function(e,classId){
+    e.preventDefault();
+    const ids=[...($('cmStudents')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
+    const {data:old,error:oe}=await sb.from('tic_class_students').select('id,student_id,status').eq('class_id',classId);
+    if(oe)return toast('Não foi possível ler os vínculos: '+oe.message,'error');
+    const wanted=new Set(ids);
+    const oldMap=new Map((old||[]).map(x=>[x.student_id,x]));
+    const remove=(old||[]).filter(x=>!wanted.has(x.student_id)&&x.status==='active').map(x=>x.id);
+    if(remove.length){
+      const r=await sb.from('tic_class_students').update({status:'inactive'}).in('id',remove);
+      if(r.error)return toast('Não foi possível atualizar vínculos: '+r.error.message,'error');
+    }
+    for(const id of ids){
+      const existing=oldMap.get(id);
+      if(existing){
+        if(existing.status!=='active'){
+          const r=await sb.from('tic_class_students').update({status:'active'}).eq('id',existing.id);
+          if(r.error)return toast('Não foi possível reativar aluno: '+r.error.message,'error');
+        }
+      }else{
+        const r=await sb.from('tic_class_students').insert({class_id:classId,student_id:id,status:'active'});
+        if(r.error)return toast('Não foi possível adicionar aluno: '+r.error.message,'error');
+      }
+    }
+    closeModal();
+    toast('Alunos da Class atualizados.','success');
+    if(document.querySelector(`[data-v41-class="${classId}"]`)) setTimeout(()=>openClassCenterV41(classId,'students'),200);
+    else if(currentView==='classCenter') setTimeout(()=>classCenterHomeV41(),200);
+    else loadView('classes');
+  };
+
+  /* Start/restart tracker when Teacher/student session changes. */
+  window.addEventListener('focus',()=>{if(profile?.role==='student'&&!activityRowV41)startActivityV41();});
 })();
 </script>
