@@ -3253,24 +3253,30 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   };
 
   window.assignResourceAudienceV39=async function(classId,materialId){
-    const mode=$('r39Audience')?.value||'class'; let studentIds=[];
-    if(mode==='students')studentIds=[...($('r39Students')?.selectedOptions||[])].map(x=>x.value);
-    else {const {data}=await sb.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active');studentIds=[...(data||[])].map(x=>x.student_id);}
-    if(!studentIds.length)return toast('Selecione pelo menos um aluno.','error');
+    const mode=$('r39Audience')?.value||'class'; let studentIds=null;
+    if(mode==='students'){
+      studentIds=[...($('r39Students')?.selectedOptions||[])].map(x=>x.value).filter(Boolean);
+      if(!studentIds.length)return toast('Selecione pelo menos um aluno.','error');
+    }
+    /* 'class' means publish to the Class itself. It must work even when the Class has zero active students. */
     await assignResourceMaterialToClassV39(classId,materialId,studentIds); closeModal();
   };
 
   async function assignResourceMaterialToClassV39(classId,materialId,studentIds=null){
     const {data:source,error:se}=await sb.from('tic_materials').select('*').eq('id',materialId).eq('teacher_id',session.user.id).maybeSingle();
     if(se||!source)return toast('Resource não encontrado.','error');
-    if(!studentIds){const {data}=await sb.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active');studentIds=(data||[]).map(x=>x.student_id);}
-    if(!studentIds.length)return toast('A Class não possui alunos ativos.','error');
     const payload={teacher_id:session.user.id,class_id:classId,title:source.title,instructions:source.description||'',assignment_type:'material',due_at:null,points:0,priority:'normal',resource_items:Array.isArray(source.resource_items)?source.resource_items:[],cover_image_url:source.cover_image_url||null,source_type:'material',source_id:source.id};
     const {data:a,error:ae}=await sb.from('tic_assignments').insert(payload).select().single();
     if(ae)return toast('Não foi possível inserir na Class: '+ae.message,'error');
-    const {error:te}=await sb.from('tic_task_assignments').insert(studentIds.map(student_id=>({assignment_id:a.id,student_id,status:'pending'})));
-    if(te){await sb.from('tic_assignments').delete().eq('id',a.id);return toast('Não foi possível disponibilizar para os alunos: '+te.message,'error');}
-    toast(`Resource “${source.title}” disponibilizado para ${studentIds.length} aluno(s).`,'success');
+
+    /* If studentIds is null, the content belongs to the Class and will be visible to students
+       who are linked to it now or later. No student row is required at creation time. */
+    if(Array.isArray(studentIds) && studentIds.length){
+      const {error:te}=await sb.from('tic_task_assignments').insert(studentIds.map(student_id=>({assignment_id:a.id,student_id,status:'pending'})));
+      if(te){await sb.from('tic_assignments').delete().eq('id',a.id);return toast('Não foi possível disponibilizar para os alunos: '+te.message,'error');}
+    }
+    const count=Array.isArray(studentIds)?studentIds.length:0;
+    toast(count?`Resource “${source.title}” disponibilizado para ${count} aluno(s).`:`Resource “${source.title}” registrado na Class. Os alunos vinculados posteriormente também poderão vê-lo.`, 'success');
     if(document.querySelector(`.class-center-shell[data-class-center="${classId}"]`))setTimeout(()=>openClassCenter(classId,'resources'),250);
   }
   window.assignResourceMaterialToClassV39=assignResourceMaterialToClassV39;
