@@ -266,6 +266,19 @@ body{overflow:hidden;}
  .agenda-tabs,.class-center-tabs{top:0;}
 }
 </style>
+<style id="tic-student-class-v1">
+.student-class-page{width:100%;min-height:100%;}
+.student-class-switcher{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:16px;padding:20px 22px;}
+.student-class-switcher h2{margin:5px 0 3px;font:800 23px 'Plus Jakarta Sans';}
+.student-class-switcher p{margin:0;color:var(--muted);font-size:12px;}
+.student-class-select{min-width:240px;padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);font-weight:700;}
+.student-class-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px;}
+.student-class-kpis .card{padding:15px 17px;}.student-class-kpis span{display:block;color:var(--muted);font-size:11px}.student-class-kpis b{display:block;font:800 23px 'Plus Jakarta Sans';margin-top:7px;}
+.student-class-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+.student-class-grid>.card{min-width:0;}.student-class-next{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--line);border-radius:13px;padding:15px;background:#fbfaff}.student-class-next b{display:block}.student-class-next span{display:block;color:var(--muted);font-size:11px;margin-top:4px}.student-class-summary{margin:12px 0 0;color:var(--muted);font-size:12px;line-height:1.55}
+.student-class-resource,.student-class-session,.student-class-board-item{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}.student-class-resource:last-child,.student-class-session:last-child,.student-class-board-item:last-child{border-bottom:0}.student-class-resource>span:nth-child(2),.student-class-session>div,.student-class-board-item>div{flex:1;min-width:0}.student-class-resource b,.student-class-session b,.student-class-board-item b{display:block;font-size:12px}.student-class-resource small,.student-class-session small,.student-class-board-item small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.resource-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:9px;background:#f0ebff;flex:0 0 32px}.student-class-resource>span:last-child{color:var(--p);font-weight:900}.student-class-board-card{grid-column:1/-1}.student-class-board-item{border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:8px}.student-class-board-item:last-child{margin-bottom:0}
+@media(max-width:800px){.student-class-switcher{align-items:flex-start;flex-direction:column}.student-class-select{width:100%;min-width:0}.student-class-kpis{grid-template-columns:1fr 1fr}.student-class-grid{grid-template-columns:1fr}.student-class-board-card{grid-column:auto}}
+</style>
 </head>
 <body>
 
@@ -478,6 +491,7 @@ async function boot(){
   $('teacherNav').innerHTML=`<div class="nav-label">My Learning</div>
   <button class="active" data-view="student">🏠 <span>My Dashboard</span></button>
   <button data-view="studentCourses">📚 <span>My Courses</span></button>
+  <button data-view="studentClass">🏫 <span>My Class</span></button>
   <button data-view="studentTasks">✅ <span>My Tasks</span></button>
   <button data-view="studentProgress">📊 <span>My Progress</span></button>
   <button data-view="studentLessons">📚 <span>My Lessons</span></button>
@@ -515,6 +529,7 @@ async function loadView(v){
  settings:['Settings','Perfil e configurações da plataforma.',''],
  student:['Student Dashboard','Seu espaço de aprendizagem.',''],
  studentCourses:['My Courses','Seus cursos, módulos e currículo.',''],
+ studentClass:['My Class','Sua turma, aulas, materiais e atividades.',''],
  studentTasks:['My Tasks','Atividades atribuídas pelo Teacher.',''],
  studentProgress:['My Progress','Seu desenvolvimento.',''],
  studentLessons:['My Lessons','Aulas disponíveis para você.',''],
@@ -541,6 +556,7 @@ async function loadView(v){
  if(v==='settings')return settingsPage();
  if(v==='student')return studentDashboard();
  if(v==='studentCourses')return studentCoursesPage();
+ if(v==='studentClass')return studentClassPage();
  if(v==='studentTasks')return studentTasks();
  if(v==='studentLessons')return studentLessons();
 }
@@ -1060,6 +1076,53 @@ async function submitTaskWork(e,taskAssignmentId){e.preventDefault();const s=awa
  const r=await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',taskAssignmentId).eq('student_id',s.id);if(r.error)return toast('Entrega enviada, mas não foi possível atualizar o status: '+r.error.message,'error');toast(`Tentativa ${attempt} enviada para o Teacher. A tarefa continua ativa.`,'success');loadView('studentTasks');
 }
 
+async function studentClassPage(){
+  const s=await studentRecord();
+  if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno pelo Teacher.</div>';return}
+  setPage('My Class','Sua turma, aulas, materiais e atividades.');
+  const {data:members,error:me}=await sb.from('tic_class_students').select('class_id,status').eq('student_id',s.id).eq('status','active');
+  if(me){$('content').innerHTML=`<div class="card attention">Não foi possível carregar suas turmas: ${esc(me.message)}</div>`;return}
+  const ids=[...(members||[]).map(x=>x.class_id).filter(Boolean)];
+  if(!ids.length){$('content').innerHTML=`<div class="card empty" style="padding:42px 20px"><div style="font-size:38px">🏫</div><h2 style="margin:10px 0 5px">Você ainda não está em uma turma</h2><p>Quando o Teacher adicionar você a uma Class, ela aparecerá aqui com aulas, materiais, atividades e próximos encontros.</p></div>`;return}
+  const [{data:classes},{data:sessions},{data:boards},{data:links},{data:tasks}]=await Promise.all([
+    sb.from('tic_classes').select('id,name,level,schedule_text,meeting_url,status,course_id').in('id',ids).eq('status','active').order('name'),
+    sb.from('tic_class_sessions').select('id,class_id,session_date,duration_minutes,lesson_title,summary,status').in('class_id',ids).order('session_date',{ascending:false}).limit(50),
+    sb.from('tic_class_board_items').select('id,class_id,title,description,item_type,status,position,source_type,source_id,created_at,updated_at').in('class_id',ids).order('position').order('created_at',{ascending:false}).limit(100),
+    sb.from('tic_class_material_links').select('id,class_id,title,url,material_type,note,position,created_at,updated_at').in('class_id',ids).order('position').order('created_at',{ascending:false}).limit(100),
+    sb.from('tic_task_assignments').select('id,assignment_id,status,due_at,active').eq('student_id',s.id).eq('active',true).order('due_at',{ascending:true}).limit(50)
+  ]);
+  const classMap=new Map((classes||[]).map(c=>[c.id,c]));
+  const activeClasses=(classes||[]).filter(c=>ids.includes(c.id));
+  const allTasks=(tasks||[]).filter(t=>t.assignment_id);
+  let assignments=[];
+  if(allTasks.length){const {data:a}=await sb.from('tic_assignments').select('id,title,due_at,assignment_type,skill,cefr_level,class_id').in('id',allTasks.map(x=>x.assignment_id));assignments=(a||[]).map(a=>({...a,ta:allTasks.find(t=>t.assignment_id===a.id)}));}
+  let selected=activeClasses[0]?.id||'';
+  const render=()=>{
+    const c=classMap.get(selected)||activeClasses[0]; if(!c)return;
+    selected=c.id;
+    const cs=(sessions||[]).filter(x=>x.class_id===c.id).sort((a,b)=>new Date(b.session_date)-new Date(a.session_date));
+    const upcoming=cs.filter(x=>new Date(x.session_date)>=new Date()).sort((a,b)=>new Date(a.session_date)-new Date(b.session_date))[0];
+    const past=cs.filter(x=>new Date(x.session_date)<new Date()).slice(0,6);
+    const ml=(links||[]).filter(x=>x.class_id===c.id);
+    const bi=(boards||[]).filter(x=>x.class_id===c.id);
+    const myTasks=assignments.filter(x=>{const t=x.ta;return t && (t.class_id===c.id || bi.some(b=>b.source_type==='assignment'&&b.source_id===x.id));});
+    const fmt=x=>x?new Date(x).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';
+    const statusLabel=x=>({scheduled:'Agendada',completed:'Concluída',cancelled:'Cancelada',rescheduled:'Reagendada'})[x]||x||'—';
+    $('content').innerHTML=`<div class="student-class-page">
+      <div class="student-class-switcher card"><div><span class="eyebrow">MY CLASS</span><h2>🏫 ${esc(c.name)}</h2><p>${esc(c.level||'')} ${c.schedule_text?'· '+esc(c.schedule_text):''}</p></div><select id="studentClassSelect" class="student-class-select">${activeClasses.map(x=>`<option value="${x.id}" ${x.id===c.id?'selected':''}>${esc(x.name)} · ${esc(x.level||'')}</option>`).join('')}</select></div>
+      <div class="student-class-kpis"><div class="card"><span>📚 Aulas registradas</span><b>${cs.length}</b></div><div class="card"><span>🔗 Materiais</span><b>${ml.length}</b></div><div class="card"><span>📝 Atividades</span><b>${myTasks.length}</b></div><div class="card"><span>📌 Status</span><b>${esc(statusLabel(c.status))}</b></div></div>
+      <div class="student-class-grid">
+        <section class="card"><div class="section-head"><h2>📅 Próxima aula</h2>${c.meeting_url?`<a class="btn sm primary" href="${esc(c.meeting_url)}" target="_blank" rel="noopener">Entrar na aula ↗</a>`:''}</div>${upcoming?`<div class="student-class-next"><div><b>${esc(upcoming.lesson_title||'Aula')}</b><span>${fmt(upcoming.session_date)} · ${upcoming.duration_minutes||'—'} min</span></div><span class="badge blue">${esc(statusLabel(upcoming.status))}</span></div>${upcoming.summary?`<p class="student-class-summary">${esc(upcoming.summary)}</p>`:''}`:'<div class="empty">Nenhuma próxima aula registrada.</div>'}</section>
+        <section class="card"><div class="section-head"><h2>🔗 Materiais da turma</h2><span class="badge blue">${ml.length}</span></div>${ml.map(x=>`<a class="student-class-resource" href="${esc(x.url)}" target="_blank" rel="noopener"><span class="resource-icon">${x.material_type==='video'?'🎬':x.material_type==='audio'?'🎧':x.material_type==='pdf'?'📄':'🔗'}</span><span><b>${esc(x.title)}</b><small>${esc(x.material_type||'link')}${x.note?' · '+esc(x.note):''}</small></span><span>↗</span></a>`).join('')||'<div class="empty">Nenhum material compartilhado nesta turma.</div>'}</section>
+        <section class="card"><div class="section-head"><h2>📝 Atividades da turma</h2><span class="badge yellow">${myTasks.length}</span></div>${myTasks.map(x=>`<div class="row"><div><b>${esc(x.title||'Atividade')}</b><small>${x.due_at?'Prazo '+fmt(x.due_at):'Sem prazo'} · ${esc(x.skill||'')}</small></div>${badge(x.ta?.status||'pending')}</div>`).join('')||'<div class="empty">Nenhuma atividade vinculada.</div>'}</section>
+        <section class="card"><div class="section-head"><h2>📚 Aulas anteriores</h2><span class="badge green">${past.length}</span></div>${past.map(x=>`<div class="student-class-session"><div><b>${esc(x.lesson_title||'Aula')}</b><small>${fmt(x.session_date)} · ${x.duration_minutes||'—'} min</small></div><span class="badge ${x.status==='completed'?'green':'blue'}">${esc(statusLabel(x.status))}</span></div>`).join('')||'<div class="empty">Nenhuma aula anterior registrada.</div>'}</section>
+        <section class="card student-class-board-card"><div class="section-head"><h2>📌 Conteúdos da turma</h2><span class="badge blue">${bi.length}</span></div>${bi.map(x=>`<div class="student-class-board-item"><div><b>${esc(x.title)}</b><small>${esc(x.description||'')}${x.item_type?' · '+esc(x.item_type):''}</small></div><span class="badge ${x.status==='completed'?'green':x.status==='in_progress'?'yellow':'blue'}">${esc(statusLabel(x.status))}</span></div>`).join('')||'<div class="empty">Nenhum conteúdo publicado ainda.</div>'}</section>
+      </div>
+    </div>`;
+    $('studentClassSelect')?.addEventListener('change',e=>{selected=e.target.value;render();});
+  };
+  render();
+}
 async function studentLessons(){
  const s=await studentRecord();if(!s){$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}
  const {data:enrollments,error:ee}=await sb.from('tic_course_students').select('course_id,status,enrolled_at,completed_at').eq('student_id',s.id).eq('status','active').order('enrolled_at',{ascending:false});
