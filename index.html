@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Teacher Platform · V42 Student Dashboard</title>
+<title>Teacher Platform · V43 Student Dashboard Clean</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
@@ -4158,5 +4158,263 @@ right:-70px;top:-100px;background:rgba(255,255,255,.08);box-shadow:0 0 0 45px rg
 
   /* New Dashboard becomes the default student home; My Class remains intact. */
   window.studentDashboard=window.studentDashboardV42;
+})();
+</script>
+
+
+
+<style id="tic-student-dashboard-v43-clean">
+/* V43 — clean, separated Student Dashboard.
+   Existing platform/features remain untouched; this only replaces the student home view. */
+.s43{--s43p:#5b2bbd;--s43bg:#f7f5fb;--s43line:#e9e4f1}
+.s43-hero{background:linear-gradient(135deg,#45219a,#6940d2 62%,#7d59e4);color:#fff;border-radius:22px;padding:25px 27px;margin-bottom:16px;position:relative;overflow:hidden;box-shadow:0 15px 40px rgba(72,38,154,.16)}
+.s43-hero:after{content:"";position:absolute;width:250px;height:250px;border-radius:50%;right:-75px;top:-115px;background:rgba(255,255,255,.08);box-shadow:0 0 0 50px rgba(255,255,255,.025)}
+.s43-hero>*{position:relative;z-index:1}.s43-kicker{font-size:10px;letter-spacing:.16em;font-weight:800;opacity:.72;text-transform:uppercase}
+.s43-hero h2{margin:7px 0 4px;font:800 27px 'Plus Jakarta Sans'}.s43-hero p{margin:0;font-size:11px;opacity:.88}
+.s43-progress{height:8px;background:rgba(255,255,255,.22);border-radius:99px;overflow:hidden;margin-top:16px}.s43-progress i{display:block;height:100%;background:#fff;border-radius:99px}
+.s43-progress-label{margin-top:7px!important;font-size:10px!important}
+.s43-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.s43-stat{background:#fff;border:1px solid var(--s43line);border-radius:17px;padding:15px 17px}
+.s43-stat span{display:block;color:var(--muted);font-size:10px}.s43-stat b{display:block;font:800 23px 'Plus Jakarta Sans';margin-top:5px}.s43-stat small{display:block;color:var(--muted);font-size:9px;margin-top:3px}
+.s43-main{background:#fff;border:1px solid var(--s43line);border-radius:18px;overflow:hidden}
+.s43-tabs{display:flex;gap:6px;padding:9px;background:#f4f1f9;border-bottom:1px solid var(--s43line);overflow:auto}
+.s43-tabs button{border:0;background:transparent;color:#6e667a;border-radius:10px;padding:10px 13px;font-size:10px;font-weight:800;white-space:nowrap;cursor:pointer}
+.s43-tabs button.active{background:#fff;color:var(--s43p);box-shadow:0 3px 12px rgba(61,33,112,.08)}
+.s43-pane{display:none;padding:20px}.s43-pane.active{display:block}
+.s43-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}.s43-head h2{font:800 17px 'Plus Jakarta Sans';margin:0}.s43-head p{margin:4px 0 0;color:var(--muted);font-size:10px}
+.s43-list{border:1px solid var(--s43line);border-radius:14px;overflow:hidden;background:#fff}
+.s43-item{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid #eeeaf3}.s43-item:last-child{border-bottom:0}
+.s43-icon{width:39px;height:39px;border-radius:11px;background:#f0ebff;display:grid;place-items:center;flex:0 0 39px;font-size:17px}
+.s43-copy{min-width:0;flex:1}.s43-copy b{display:block;font-size:12px}.s43-copy small{display:block;color:var(--muted);font-size:9px;margin-top:3px}
+.s43-action{flex:0 0 auto}.s43-empty{padding:35px 18px;text-align:center;color:var(--muted);font-size:11px;border:1px dashed #ddd5ea;border-radius:13px;background:#fcfbfe}
+.s43-session{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:13px;align-items:center;padding:14px;border-bottom:1px solid #eeeaf3}.s43-session:last-child{border-bottom:0}
+.s43-date{width:54px;height:54px;border-radius:13px;background:#f0ebff;color:var(--s43p);display:grid;place-items:center;text-align:center;font-weight:800;line-height:1.05}.s43-date b{font-size:17px}.s43-date small{font-size:8px;text-transform:uppercase}
+.s43-session b{font-size:12px}.s43-session small{display:block;color:var(--muted);font-size:9px;margin-top:4px}
+.s43-next{background:#fbf9ff;border:1px solid #e5dcf5;border-radius:14px;padding:15px;margin-bottom:15px}.s43-next .label{font-size:9px;color:var(--s43p);font-weight:800;text-transform:uppercase;letter-spacing:.08em}.s43-next h3{font:800 16px 'Plus Jakarta Sans';margin:5px 0 3px}.s43-next p{margin:0;color:var(--muted);font-size:10px}
+.s43-class{border:1px solid var(--s43line);border-radius:14px;padding:14px;margin-bottom:10px}.s43-class:last-child{margin-bottom:0}.s43-class h3{font:800 15px 'Plus Jakarta Sans';margin:6px 0 3px}.s43-class p{font-size:10px;color:var(--muted);margin:0}.s43-class-actions{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}
+.s43-overview{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);gap:16px}.s43-side{display:grid;gap:16px;align-content:start}
+.s43-side-card{background:#fff;border:1px solid var(--s43line);border-radius:18px;padding:17px}.s43-side-card h3{font:800 15px 'Plus Jakarta Sans';margin:0 0 4px}.s43-side-card>p{font-size:10px;color:var(--muted);margin:0 0 13px}
+.s43-mini{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #eeeaf3;font-size:10px}.s43-mini:last-child{border-bottom:0}.s43-mini span{color:var(--muted)}
+.s43-overview-card{background:#fff;border:1px solid var(--s43line);border-radius:18px;padding:18px}.s43-overview-card h2{font:800 17px 'Plus Jakarta Sans';margin:0}.s43-overview-card p{font-size:10px;color:var(--muted);margin:4px 0 15px}
+.s43-section-title{font-size:11px;font-weight:800;color:#62596e;margin:17px 0 8px;text-transform:uppercase;letter-spacing:.06em}
+@media(max-width:1050px){.s43-overview{grid-template-columns:1fr}.s43-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.s43-stats{grid-template-columns:1fr 1fr}.s43-hero{padding:20px}.s43-hero h2{font-size:23px}.s43-pane{padding:14px}}
+@media(max-width:430px){.s43-stats{grid-template-columns:1fr}}
+</style>
+
+<script id="tic-student-dashboard-v43-clean-js">
+(function(){
+'use strict';
+
+const e43=v=>{try{return typeof esc==='function'?esc(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}catch(_){return String(v??'')}};
+const d43=v=>v?new Date(v).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';
+const day43=v=>v?new Date(v).toLocaleDateString('pt-BR',{day:'2-digit'}):'—';
+const month43=v=>v?new Date(v).toLocaleDateString('pt-BR',{month:'short'}).replace('.','').toUpperCase():'—';
+const type43=v=>({material:'Material',lesson:'Lesson',assignment:'Atividade',task:'Tarefa',quiz:'Quiz',homework:'Homework'})[String(v||'').toLowerCase()]||v||'Conteúdo';
+const icon43=v=>{const x=String(v||'').toLowerCase();return x==='video'?'🎬':x==='audio'?'🎧':x==='pdf'?'📄':x==='lesson'?'📚':'🔗'};
+
+window.studentDashboard=async function(){
+  const s=await studentRecord();
+  if(!s){$('content').innerHTML='<div class="card empty">Sua conta não está vinculada a um cadastro de aluno.</div>';return}
+
+  let snap={overall:0,done:0,total:0};
+  try{snap=await ticRecalculateStudentProgressV19(s.id)||snap}catch(_){}
+
+  const {data:members,error:me}=await sb.from('tic_class_students').select('class_id,status').eq('student_id',s.id).eq('status','active');
+  if(me){$('content').innerHTML=`<div class="card attention">Não foi possível carregar suas turmas: ${e43(me.message)}</div>`;return}
+
+  const classIds=[...(members||[]).map(x=>x.class_id).filter(Boolean)];
+
+  const [
+    {data:classes},
+    {data:sessions},
+    {data:materials},
+    {data:classAssignments},
+    {data:taskAssignments},
+    {data:payments}
+  ]=await Promise.all([
+    classIds.length?sb.from('tic_classes').select('id,name,level,schedule_text,meeting_url,status').in('id',classIds).eq('status','active').order('name'):Promise.resolve({data:[]}),
+    classIds.length?sb.from('tic_class_sessions').select('id,class_id,session_date,duration_minutes,lesson_title,summary,status').in('class_id',classIds).order('session_date',{ascending:false}).limit(100):Promise.resolve({data:[]}),
+    classIds.length?sb.from('tic_class_material_links').select('id,class_id,title,url,material_type,note,created_at,updated_at').in('class_id',classIds).order('created_at',{ascending:false}).limit(100):Promise.resolve({data:[]}),
+    classIds.length?sb.from('tic_assignments').select('id,title,instructions,assignment_type,due_at,points,priority,class_id,resource_items,cover_image_url,source_type,source_id,cefr_level,skill,task_level,created_at').in('class_id',classIds).order('created_at',{ascending:false}).limit(100):Promise.resolve({data:[]}),
+    sb.from('tic_task_assignments').select('id,assignment_id,status,due_at,active').eq('student_id',s.id).eq('active',true).order('due_at',{ascending:true}).limit(100),
+    sb.from('tic_monthly_payments').select('*').eq('student_id',s.id).order('reference_month',{ascending:false}).limit(8)
+  ]);
+
+  const classMap=new Map((classes||[]).map(c=>[c.id,c]));
+  const now=new Date();
+
+  /* IMPORTANT: Teacher-registered lessons live in tic_class_sessions.
+     They are intentionally kept separate from materials/tasks. */
+  const previousLessons=(sessions||[])
+    .filter(x=>new Date(x.session_date)<now)
+    .sort((a,b)=>new Date(b.session_date)-new Date(a.session_date));
+
+  const nextLessons=(sessions||[])
+    .filter(x=>new Date(x.session_date)>=now)
+    .sort((a,b)=>new Date(a.session_date)-new Date(b.session_date));
+
+  const latestMaterials=[
+    ...(materials||[]).map(x=>({...x,_kind:'link',_date:x.created_at})),
+    ...(classAssignments||[])
+      .filter(x=>['material','lesson'].includes(String(x.assignment_type||'').toLowerCase()))
+      .map(x=>({...x,_kind:'assignment',_date:x.created_at}))
+  ].sort((a,b)=>new Date(b._date||0)-new Date(a._date||0));
+
+  const taskMap=new Map((taskAssignments||[]).map(x=>[x.assignment_id,x]));
+  const openTasks=(classAssignments||[])
+    .filter(x=>taskMap.has(x.id))
+    .map(x=>({...x,_task:taskMap.get(x.id)}))
+    .filter(x=>!['submitted','graded'].includes(String(x._task?.status||'').toLowerCase()))
+    .sort((a,b)=>new Date(a.due_at||'2999-01-01')-new Date(b.due_at||'2999-01-01'));
+
+  const completedTasks=(classAssignments||[])
+    .filter(x=>taskMap.has(x.id))
+    .map(x=>({...x,_task:taskMap.get(x.id)}))
+    .filter(x=>['submitted','graded'].includes(String(x._task?.status||'').toLowerCase()));
+
+  const overall=Number(snap.overall||0);
+  const firstNext=nextLessons[0];
+  const firstClass=firstNext?classMap.get(firstNext.class_id):classes?.[0];
+
+  setPage('My Dashboard','Seu espaço de aprendizagem.');
+
+  const materialHTML=(x)=>{
+    let href=x.url||x.external_url||x.file_url;
+    if(!href && Array.isArray(x.resource_items)) href=x.resource_items[0]?.url||x.resource_items[0]?.link;
+    const subtitle=`${type43(x.material_type||x.assignment_type)} · ${d43(x._date)}${x.class_id&&classMap.get(x.class_id)?' · '+e43(classMap.get(x.class_id).name):''}`;
+    return `<div class="s43-item">
+      <span class="s43-icon">${icon43(x.material_type||x.assignment_type)}</span>
+      <div class="s43-copy"><b>${e43(x.title||'Material')}</b><small>${subtitle}</small></div>
+      <div class="s43-action">${href?`<a class="btn sm primary" href="${e43(href)}" target="_blank" rel="noopener">Abrir material ↗</a>`:'<span class="badge gray">Sem link</span>'}</div>
+    </div>`;
+  };
+
+  const sessionHTML=(x)=>{
+    const c=classMap.get(x.class_id);
+    return `<div class="s43-session">
+      <div class="s43-date"><b>${day43(x.session_date)}</b><small>${month43(x.session_date)}</small></div>
+      <div><b>${e43(x.lesson_title||'Aula')}</b><small>${d43(x.session_date)} · ${x.duration_minutes||'—'} min${c?' · '+e43(c.name):''}</small>${x.summary?`<small>${e43(x.summary)}</small>`:''}</div>
+      <span class="badge ${x.status==='completed'?'green':'blue'}">${e43(x.status||'Registrada')}</span>
+    </div>`;
+  };
+
+  const classHTML=(c)=>{
+    const cSessions=(sessions||[]).filter(x=>x.class_id===c.id);
+    return `<div class="s43-class">
+      <span class="badge blue">${e43(c.level||'')}</span>
+      <h3>${e43(c.name)}</h3>
+      <p>${e43(c.schedule_text||'Horário não definido')}</p>
+      <div class="s43-class-actions">
+        <button class="btn sm primary" onclick="loadView('studentClass')">Abrir minha Class</button>
+        ${c.meeting_url?`<a class="btn sm secondary" href="${e43(c.meeting_url)}" target="_blank" rel="noopener">Entrar na aula ↗</a>`:''}
+      </div>
+      <div style="margin-top:9px;font-size:9px;color:var(--muted)">📚 ${cSessions.length} aula(s) registrada(s)</div>
+    </div>`;
+  };
+
+  const taskHTML=(x)=>{
+    const status=x._task?.status||'pending';
+    return `<div class="s43-item">
+      <span class="s43-icon">📝</span>
+      <div class="s43-copy"><b>${e43(x.title||'Tarefa')}</b><small>${type43(x.assignment_type)} · ${x.due_at?'Prazo '+d43(x.due_at):'Sem prazo'}${x.class_id&&classMap.get(x.class_id)?' · '+e43(classMap.get(x.class_id).name):''}</small></div>
+      <div class="s43-action"><button class="btn sm primary" onclick="loadView('studentTasks')">Ver tarefa</button></div>
+    </div>`;
+  };
+
+  $('content').innerHTML=`
+  <div class="s43">
+    <section class="s43-hero">
+      <span class="s43-kicker">MY LEARNING</span>
+      <h2>Olá, ${e43(s.display_name?.split(' ')[0]||'Student')} 👋</h2>
+      <p>${e43(s.current_level||'—')} · Objetivo ${e43(s.target_level||'—')} · ${snap.done||0} de ${snap.total||0} lessons concluídas</p>
+      <div class="s43-progress"><i style="width:${Math.max(0,Math.min(100,overall))}%"></i></div>
+      <p class="s43-progress-label">${overall}% de progresso geral</p>
+    </section>
+
+    <div class="s43-stats">
+      <div class="s43-stat"><span>📝 Tarefas abertas</span><b>${openTasks.length}</b><small>Somente suas tarefas</small></div>
+      <div class="s43-stat"><span>📚 Aulas anteriores</span><b>${previousLessons.length}</b><small>Registradas pelo Teacher</small></div>
+      <div class="s43-stat"><span>🏫 Minhas Classes</span><b>${(classes||[]).length}</b><small>Turmas ativas</small></div>
+      <div class="s43-stat"><span>🆕 Materiais novos</span><b>${latestMaterials.length}</b><small>Materiais publicados</small></div>
+    </div>
+
+    <div class="s43-overview">
+      <section class="s43-overview-card">
+        <div class="s43-head"><div><h2>Visão geral</h2><p>Informações organizadas por área. Cada botão leva somente ao conteúdo correspondente.</p></div></div>
+
+        ${firstNext?`<div class="s43-next">
+          <div class="label">📅 Próxima aula registrada</div>
+          <h3>${e43(firstNext.lesson_title||'Aula')}</h3>
+          <p>${d43(firstNext.session_date)} · ${firstNext.duration_minutes||'—'} min${firstClass?' · '+e43(firstClass.name):''}</p>
+        </div>`:`<div class="s43-empty" style="margin-bottom:15px">Nenhuma próxima aula foi registrada pelo Teacher.</div>`}
+
+        <div class="s43-section-title">Acessos rápidos</div>
+        <div class="s43-list">
+          <div class="s43-item"><span class="s43-icon">🆕</span><div class="s43-copy"><b>Últimos materiais enviados</b><small>Somente materiais e conteúdos publicados.</small></div><button class="btn sm primary" data-s43go="materials">Abrir</button></div>
+          <div class="s43-item"><span class="s43-icon">📖</span><div class="s43-copy"><b>Aulas anteriores</b><small>Somente aulas registradas pelo Teacher.</small></div><button class="btn sm primary" data-s43go="previous">Abrir</button></div>
+          <div class="s43-item"><span class="s43-icon">📝</span><div class="s43-copy"><b>Minhas tarefas</b><small>Somente atividades atribuídas a você.</small></div><button class="btn sm primary" data-s43go="tasks">Abrir</button></div>
+          <div class="s43-item"><span class="s43-icon">🏫</span><div class="s43-copy"><b>Minhas Classes</b><small>Somente suas turmas ativas.</small></div><button class="btn sm primary" data-s43go="classes">Abrir</button></div>
+        </div>
+      </section>
+
+      <aside class="s43-side">
+        <section class="s43-side-card">
+          <h3>📈 Meu progresso</h3><p>Resumo do currículo.</p>
+          <div class="progress" style="margin:8px 0 12px"><i style="width:${overall}%"></i></div>
+          <div class="s43-mini"><span>Lessons concluídas</span><b>${snap.done||0}</b></div>
+          <div class="s43-mini"><span>Total de lessons</span><b>${snap.total||0}</b></div>
+          <div class="s43-mini"><span>Nível atual</span><b>${e43(s.current_level||'—')}</b></div>
+        </section>
+        <section class="s43-side-card">
+          <h3>📅 Próxima aula</h3><p>Somente a próxima aula registrada.</p>
+          ${firstNext?`<div class="s43-mini"><span>${e43(firstNext.lesson_title||'Aula')}</span><b>${day43(firstNext.session_date)}/${month43(firstNext.session_date)}</b></div><div style="font-size:9px;color:var(--muted);margin-top:8px">${d43(firstNext.session_date)}${firstClass?' · '+e43(firstClass.name):''}</div>`:'<div class="s43-empty">Nenhuma aula agendada.</div>'}
+        </section>
+      </aside>
+    </div>
+
+    <section class="s43-main" style="margin-top:16px">
+      <nav class="s43-tabs">
+        <button class="active" data-s43tab="materials">🆕 Últimos materiais</button>
+        <button data-s43tab="previous">📖 Aulas anteriores</button>
+        <button data-s43tab="tasks">📝 Minhas tarefas</button>
+        <button data-s43tab="classes">🏫 Minhas Classes</button>
+        <button data-s43tab="payments">💰 Pagamentos</button>
+      </nav>
+
+      <section class="s43-pane active" data-s43pane="materials">
+        <div class="s43-head"><div><h2>🆕 Últimos materiais enviados</h2><p>Apenas materiais publicados pelo Teacher nas suas Classes. Nenhuma aula registrada aparece aqui.</p></div><span class="badge blue">${latestMaterials.length}</span></div>
+        <div class="s43-list">${latestMaterials.slice(0,20).map(materialHTML).join('')||'<div class="s43-empty">Nenhum material foi enviado ainda.</div>'}</div>
+      </section>
+
+      <section class="s43-pane" data-s43pane="previous">
+        <div class="s43-head"><div><h2>📖 Aulas anteriores</h2><p>Estas são as aulas registradas pelo Teacher em <b>Class → Aulas → Registrar aula</b>.</p></div><span class="badge green">${previousLessons.length}</span></div>
+        <div class="s43-list">${previousLessons.slice(0,30).map(sessionHTML).join('')||'<div class="s43-empty">Nenhuma aula anterior foi registrada pelo Teacher.</div>'}</div>
+      </section>
+
+      <section class="s43-pane" data-s43pane="tasks">
+        <div class="s43-head"><div><h2>📝 Minhas tarefas</h2><p>Apenas tarefas que foram atribuídas ao seu aluno.</p></div><span class="badge yellow">${openTasks.length}</span></div>
+        <div class="s43-list">${openTasks.slice(0,30).map(taskHTML).join('')||'<div class="s43-empty">Você não tem tarefas abertas.</div>'}</div>
+      </section>
+
+      <section class="s43-pane" data-s43pane="classes">
+        <div class="s43-head"><div><h2>🏫 Minhas Classes</h2><p>Apenas suas turmas ativas e seus acessos.</p></div><span class="badge blue">${(classes||[]).length}</span></div>
+        ${(classes||[]).map(classHTML).join('')||'<div class="s43-empty">Você ainda não está vinculado a uma Class.</div>'}
+      </section>
+
+      <section class="s43-pane" data-s43pane="payments">
+        <div class="s43-head"><div><h2>💰 Pagamentos</h2><p>Somente seus registros financeiros.</p></div><span class="badge blue">${(payments||[]).length}</span></div>
+        <div class="s43-list">${(payments||[]).map(x=>`<div class="s43-item"><span class="s43-icon">💰</span><div class="s43-copy"><b>${e43(x.reference_month||'Pagamento')}</b><small>${x.payment_date?'Pago em '+new Date(x.payment_date).toLocaleDateString('pt-BR'):x.due_date?'Vencimento '+new Date(x.due_date).toLocaleDateString('pt-BR'):'Registro financeiro'}</small></div><div><b>${typeof money==='function'?money(x.amount):('R$ '+Number(x.amount||0).toFixed(2).replace('.',','))}</b><br>${typeof badge==='function'?badge(x.status):e43(x.status||'—')}</div></div>`).join('')||'<div class="s43-empty">Nenhum pagamento registrado.</div>'}</div>
+      </section>
+    </section>
+  </div>`;
+
+  const activate=(name)=>{
+    document.querySelectorAll('[data-s43tab]').forEach(b=>b.classList.toggle('active',b.dataset.s43tab===name));
+    document.querySelectorAll('[data-s43pane]').forEach(p=>p.classList.toggle('active',p.dataset.s43pane===name));
+    document.querySelector('.s43-main')?.scrollIntoView({behavior:'smooth',block:'start'});
+  };
+  document.querySelectorAll('[data-s43tab]').forEach(b=>b.addEventListener('click',()=>activate(b.dataset.s43tab)));
+  document.querySelectorAll('[data-s43go]').forEach(b=>b.addEventListener('click',()=>activate(b.dataset.s43go)));
+};
 })();
 </script>
