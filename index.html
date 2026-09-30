@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Teacher Platform · V43 Student Dashboard Clean</title>
+<title>Teacher Platform · V44 Separated Content</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
@@ -4415,6 +4415,197 @@ window.studentDashboard=async function(){
   };
   document.querySelectorAll('[data-s43tab]').forEach(b=>b.addEventListener('click',()=>activate(b.dataset.s43tab)));
   document.querySelectorAll('[data-s43go]').forEach(b=>b.addEventListener('click',()=>activate(b.dataset.s43go)));
+};
+})();
+</script>
+
+
+
+<style id="tic-v44-separated-content-css">
+/* V44 — strict content separation + clean Student Dashboard/My Class */
+.v44-hub{background:#fff;border:1px solid #e8e3f0;border-radius:18px;padding:16px;margin-bottom:16px}
+.v44-hub-head{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-bottom:13px}.v44-hub-head h2{font:800 17px 'Plus Jakarta Sans';margin:0}.v44-hub-head p{font-size:10px;color:var(--muted);margin:4px 0 0}
+.v44-type-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.v44-type-btn{border:1px solid #e6e0ef;background:#fbfaff;border-radius:13px;padding:12px;text-align:left;cursor:pointer;transition:.15s}.v44-type-btn:hover{border-color:#b9a5eb;transform:translateY(-1px)}.v44-type-btn b{display:block;font-size:11px}.v44-type-btn small{display:block;color:var(--muted);font-size:9px;margin-top:3px}
+.v44-filterbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:13px}.v44-filterbar select,.v44-filterbar input{height:38px;border:1px solid #e3ddea;border-radius:10px;padding:0 10px;background:#fff;font-size:11px}.v44-filterbar input{min-width:230px;flex:1}
+.v44-legacy{border:1px solid #eadfc9;background:#fffaf0;border-radius:14px;padding:13px;margin-bottom:14px}.v44-legacy h3{margin:0;font-size:12px}.v44-legacy p{margin:4px 0 9px;font-size:10px;color:#786b56}
+.v44-class-page{display:grid;gap:15px}.v44-class-hero{background:linear-gradient(135deg,#44209a,#7045d7);color:#fff;border-radius:21px;padding:22px;display:flex;justify-content:space-between;gap:15px;align-items:center}.v44-class-hero h2{font:800 23px 'Plus Jakarta Sans';margin:5px 0}.v44-class-hero p{font-size:10px;opacity:.82;margin:0}.v44-class-select{min-width:210px;border:0;border-radius:11px;padding:10px;background:#fff;color:#30254a;font-weight:700}
+.v44-class-nav{display:flex;gap:7px;overflow:auto;background:#f3f0f8;border:1px solid #e7e1ef;border-radius:13px;padding:6px}.v44-class-nav button{border:0;background:transparent;color:#6b6377;border-radius:9px;padding:10px 12px;font-size:10px;font-weight:800;white-space:nowrap;cursor:pointer}.v44-class-nav button.active{background:#fff;color:#5b2bbd;box-shadow:0 3px 12px rgba(60,30,110,.08)}
+.v44-class-pane{display:none}.v44-class-pane.active{display:block}.v44-class-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(280px,.7fr);gap:15px}.v44-card{background:#fff;border:1px solid #e8e3f0;border-radius:17px;padding:17px}.v44-card h3{font:800 16px 'Plus Jakarta Sans';margin:0}.v44-card .desc{font-size:10px;color:var(--muted);margin:4px 0 13px}
+.v44-list{border:1px solid #e9e4f0;border-radius:13px;overflow:hidden}.v44-row{display:flex;align-items:center;gap:11px;padding:12px 13px;border-bottom:1px solid #eeeaf3}.v44-row:last-child{border-bottom:0}.v44-row-icon{width:38px;height:38px;border-radius:11px;background:#f0ebff;display:grid;place-items:center;flex:0 0 38px}.v44-row-main{min-width:0;flex:1}.v44-row-main b{display:block;font-size:12px}.v44-row-main small{display:block;font-size:9px;color:var(--muted);margin-top:3px}.v44-empty{padding:30px 15px;text-align:center;color:var(--muted);font-size:11px;border:1px dashed #ddd5e9;border-radius:12px;background:#fcfbfe}
+.v44-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.v44-kpi{background:#fff;border:1px solid #e8e3f0;border-radius:15px;padding:13px}.v44-kpi span{display:block;color:var(--muted);font-size:9px}.v44-kpi b{display:block;font:800 20px 'Plus Jakarta Sans';margin-top:4px}
+.v44-session{display:grid;grid-template-columns:52px minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #eeeaf3}.v44-session:last-child{border-bottom:0}.v44-date{width:52px;height:52px;border-radius:12px;background:#f0ebff;color:#5b2bbd;display:grid;place-items:center;text-align:center}.v44-date b{font-size:16px}.v44-date small{font-size:8px;text-transform:uppercase}.v44-class-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+@media(max-width:950px){.v44-type-grid{grid-template-columns:repeat(2,1fr)}.v44-class-grid{grid-template-columns:1fr}.v44-kpis{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.v44-type-grid{grid-template-columns:1fr}.v44-kpis{grid-template-columns:1fr 1fr}.v44-class-hero{align-items:flex-start;flex-direction:column}.v44-class-select{width:100%}}
+</style>
+
+<script id="tic-v44-separated-content-js">
+(function(){
+'use strict';
+const x44=v=>{try{return typeof esc==='function'?esc(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}catch(_){return String(v??'')}};
+const dt44=v=>v?new Date(v).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';
+const dl44=v=>v?new Date(v).toLocaleDateString('pt-BR'): '—';
+const typ44=v=>({assignment:'Assignment',quiz:'Quiz',speaking:'Speaking',writing:'Writing',listening:'Listening',reading:'Reading',project:'Project',audio:'Audio',file:'File',material:'Material',lesson:'Lesson'})[String(v||'').toLowerCase()]||v||'Conteúdo';
+
+/* One explicit creation router. Existing builders remain the actual editors. */
+window.openContentRouterV44=function(){
+ openModal('✨ Criar conteúdo — escolha o destino',`
+ <div class="v44-hub" style="border:0;padding:0">
+   <div class="v44-hub-head"><div><h2>Escolha exatamente o que deseja criar</h2><p>Cada tipo será salvo e direcionado para sua área própria.</p></div></div>
+   <div class="v44-type-grid">
+    <button class="v44-type-btn" onclick="closeModal();openAssignmentForm()"><b>📝 Assignment</b><small>Tarefa para o aluno realizar/entregar.</small></button>
+    <button class="v44-type-btn" onclick="closeModal();openLessonForm()"><b>📚 Lesson</b><small>Aula do currículo.</small></button>
+    <button class="v44-type-btn" onclick="closeModal();openResourceFormV39()"><b>🔗 Resource</b><small>Links, PDFs, vídeos e recursos de apoio.</small></button>
+    <button class="v44-type-btn" onclick="closeModal();openMaterialForm()"><b>📂 Material</b><small>Material didático organizado.</small></button>
+   </div>
+ </div>`);
+};
+
+/* Teacher Assignments: only real tasks. Materials/Lessons are no longer listed here. */
+window.assignmentsPage=async function(){
+ const {data,error}=await sb.from('tic_assignments').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+ if(error){$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar Assignments.</b><p>${x44(error.message)}</p></div>`;return}
+ const real=(data||[]).filter(a=>!['material','lesson'].includes(String(a.assignment_type||'').toLowerCase()));
+ const legacy=(data||[]).filter(a=>['material','lesson'].includes(String(a.assignment_type||'').toLowerCase()));
+ let counts={};
+ if(real.length){
+   const ids=real.map(a=>a.id);
+   const {data:c}=await sb.from('tic_task_assignments').select('assignment_id,status').in('assignment_id',ids);
+   (c||[]).forEach(r=>{counts[r.assignment_id]=(counts[r.assignment_id]||0)+1});
+ }
+ setPage('Assignments','Somente tarefas e atividades atribuídas aos alunos.');
+ $('content').innerHTML=`
+ <div class="v44-hub">
+   <div class="v44-hub-head"><div><h2>📝 Assignments</h2><p>Aqui entram somente tarefas/atividades. Lessons, Materials e Resources ficam separados.</p></div><button class="btn primary" onclick="openContentRouterV44()">＋ Criar conteúdo</button></div>
+   <div class="v44-filterbar"><input id="v44AsSearch" placeholder="🔎 Buscar tarefa..." oninput="v44FilterAssignments()"><select id="v44AsType" onchange="v44FilterAssignments()"><option value="">Todos os tipos de tarefa</option>${[...new Set(real.map(a=>a.assignment_type).filter(Boolean))].map(t=>`<option value="${x44(t)}">${x44(typ44(t))}</option>`).join('')}</select></div>
+ </div>
+ ${legacy.length?`<div class="v44-legacy"><h3>⚠️ ${legacy.length} item(ns) antigo(s) estão classificados como ${legacy.every(a=>String(a.assignment_type).toLowerCase()==='material')?'Material/Lesson':''} e não aparecem na lista de Assignments.</h3><p>Eles foram preservados no banco para não perder seus dados. Use a área correta (Materials/Lessons) para novos conteúdos.</p></div>`:''}
+ <div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Tarefa</th><th>Tipo</th><th>Alunos</th><th>Prazo</th><th>Prioridade</th><th></th></tr></thead><tbody>
+ ${real.map(a=>`<tr data-v44-assignment data-type="${x44(a.assignment_type||'')}"><td><b>${x44(a.title)}</b><small>${x44(a.cefr_level||'')} ${a.skill?'· '+x44(a.skill):''}</small></td><td><span class="badge blue">${x44(typ44(a.assignment_type))}</span></td><td><span class="badge blue">${counts[a.id]||0}</span></td><td>${a.due_at?dl44(a.due_at):'—'}</td><td>${x44(a.priority||'normal')}</td><td><button class="btn sm secondary" onclick='openAssignmentForm(${JSON.stringify(a)})'>Editar</button></td></tr>`).join('')||`<tr><td colspan="6"><div class="v44-empty">Nenhum Assignment criado ainda. Use <b>Criar conteúdo</b> para escolher o tipo correto.</div></td></tr>`}
+ </tbody></table></div></div>`;
+};
+window.v44FilterAssignments=function(){
+ const q=($('v44AsSearch')?.value||'').toLowerCase(),t=$('v44AsType')?.value||'';
+ document.querySelectorAll('[data-v44-assignment]').forEach(r=>{const ok=(!q||r.innerText.toLowerCase().includes(q))&&(!t||r.dataset.type===t);r.style.display=ok?'':'none'});
+};
+
+/* Add the same router to Resources and Materials so creation always starts with a clear choice. */
+const oldResourcesV44=window.resourcesPageV39;
+window.resourcesPageV39=async function(){
+ await oldResourcesV44();
+ const c=document.querySelector('.main>.container'); if(!c)return;
+ const oldToolbar=c.querySelector('.resource-toolbar-v39');
+ if(oldToolbar&&!oldToolbar.querySelector('[data-v44-create]')){
+   const b=document.createElement('button');b.className='btn primary';b.dataset.v44Create='1';b.textContent='✨ Criar conteúdo';b.onclick=()=>openContentRouterV44();oldToolbar.appendChild(b);
+ }
+};
+const oldMaterialsV44=window.materialsPage;
+window.materialsPage=async function(){
+ await oldMaterialsV44();
+ const c=document.querySelector('.main>.container');if(!c)return;
+ const heads=[...c.querySelectorAll('.material-section-head')];
+ if(heads[0]&&!heads[0].querySelector('[data-v44-create]')){
+   const b=document.createElement('button');b.className='btn primary';b.dataset.v44Create='1';b.textContent='✨ Criar conteúdo';b.onclick=()=>openContentRouterV44();heads[0].appendChild(b);
+ }
+};
+
+/* Re-route loadView to the clean Assignment workspace without breaking existing routes. */
+const loadViewBaseV44=window.loadView;
+window.loadView=async function(v){
+ if(v==='assignments'){currentView=v;toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));const c=document.querySelector('.main>.container');if(c)c.scrollTo({top:0,left:0,behavior:'instant'});return assignmentsPage();}
+ return loadViewBaseV44(v);
+};
+
+/* Clean Student My Class: every tab owns one content category. */
+window.studentClassPage=async function(){
+ const s=await studentRecord();
+ if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno pelo Teacher.</div>';return}
+ const {data:members,error:me}=await sb.from('tic_class_students').select('class_id,status').eq('student_id',s.id).eq('status','active');
+ if(me){$('content').innerHTML=`<div class="card attention">${x44(me.message)}</div>`;return}
+ const ids=[...(members||[]).map(m=>m.class_id).filter(Boolean)];
+ if(!ids.length){$('content').innerHTML='<div class="v44-empty">🏫 Você ainda não está em uma Class.</div>';return}
+ const [{data:classes},{data:sessions},{data:links},{data:assignments},{data:tas},{data:boards}]=await Promise.all([
+  sb.from('tic_classes').select('id,name,level,schedule_text,meeting_url,status').in('id',ids).eq('status','active').order('name'),
+  sb.from('tic_class_sessions').select('id,class_id,session_date,duration_minutes,lesson_title,summary,status').in('class_id',ids).order('session_date',{ascending:false}).limit(100),
+  sb.from('tic_class_material_links').select('id,class_id,title,url,material_type,note,position,created_at').in('class_id',ids).order('created_at',{ascending:false}).limit(100),
+  sb.from('tic_assignments').select('id,title,instructions,assignment_type,due_at,points,priority,class_id,resource_items,cefr_level,skill,created_at').in('class_id',ids).order('created_at',{ascending:false}).limit(100),
+  sb.from('tic_task_assignments').select('id,assignment_id,status,due_at,active').eq('student_id',s.id).eq('active',true).limit(100),
+  sb.from('tic_class_board_items').select('id,class_id,title,description,item_type,status,position,created_at').in('class_id',ids).order('position').order('created_at',{ascending:false}).limit(100)
+ ]);
+ const cls=classes||[],map=new Map(cls.map(c=>[c.id,c])),taMap=new Map((tas||[]).map(t=>[t.assignment_id,t]));
+ let selected=cls[0]?.id||'';
+ const go=name=>{document.querySelectorAll('[data-v44cp]').forEach(b=>b.classList.toggle('active',b.dataset.v44cp===name));document.querySelectorAll('[data-v44pane]').forEach(p=>p.classList.toggle('active',p.dataset.v44pane===name))};
+ const render=()=>{
+  const c=map.get(selected)||cls[0];if(!c)return;selected=c.id;
+  const cs=(sessions||[]).filter(x=>x.class_id===c.id),now=new Date(),past=cs.filter(x=>new Date(x.session_date)<now).sort((a,b)=>new Date(b.session_date)-new Date(a.session_date)),next=cs.filter(x=>new Date(x.session_date)>=now).sort((a,b)=>new Date(a.session_date)-new Date(b.session_date))[0];
+  const rs=(links||[]).filter(x=>x.class_id===c.id);
+  const as=(assignments||[]).filter(x=>x.class_id===c.id);
+  const lessons=as.filter(x=>String(x.assignment_type||'').toLowerCase()==='lesson');
+  const materials=as.filter(x=>String(x.assignment_type||'').toLowerCase()==='material');
+  const tasks=as.filter(x=>!['lesson','material'].includes(String(x.assignment_type||'').toLowerCase()));
+  const myTasks=tasks.filter(x=>taMap.has(x.id));
+  const bi=(boards||[]).filter(x=>x.class_id===c.id);
+  setPage('My Class',`${c.name} · conteúdo separado por categoria`);
+  $('content').innerHTML=`
+  <div class="v44-class-page">
+   <div class="v44-class-hero"><div><span class="eyebrow" style="color:#fff">MY CLASS</span><h2>🏫 ${x44(c.name)}</h2><p>${x44(c.level||'')} ${c.schedule_text?'· '+x44(c.schedule_text):''}</p></div><select id="v44ClassSelect" class="v44-class-select">${cls.map(z=>`<option value="${z.id}" ${z.id===c.id?'selected':''}>${x44(z.name)} · ${x44(z.level||'')}</option>`).join('')}</select></div>
+   <div class="v44-kpis"><div class="v44-kpi"><span>📖 Aulas anteriores</span><b>${past.length}</b></div><div class="v44-kpi"><span>📚 Lessons da Class</span><b>${lessons.length}</b></div><div class="v44-kpi"><span>🔗 Resources</span><b>${rs.length}</b></div><div class="v44-kpi"><span>📝 Minhas tarefas</span><b>${myTasks.length}</b></div></div>
+   <nav class="v44-class-nav">
+    <button class="active" data-v44cp="home">🏠 Visão geral</button><button data-v44cp="lessons">📚 Lessons</button><button data-v44cp="materials">📂 Materials</button><button data-v44cp="resources">🔗 Resources</button><button data-v44cp="tasks">📝 Minhas tarefas</button><button data-v44cp="previous">📖 Aulas anteriores</button><button data-v44cp="board">📌 Board</button>
+   </nav>
+   <section class="v44-class-pane active" data-v44pane="home">
+    <div class="v44-class-grid"><div class="v44-card"><h3>📅 Próxima aula</h3><p class="desc">Somente a próxima aula registrada pelo Teacher.</p>${next?`<div class="v44-row"><div class="v44-row-icon">📅</div><div class="v44-row-main"><b>${x44(next.lesson_title||'Aula')}</b><small>${dt44(next.session_date)} · ${next.duration_minutes||'—'} min</small></div>${c.meeting_url?`<a class="btn sm primary" href="${x44(c.meeting_url)}" target="_blank" rel="noopener">Entrar ↗</a>`:''}</div>`:'<div class="v44-empty">Nenhuma próxima aula registrada.</div>'}</div>
+    <div class="v44-card"><h3>🏫 Minha Class</h3><p class="desc">Informações da turma, sem misturar conteúdos.</p><div class="v44-row"><div class="v44-row-icon">🏫</div><div class="v44-row-main"><b>${x44(c.name)}</b><small>${x44(c.level||'')} · ${x44(c.schedule_text||'Horário não definido')}</small></div></div><div class="v44-class-actions">${c.meeting_url?`<a class="btn sm primary" href="${x44(c.meeting_url)}" target="_blank" rel="noopener">Entrar na aula ↗</a>`:''}</div></div></div>
+   </section>
+   <section class="v44-class-pane" data-v44pane="lessons"><div class="v44-card"><h3>📚 Lessons</h3><p class="desc">Somente conteúdos classificados como Lesson para esta Class.</p><div class="v44-list">${lessons.map(a=>`<div class="v44-row"><div class="v44-row-icon">📚</div><div class="v44-row-main"><b>${x44(a.title)}</b><small>Lesson${a.cefr_level?' · '+x44(a.cefr_level):''}${a.skill?' · '+x44(a.skill):''}</small></div><span class="badge green">Lesson</span></div>`).join('')||'<div class="v44-empty">Nenhuma Lesson foi disponibilizada para esta Class.</div>'}</div></div></section>
+   <section class="v44-class-pane" data-v44pane="materials"><div class="v44-card"><h3>📂 Materials</h3><p class="desc">Somente itens classificados como Material. Resources ficam na aba ao lado.</p><div class="v44-list">${materials.map(a=>`<div class="v44-row"><div class="v44-row-icon">📂</div><div class="v44-row-main"><b>${x44(a.title)}</b><small>${a.cefr_level?'Nível '+x44(a.cefr_level)+' · ':''}${a.created_at?dt44(a.created_at):''}</small></div><span class="badge blue">Material</span></div>`).join('')||'<div class="v44-empty">Nenhum Material foi disponibilizado para esta Class.</div>'}</div></div></section>
+   <section class="v44-class-pane" data-v44pane="resources"><div class="v44-card"><h3>🔗 Resources</h3><p class="desc">Somente links/arquivos inseridos como Resource. Não são tarefas nem Lessons.</p><div class="v44-list">${rs.map(r=>`<div class="v44-row"><div class="v44-row-icon">${String(r.material_type||'').toLowerCase()==='video'?'🎬':String(r.material_type||'').toLowerCase()==='audio'?'🎧':String(r.material_type||'').toLowerCase()==='pdf'?'📄':'🔗'}</div><div class="v44-row-main"><b>${x44(r.title)}</b><small>${x44(r.material_type||'link')}${r.note?' · '+x44(r.note):''}</small></div><a class="btn sm secondary" href="${x44(r.url||'#')}" target="_blank" rel="noopener">Abrir ↗</a></div>`).join('')||'<div class="v44-empty">Nenhum Resource foi disponibilizado para esta Class.</div>'}</div></div></section>
+   <section class="v44-class-pane" data-v44pane="tasks"><div class="v44-card"><h3>📝 Minhas tarefas</h3><p class="desc">Somente Assignments que foram atribuídos a você nesta Class.</p><div class="v44-list">${myTasks.map(a=>{const t=taMap.get(a.id);return `<div class="v44-row"><div class="v44-row-icon">📝</div><div class="v44-row-main"><b>${x44(a.title)}</b><small>${typ44(a.assignment_type)} · ${a.due_at?'Prazo '+dt44(a.due_at):'Sem prazo'}${a.skill?' · '+x44(a.skill):''}</small></div>${typeof badge==='function'?badge(t?.status||'pending'):'<span class="badge yellow">Pendente</span>'}</div>`}).join('')||'<div class="v44-empty">Nenhuma tarefa atribuída a você nesta Class.</div>'}</div></div></section>
+   <section class="v44-class-pane" data-v44pane="previous"><div class="v44-card"><h3>📖 Aulas anteriores</h3><p class="desc">Somente aulas que o Teacher registrou em Class → Aulas.</p><div class="v44-list">${past.map(a=>`<div class="v44-session"><div class="v44-date"><b>${new Date(a.session_date).getDate()}</b><small>${new Date(a.session_date).toLocaleDateString('pt-BR',{month:'short'}).replace('.','')}</small></div><div><b>${x44(a.lesson_title||'Aula')}</b><small>${dt44(a.session_date)} · ${a.duration_minutes||'—'} min${a.summary?' · '+x44(a.summary):''}</small></div><span class="badge ${a.status==='completed'?'green':'blue'}">${x44(a.status||'Registrada')}</span></div>`).join('')||'<div class="v44-empty">Nenhuma aula anterior foi registrada pelo Teacher.</div>'}</div></div></section>
+   <section class="v44-class-pane" data-v44pane="board"><div class="v44-card"><h3>📌 Board</h3><p class="desc">Somente avisos e itens publicados no Board desta Class.</p><div class="v44-list">${bi.map(b=>`<div class="v44-row"><div class="v44-row-icon">📌</div><div class="v44-row-main"><b>${x44(b.title)}</b><small>${x44(b.description||'')}${b.item_type?' · '+x44(b.item_type):''}</small></div><span class="badge ${b.status==='completed'?'green':b.status==='in_progress'?'yellow':'blue'}">${x44(b.status||'Publicado')}</span></div>`).join('')||'<div class="v44-empty">Nenhum item no Board.</div>'}</div></div></section>
+  </div>`;
+  document.querySelectorAll('[data-v44cp]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.v44cp)));
+  $('v44ClassSelect')?.addEventListener('change',ev=>{selected=ev.target.value;render()});
+ };
+ render();
+};
+
+/* Student dashboard: concise cards, no duplicated content lists. */
+window.studentDashboard=async function(){
+ const s=await studentRecord();if(!s){$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}
+ let prog={overall:0,done:0,total:0};try{prog=await ticRecalculateStudentProgressV19(s.id)||prog}catch(_){}
+ const {data:members}=await sb.from('tic_class_students').select('class_id').eq('student_id',s.id).eq('status','active');
+ const ids=(members||[]).map(x=>x.class_id).filter(Boolean);
+ const [{data:classes},{data:sessions},{data:materials},{data:tas}]=await Promise.all([
+  ids.length?sb.from('tic_classes').select('id,name,level,schedule_text,meeting_url,status').in('id',ids).eq('status','active').order('name'):Promise.resolve({data:[]}),
+  ids.length?sb.from('tic_class_sessions').select('id,class_id,session_date,lesson_title,duration_minutes,status').in('class_id',ids).order('session_date',{ascending:false}).limit(50):Promise.resolve({data:[]}),
+  ids.length?sb.from('tic_assignments').select('id,title,assignment_type,class_id,created_at').in('class_id',ids).eq('assignment_type','material').order('created_at',{ascending:false}).limit(20):Promise.resolve({data:[]}),
+  sb.from('tic_task_assignments').select('id,assignment_id,status').eq('student_id',s.id).eq('active',true)
+ ]);
+ const cmap=new Map((classes||[]).map(c=>[c.id,c]));
+ const open=(tas||[]).filter(t=>!['submitted','graded'].includes(String(t.status||'').toLowerCase())).length;
+ const now=new Date(),past=(sessions||[]).filter(x=>new Date(x.session_date)<now),next=(sessions||[]).filter(x=>new Date(x.session_date)>=now).sort((a,b)=>new Date(a.session_date)-new Date(b.session_date))[0];
+ setPage('My Dashboard','Seu espaço de aprendizagem.');
+ $('content').innerHTML=`<div class="s43">
+  <section class="s43-hero"><span class="s43-kicker">MY LEARNING</span><h2>Olá, ${x44(s.display_name?.split(' ')[0]||'Student')} 👋</h2><p>${x44(s.current_level||'—')} · Objetivo ${x44(s.target_level||'—')} · ${prog.done||0}/${prog.total||0} lessons concluídas</p><div class="s43-progress"><i style="width:${Math.max(0,Math.min(100,Number(prog.overall||0)))}%"></i></div><p class="s43-progress-label">${Number(prog.overall||0)}% de progresso geral</p></section>
+  <div class="s43-stats">
+   <button class="s43-stat" onclick="loadView('studentTasks')" style="text-align:left;cursor:pointer"><span>📝 Minhas tarefas</span><b>${open}</b><small>Ir para My Tasks →</small></button>
+   <button class="s43-stat" onclick="loadView('studentClass')" style="text-align:left;cursor:pointer"><span>📖 Aulas anteriores</span><b>${past.length}</b><small>Ver somente aulas registradas →</small></button>
+   <button class="s43-stat" onclick="loadView('studentClass')" style="text-align:left;cursor:pointer"><span>🏫 Minhas Classes</span><b>${(classes||[]).length}</b><small>Abrir My Class →</small></button>
+   <button class="s43-stat" onclick="loadView('studentClass')" style="text-align:left;cursor:pointer"><span>🆕 Materiais enviados</span><b>${(materials||[]).length}</b><small>Ver Materials da Class →</small></button>
+  </div>
+  <div class="s43-overview">
+   <section class="s43-overview-card"><div class="s43-head"><div><h2>🎯 Acesso rápido</h2><p>Um único destino para cada tipo de conteúdo.</p></div></div>
+    <div class="s43-list">
+     <div class="s43-item"><span class="s43-icon">📚</span><div class="s43-copy"><b>My Lessons</b><small>Currículo e aulas do curso.</small></div><button class="btn sm primary" onclick="loadView('studentLessons')">Abrir</button></div>
+     <div class="s43-item"><span class="s43-icon">📝</span><div class="s43-copy"><b>My Tasks</b><small>Somente tarefas atribuídas a você.</small></div><button class="btn sm primary" onclick="loadView('studentTasks')">Abrir</button></div>
+     <div class="s43-item"><span class="s43-icon">🏫</span><div class="s43-copy"><b>My Class</b><small>Resources, Materials, Lessons, Board e aulas anteriores separados.</small></div><button class="btn sm primary" onclick="loadView('studentClass')">Abrir</button></div>
+    </div>
+   </section>
+   <aside class="s43-side">
+    <section class="s43-side-card"><h3>📅 Próxima aula</h3><p>Somente a próxima aula registrada pelo Teacher.</p>${next?`<div class="s43-mini"><span>${x44(next.lesson_title||'Aula')}</span><b>${new Date(next.session_date).toLocaleDateString('pt-BR')}</b></div><div style="font-size:9px;color:var(--muted);margin-top:7px">${dt44(next.session_date)} · ${x44(cmap.get(next.class_id)?.name||'Class')}</div>`:'<div class="s43-empty">Nenhuma próxima aula registrada.</div>'}</section>
+    <section class="s43-side-card"><h3>📈 Meu progresso</h3><p>Resumo do currículo.</p><div class="progress" style="margin:8px 0 12px"><i style="width:${prog.overall||0}%"></i></div><div class="s43-mini"><span>Lessons concluídas</span><b>${prog.done||0}</b></div><div class="s43-mini"><span>Total</span><b>${prog.total||0}</b></div></section>
+   </aside>
+  </div>
+ </div>`;
 };
 })();
 </script>
