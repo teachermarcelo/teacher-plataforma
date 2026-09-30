@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Teacher Platform · V41 Class Center</title>
+<title>Teacher Platform · V42 Student Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
@@ -573,7 +573,7 @@ async function overview(){
   sb.from('tic_submissions').select('id,student_id,grade').limit(100)
  ]);
  const paid=(pay||[]).filter(x=>x.status==='paid').reduce((a,x)=>a+Number(x.amount),0),pending=(pay||[]).filter(x=>x.status==='pending').reduce((a,x)=>a+Number(x.amount),0),overdue=(pay||[]).filter(x=>x.status==='overdue').reduce((a,x)=>a+Number(x.amount),0);
- $('content').innerHTML=`<div class="hero"><div style="font-size:9px;letter-spacing:1.5px;opacity:.65;font-weight:800">TEACHER COMMAND CENTER</div><h2>Hello, ${esc(profile?.full_name?.split(' ')[0]||'Teacher')} 👋</h2><p>Veja rapidamente o que precisa da sua atenção.</p><div class="progress"><i style="width:${Math.min(100,(paid/(paid+pending+overdue||1))*100)}%"></i></div><div class="hero-foot"><span>Recebimento do período</span><b>${money(paid)}</b></div></div>
+ $('content').innerHTML=`<div class="hero"><div style="font-size:9px;letter-spacing:1.5px;opacity:.65;font-weight:800">TEACHER COMMAND CENTER</div><h2>Good morning, ${esc(profile?.full_name?.split(' ')[0]||'Teacher')} 👋</h2><p>Veja rapidamente o que precisa da sua atenção.</p><div class="progress"><i style="width:${Math.min(100,(paid/(paid+pending+overdue||1))*100)}%"></i></div><div class="hero-foot"><span>Recebimento do período</span><b>${money(paid)}</b></div></div>
  <div class="quick-grid section"><button class="quick" onclick="openStudentForm()">👤<b>Novo aluno</b><small>Cadastrar e enviar convite</small></button><button class="quick" onclick="openPaymentForm()">💰<b>Mensalidade</b><small>Registrar recebimento</small></button><button class="quick" onclick="openLessonForm()">📝<b>Nova lesson</b><small>Adicionar conteúdo</small></button><button class="quick" onclick="openGlobalSearch()">⌕<b>Busca global</b><small>Encontrar qualquer item</small></button></div><div class="grid stats section"><div class="card"><div class="stat-label">👨‍🎓 Alunos ativos</div><div class="stat-value">${st?.length||0}</div><div class="stat-note">Base atual</div></div><div class="card"><div class="stat-label">🏫 Turmas</div><div class="stat-value">${cl?.length||0}</div><div class="stat-note">Turmas ativas</div></div><div class="card"><div class="stat-label">📝 Para acompanhar</div><div class="stat-value">${as?.length||0}</div><div class="stat-note">Tarefas em aberto</div></div><div class="card"><div class="stat-label">💰 Recebido</div><div class="stat-value">${money(paid)}</div><div class="stat-note">${money(pending)} pendente</div></div></div>
  <div class="grid cols2 section"><div class="card attention"><div class="section-head"><h2>⚠️ Attention</h2><span>Ações prioritárias</span></div><div class="row"><div><b>Mensalidades atrasadas</b><small>Verifique os pagamentos</small></div>${badge('overdue')} <strong>${money(overdue)}</strong></div><div class="row"><div><b>Tarefas para acompanhar</b><small>Pending / submitted / overdue</small></div><span class="badge blue">${as?.length||0}</span></div><div class="row"><div><b>Submissions</b><small>Entregas registradas</small></div><span class="badge gray">${sub?.length||0}</span></div></div>
  <div class="card"><div class="section-head"><h2>📅 Próximas aulas</h2><span>Agenda</span></div>${(ev||[]).map(e=>`<div class="row"><div><b>${esc(e.title)}</b><small>${new Date(e.starts_at).toLocaleString('pt-BR')}</small></div><span class="badge blue">${esc(e.event_type)}</span></div>`).join('')||'<div class="empty">Nenhum evento próximo.</div>'}</div></div>`;
@@ -3921,5 +3921,242 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
 
   /* Start/restart tracker when Teacher/student session changes. */
   window.addEventListener('focus',()=>{if(profile?.role==='student'&&!activityRowV41)startActivityV41();});
+})();
+</script>
+
+
+
+<style id="tic-student-dashboard-v42">
+/* V42 — Student experience upgrade. Existing content/functions are preserved. */
+.student-v42-hero{
+  background:linear-gradient(135deg,#43208f 0%,#6d42d8 58%,#815ee5 100%);
+  color:#fff;border-radius:22px;padding:25px 27px;margin-bottom:16px;
+  box-shadow:0 16px 42px rgba(74,39,155,.18);position:relative;overflow:hidden;
+}
+.student-v42-hero:after{content:"";position:absolute;width:230px;height:230px;border-radius:50%;
+right:-70px;top:-100px;background:rgba(255,255,255,.08);box-shadow:0 0 0 45px rgba(255,255,255,.035)}
+.student-v42-hero>*{position:relative;z-index:1}
+.student-v42-kicker{font-size:10px;letter-spacing:.15em;text-transform:uppercase;opacity:.75;font-weight:800}
+.student-v42-hero h2{margin:6px 0 4px;font:800 27px 'Plus Jakarta Sans'}
+.student-v42-hero p{margin:0;opacity:.86;font-size:12px}
+.student-v42-progress{height:8px;background:rgba(255,255,255,.22);border-radius:99px;overflow:hidden;margin-top:16px}
+.student-v42-progress i{display:block;height:100%;background:#fff;border-radius:99px}
+.student-v42-quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.student-v42-quick .card{padding:15px 17px;position:relative;overflow:hidden}
+.student-v42-quick span{display:block;color:var(--muted);font-size:10px}
+.student-v42-quick b{display:block;font:800 23px 'Plus Jakarta Sans';margin-top:6px}
+.student-v42-quick small{display:block;color:var(--muted);font-size:9px;margin-top:4px}
+.student-v42-layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(310px,.75fr);gap:16px}
+.student-v42-panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:17px;min-width:0}
+.student-v42-panel h2{font:800 16px 'Plus Jakarta Sans';margin:0}
+.student-v42-panel .sub{display:block;color:var(--muted);font-size:10px;margin-top:3px}
+.student-v42-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
+.student-v42-tabs{display:flex;gap:7px;overflow:auto;padding:4px;background:#f6f3fb;border-radius:13px;margin-bottom:14px}
+.student-v42-tabs button{border:0;background:transparent;color:#6d657a;padding:9px 12px;border-radius:9px;font-size:10px;font-weight:800;white-space:nowrap;cursor:pointer}
+.student-v42-tabs button.active{background:#fff;color:var(--p);box-shadow:0 4px 12px rgba(60,30,110,.08)}
+.student-v42-tabpane{display:none}.student-v42-tabpane.active{display:block}
+.student-v42-material{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid #eeeaf4;text-decoration:none;color:inherit}
+.student-v42-material:last-child{border-bottom:0}
+.student-v42-material-icon{width:38px;height:38px;border-radius:11px;background:#f0ebff;display:grid;place-items:center;flex:0 0 38px;font-size:17px}
+.student-v42-material-main{min-width:0;flex:1}
+.student-v42-material-main b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.student-v42-material-main small{display:block;color:var(--muted);font-size:9px;margin-top:3px}
+.student-v42-material-arrow{color:var(--p);font-weight:900}
+.student-v42-empty{padding:26px 10px;text-align:center;color:var(--muted);font-size:11px;border:1px dashed #ddd5eb;border-radius:12px;background:#fbfaff}
+.student-v42-task{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #eeeaf4}
+.student-v42-task:last-child{border-bottom:0}
+.student-v42-task-main{flex:1;min-width:0}
+.student-v42-task-main b{display:block;font-size:12px}
+.student-v42-task-main small{display:block;color:var(--muted);font-size:9px;margin-top:3px}
+.student-v42-payment{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid #eeeaf4}
+.student-v42-payment:last-child{border-bottom:0}
+.student-v42-payment small{display:block;color:var(--muted);font-size:9px;margin-top:3px}
+.student-v42-class-card{padding:14px;border-radius:14px;background:linear-gradient(180deg,#fbfaff,#fff);border:1px solid #ebe5f4}
+.student-v42-class-card h3{margin:6px 0 2px;font:800 15px 'Plus Jakarta Sans'}
+.student-v42-class-card p{margin:0;color:var(--muted);font-size:10px}
+.student-v42-class-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:12px}
+.student-v42-statline{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px}
+.student-v42-statline div{background:#f7f4fc;border-radius:9px;padding:8px}
+.student-v42-statline b{display:block;font-size:13px}.student-v42-statline span{font-size:8px;color:var(--muted)}
+.student-v42-class-shell{display:grid;gap:10px}
+.student-v42-myclass-tabs{display:flex;gap:7px;overflow:auto;padding:4px;background:#f6f3fb;border-radius:13px;margin-bottom:14px}
+.student-v42-myclass-tabs button{border:0;background:transparent;color:#6d657a;padding:9px 12px;border-radius:9px;font-size:10px;font-weight:800;white-space:nowrap;cursor:pointer}
+.student-v42-myclass-tabs button:hover{color:var(--p)}
+.student-v42-myclass-tabs button.active{background:#fff;color:var(--p);box-shadow:0 4px 12px rgba(60,30,110,.08)}
+.student-v42-scroll-target{scroll-margin-top:20px}
+@media(max-width:1050px){.student-v42-layout{grid-template-columns:1fr}.student-v42-quick{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.student-v42-quick{grid-template-columns:1fr 1fr}.student-v42-hero{padding:20px}.student-v42-hero h2{font-size:23px}}
+@media(max-width:430px){.student-v42-quick{grid-template-columns:1fr}}
+</style>
+
+<script id="tic-student-dashboard-v42-js">
+(function(){
+  'use strict';
+  const esc42=v=>{try{return typeof esc==='function'?esc(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}catch(e){return String(v??'')}};
+  const fmt42=v=>v?new Date(v).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';
+  const fmtD42=v=>v?new Date(v).toLocaleDateString('pt-BR'):'—';
+  const type42=x=>({material:'Material',lesson:'Lesson',assignment:'Atividade',task:'Tarefa',quiz:'Quiz',homework:'Homework'})[String(x||'').toLowerCase()]||x||'Conteúdo';
+  const icon42=x=>{const t=String(x||'').toLowerCase();return t==='video'?'🎬':t==='audio'?'🎧':t==='pdf'?'📄':t==='lesson'?'📚':'🔗'};
+
+  /* Dashboard: new visual shell, same underlying Supabase sources. */
+  window.studentDashboardV42=async function(){
+    const s=await studentRecord();
+    if(!s){$('content').innerHTML='<div class="card empty">Sua conta não está vinculada a um cadastro de aluno.</div>';return}
+    let snap={overall:0,done:0,total:0};
+    try{snap=await ticRecalculateStudentProgressV19(s.id)||snap}catch(_){}
+    const [{data:ta},{data:pay},{data:members}]=await Promise.all([
+      sb.from('tic_task_assignments').select('id,assignment_id,status,due_at,active,tic_assignments(title,due_at,assignment_type,class_id,resource_items,created_at)').eq('student_id',s.id).eq('active',true).order('due_at',{ascending:true}).limit(12),
+      sb.from('tic_monthly_payments').select('*').eq('student_id',s.id).order('reference_month',{ascending:false}).limit(5),
+      sb.from('tic_class_students').select('class_id,status').eq('student_id',s.id).eq('status','active')
+    ]);
+    const classIds=[...(members||[]).map(x=>x.class_id).filter(Boolean)];
+    const [{data:classes},{data:links},{data:ca}]=classIds.length?await Promise.all([
+      sb.from('tic_classes').select('id,name,level,schedule_text,meeting_url,status').in('id',classIds).eq('status','active').order('name'),
+      sb.from('tic_class_material_links').select('id,class_id,title,url,material_type,note,created_at').in('class_id',classIds).order('created_at',{ascending:false}).limit(30),
+      sb.from('tic_assignments').select('id,title,assignment_type,due_at,class_id,resource_items,created_at,cefr_level,skill').in('class_id',classIds).order('created_at',{ascending:false}).limit(30)
+    ]):[{data:[]},{data:[]},{data:[]}];
+    const allRecent=[
+      ...(links||[]).map(x=>({...x,_source:'link',_date:x.created_at,_type:x.material_type||'link'})),
+      ...(ca||[]).filter(x=>['material','lesson'].includes(String(x.assignment_type||'').toLowerCase())).map(x=>({...x,_source:'assignment',_date:x.created_at,_type:x.assignment_type||'material'}))
+    ].sort((a,b)=>new Date(b._date||0)-new Date(a._date||0)).slice(0,8);
+    const upcoming=(ta||[]).filter(x=>x.status!=='graded'&&x.status!=='submitted').slice(0,6);
+    const overall=Number(snap.overall||0);
+    setPage(`Hello, ${s.display_name?.split(' ')[0]||'Student'} 👋`,'Seu espaço de aprendizagem.');
+    $('content').innerHTML=`<div class="student-v42">
+      <section class="student-v42-hero">
+        <span class="student-v42-kicker">MY LEARNING</span>
+        <h2>${esc42(s.display_name||'Student')} · ${esc42(s.current_level||'')}</h2>
+        <p>Nível atual <b>${esc42(s.current_level||'—')}</b> → objetivo <b>${esc42(s.target_level||'—')}</b> · ${snap.done||0}/${snap.total||0} Lessons concluídas</p>
+        <div class="student-v42-progress"><i style="width:${Math.max(0,Math.min(100,overall))}%"></i></div>
+        <p style="margin-top:7px;font-size:10px">${overall}% do seu progresso geral</p>
+      </section>
+
+      <div class="student-v42-quick">
+        <div class="card"><span>📝 Tarefas abertas</span><b>${upcoming.length}</b><small>Atividades aguardando você</small></div>
+        <div class="card"><span>📚 Lessons concluídas</span><b>${snap.done||0}</b><small>De ${snap.total||0} no currículo</small></div>
+        <div class="card"><span>🏫 Minhas Classes</span><b>${(classes||[]).length}</b><small>Turmas ativas</small></div>
+        <div class="card"><span>📂 Materiais recentes</span><b>${allRecent.length}</b><small>Últimos conteúdos enviados</small></div>
+      </div>
+
+      <div class="student-v42-layout">
+        <main class="student-v42-panel">
+          <div class="student-v42-tabs">
+            <button class="active" data-v42tab="recent">🆕 Últimos materiais enviados</button>
+            <button data-v42tab="tasks">📝 Minhas tarefas</button>
+            <button data-v42tab="classes">🏫 Minhas Classes</button>
+            <button data-v42tab="payments">💰 Pagamentos</button>
+          </div>
+
+          <section class="student-v42-tabpane active" data-v42pane="recent">
+            <div class="student-v42-section-head"><div><h2>🆕 Últimos materiais enviados</h2><span class="sub">Os conteúdos mais recentes publicados nas suas Classes.</span></div><span class="badge blue">${allRecent.length}</span></div>
+            ${allRecent.map(x=>{
+              const href=x.url||x.external_url||x.file_url||((Array.isArray(x.resource_items)&&x.resource_items[0])?.url);
+              const title=x.title||'Material';
+              return `<div class="student-v42-material">
+                <span class="student-v42-material-icon">${icon42(x._type)}</span>
+                <div class="student-v42-material-main"><b>${esc42(title)}</b><small>${esc42(type42(x._type))} · ${fmt42(x._date)}${x.skill?' · '+esc42(x.skill):''}</small></div>
+                ${href?`<a class="student-v42-material-arrow" href="${esc42(href)}" target="_blank" rel="noopener">Abrir ↗</a>`:`<span class="student-v42-material-arrow">Ver</span>`}
+              </div>`;
+            }).join('')||'<div class="student-v42-empty">Nenhum material novo foi enviado para suas Classes ainda.</div>'}
+          </section>
+
+          <section class="student-v42-tabpane" data-v42pane="tasks">
+            <div class="student-v42-section-head"><div><h2>📝 Minhas tarefas</h2><span class="sub">Acesse rapidamente o que precisa ser feito.</span></div><span class="badge yellow">${upcoming.length}</span></div>
+            ${upcoming.map(x=>`<div class="student-v42-task"><div class="student-v42-material-icon">📝</div><div class="student-v42-task-main"><b>${esc42(x.tic_assignments?.title||'Task')}</b><small>${x.tic_assignments?.assignment_type?type42(x.tic_assignments.assignment_type):'Atividade'} · ${x.tic_assignments?.due_at?'Prazo '+fmtD42(x.tic_assignments.due_at):(x.due_at?'Prazo '+fmtD42(x.due_at):'Sem prazo')}</small></div><button class="btn sm primary" onclick="openStudentTask('${x.id}')">Abrir</button></div>`).join('')||'<div class="student-v42-empty">Você não tem tarefas abertas no momento.</div>'}
+          </section>
+
+          <section class="student-v42-tabpane" data-v42pane="classes">
+            <div class="student-v42-section-head"><div><h2>🏫 Minhas Classes</h2><span class="sub">Turmas, horários e acesso rápido.</span></div></div>
+            <div class="student-v42-class-shell">${(classes||[]).map(c=>`<div class="student-v42-class-card"><span class="badge blue">${esc42(c.level||'')}</span><h3>${esc42(c.name)}</h3><p>${esc42(c.schedule_text||'Horário não definido')}</p><div class="student-v42-class-row">${c.meeting_url?`<a class="btn sm primary" href="${esc42(c.meeting_url)}" target="_blank" rel="noopener">Entrar ↗</a>`:'<span class="badge gray">Sem link</span>'}<button class="btn sm secondary" onclick="loadView('studentClass')">Abrir My Class</button></div></div>`).join('')||'<div class="student-v42-empty">Você ainda não está vinculado a uma Class.</div>'}</div>
+          </section>
+
+          <section class="student-v42-tabpane" data-v42pane="payments">
+            <div class="student-v42-section-head"><div><h2>💰 Pagamentos</h2><span class="sub">Seus últimos registros.</span></div></div>
+            ${(pay||[]).map(x=>`<div class="student-v42-payment"><div><b>${esc42(monthLabel(x.reference_month))}</b><small>${x.payment_date?'Pago em '+fmtD42(x.payment_date):'Vencimento '+fmtD42(x.due_date)}</small></div><b>${money(x.amount)} ${badge(x.status)}</b></div>`).join('')||'<div class="student-v42-empty">Nenhum registro financeiro.</div>'}
+          </section>
+        </main>
+
+        <aside style="display:grid;gap:16px;align-content:start">
+          <section class="student-v42-panel">
+            <div class="student-v42-section-head"><div><h2>📊 Meu progresso</h2><span class="sub">Visão rápida do currículo.</span></div><b style="font-size:22px">${overall}%</b></div>
+            <div class="progress" style="margin:8px 0 14px"><i style="width:${overall}%"></i></div>
+            ${['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'].map(k=>`<div class="mini"><span>${k}</span><b>${esc42(s.current_level||'')}</b></div>`).join('')}
+          </section>
+          <section class="student-v42-panel">
+            <div class="student-v42-section-head"><div><h2>🏫 Minha turma</h2><span class="sub">Acesso rápido ao ambiente da Class.</span></div></div>
+            ${(classes||[]).slice(0,2).map(c=>`<div class="student-v42-class-card" style="margin-bottom:8px"><span class="badge blue">${esc42(c.level||'')}</span><h3>${esc42(c.name)}</h3><p>${esc42(c.schedule_text||'')}</p><button class="btn sm primary" style="margin-top:9px" onclick="loadView('studentClass')">Abrir My Class →</button></div>`).join('')||'<div class="student-v42-empty">Nenhuma Class ativa.</div>'}
+          </section>
+        </aside>
+      </div>
+    </div>`;
+
+    document.querySelectorAll('[data-v42tab]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        document.querySelectorAll('[data-v42tab]').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('[data-v42pane]').forEach(p=>p.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelector(`[data-v42pane="${btn.dataset.v42tab}"]`)?.classList.add('active');
+      });
+    });
+  };
+
+  /* My Class enhancement: preserve every existing section, but add a visual navigation
+     and a dedicated "Últimos materiais enviados" block. */
+  const originalStudentClassV42=window.studentClassPage;
+  window.studentClassPage=async function(){
+    await originalStudentClassV42();
+    const root=document.querySelector('.student-class-page');
+    if(!root)return;
+
+    const grid=root.querySelector('.student-class-grid');
+    if(!grid)return;
+
+    const sections=[...grid.querySelectorAll(':scope > section')];
+    const ids=['next-class','class-materials','class-content','class-activities','past-lessons','class-board'];
+    sections.forEach((el,i)=>{if(ids[i])el.id='v42-'+ids[i];el.classList.add('student-v42-scroll-target')});
+
+    const nav=document.createElement('div');
+    nav.className='student-v42-myclass-tabs';
+    nav.innerHTML=[
+      ['next-class','📅 Próxima aula'],
+      ['latest-materials','🆕 Últimos materiais'],
+      ['class-materials','🔗 Materiais da turma'],
+      ['class-content','📚 Conteúdos'],
+      ['class-activities','📝 Atividades'],
+      ['past-lessons','📖 Aulas anteriores'],
+      ['class-board','📌 Board']
+    ].map(([id,label],i)=>`<button class="${i===0?'active':''}" data-v42scroll="${id}">${label}</button>`).join('');
+    const switcher=root.querySelector('.student-class-switcher');
+    switcher?.insertAdjacentElement('afterend',nav);
+
+    nav.querySelectorAll('[data-v42scroll]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        nav.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        if(btn.dataset.v42scroll==='latest-materials'){
+          document.getElementById('v42-latest-materials')?.scrollIntoView({behavior:'smooth',block:'start'});
+        }else{
+          document.getElementById('v42-'+btn.dataset.v42scroll)?.scrollIntoView({behavior:'smooth',block:'start'});
+        }
+      });
+    });
+
+    /* Build latest-materials from the same visible Class data already rendered by My Class.
+       This does not remove the original "Materiais da turma" card. */
+    const materialSection=document.createElement('section');
+    materialSection.className='card student-v42-scroll-target';
+    materialSection.id='v42-latest-materials';
+    const sourceLinks=[...root.querySelectorAll('#v42-class-materials .student-class-resource')];
+    const sourceContent=[...root.querySelectorAll('#v42-class-content .student-class-board-item')].filter(el=>{
+      const text=(el.textContent||'').toLowerCase();
+      return text.includes('material')||text.includes('lesson');
+    });
+    materialSection.innerHTML=`<div class="section-head"><div><h2>🆕 Últimos materiais enviados</h2><span style="display:block;color:var(--muted);font-size:10px;margin-top:3px">Materiais e conteúdos mais recentes disponibilizados pela sua turma.</span></div><span class="badge blue">${sourceLinks.length+sourceContent.length}</span></div>
+      <div>${sourceLinks.slice(0,6).map(a=>a.outerHTML).join('')}${sourceContent.slice(0,6).map(a=>a.outerHTML).join('')||(!sourceLinks.length?'<div class="student-v42-empty">Nenhum material enviado recentemente.</div>':'')}</div>`;
+    grid.insertBefore(materialSection,grid.firstElementChild);
+  };
+
+  /* New Dashboard becomes the default student home; My Class remains intact. */
+  window.studentDashboard=window.studentDashboardV42;
 })();
 </script>
