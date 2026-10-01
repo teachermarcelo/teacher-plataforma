@@ -5245,3 +5245,93 @@ document.addEventListener('click',function(ev){
 
 })();
 </script>
+
+<style id="tic-v51-student-materials">
+.v51-material-card{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid #e8e2f1;border-radius:14px;background:#fff;transition:.15s;cursor:pointer}
+.v51-material-card:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(55,35,95,.08);border-color:#cfc0ef}
+.v51-material-icon{width:42px;height:42px;border-radius:12px;background:#eee7ff;display:grid;place-items:center;font-size:20px;flex:none}
+.v51-material-main{min-width:0;flex:1}.v51-material-main b{display:block;font-size:12px}.v51-material-main small{display:block;margin-top:4px;color:var(--muted);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v51-material-open{border-radius:9px;padding:8px 11px;background:#eee7ff;color:#4e2ba1;font-size:9px;font-weight:800;white-space:nowrap}
+.v51-material-private{font-size:8px;color:#26734d;background:#eaf8f0;border-radius:999px;padding:4px 7px;font-weight:800;white-space:nowrap}
+.v51-resource-grid{display:grid;gap:9px}.v51-resource-row{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #ece7f3;border-radius:11px;background:#faf9fd}.v51-resource-row>div{min-width:0;flex:1}.v51-resource-row b{display:block;font-size:10px}.v51-resource-row small{display:block;color:var(--muted);font-size:8px;margin-top:3px}
+</style>
+<script id="tic-v51-student-materials-js">
+(function(){
+'use strict';
+const x51=v=>typeof x44==='function'?x44(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const icon51=t=>{t=String(t||'link').toLowerCase();return t==='pdf'?'📄':t==='video'?'🎬':t==='audio'?'🎧':t==='file'?'📎':t==='worksheet'?'📝':t==='drive'?'📁':'🔗'};
+
+window.openStudentMaterialV51=async function(taskAssignmentId){
+ const s=await studentRecord();if(!s)return;
+ const {data:x,error}=await sb.from('tic_task_assignments').select('id,status,assigned_at,completed_at,student_id,assignment_id,tic_assignments(id,title,instructions,due_at,points,resource_items,cover_image_url,assignment_type,active,class_id,created_at)').eq('id',taskAssignmentId).eq('student_id',s.id).eq('active',true).maybeSingle();
+ if(error||!x)return toast(error?.message||'Material não encontrado ou não está disponível para você.','error');
+ const a=x.tic_assignments||{};
+ if(String(a.assignment_type||'').toLowerCase()!=='material')return toast('Este conteúdo não é um Material.','error');
+ const resources=Array.isArray(a.resource_items)?a.resource_items.filter(r=>r&&r.url):[];
+ openModal('📂 '+x51(a.title||'Material'),`<div class="form">
+   ${a.cover_image_url?`<img src="${x51(a.cover_image_url)}" style="width:100%;max-height:210px;object-fit:cover;border-radius:14px;margin-bottom:12px">`:''}
+   <div class="notice success"><b>Material destinado a você.</b>${a.due_at?` Prazo informativo: ${fmtDate(a.due_at)}.`:''}</div>
+   ${a.instructions?`<div class="card" style="padding:13px;margin:10px 0"><b>Instruções</b><p style="margin:6px 0 0;color:var(--muted);font-size:11px;line-height:1.6">${x51(a.instructions)}</p></div>`:''}
+   <div class="section-head" style="margin-top:12px"><div><h3>🔗 Recursos deste material</h3><span>${resources.length} item(ns)</span></div></div>
+   <div class="v51-resource-grid">${resources.map(r=>`<div class="v51-resource-row"><span style="font-size:20px">${icon51(r.type)}</span><div><b>${x51(r.title||'Abrir recurso')}</b><small>${x51(r.type||'link')}${r.description?' · '+x51(r.description):''}</small></div><a class="btn sm primary" href="${x51(r.url)}" target="_blank" rel="noopener noreferrer">Abrir ↗</a></div>`).join('')||'<div class="empty">Este material não possui recursos disponíveis.</div>'}</div>
+   <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Fechar</button></div>
+ </div>`);
+};
+
+window.studentClassPage=async function(){
+ const s=await studentRecord();
+ if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno pelo Teacher.</div>';return}
+ const {data:members,error:me}=await sb.from('tic_class_students').select('class_id,status').eq('student_id',s.id).eq('status','active');
+ if(me){$('content').innerHTML=`<div class="card attention">${x51(me.message)}</div>`;return}
+ const ids=[...(members||[]).map(m=>m.class_id).filter(Boolean)];
+ if(!ids.length){$('content').innerHTML='<div class="v44-empty">🏫 Você ainda não está em uma Class.</div>';return}
+ const [{data:classes},{data:sessions},{data:links},{data:allAssignments},{data:tas},{data:boards}]=await Promise.all([
+   sb.from('tic_classes').select('id,name,level,schedule_text,meeting_url,status').in('id',ids).eq('status','active').order('name'),
+   sb.from('tic_class_sessions').select('id,class_id,session_date,duration_minutes,lesson_title,summary,status').in('class_id',ids).order('session_date',{ascending:false}).limit(100),
+   sb.from('tic_class_material_links').select('id,class_id,title,url,material_type,note,position,created_at').in('class_id',ids).order('created_at',{ascending:false}).limit(100),
+   sb.from('tic_assignments').select('id,title,instructions,assignment_type,due_at,points,priority,class_id,resource_items,cover_image_url,cefr_level,skill,created_at').in('class_id',ids).order('created_at',{ascending:false}).limit(200),
+   sb.from('tic_task_assignments').select('id,assignment_id,status,due_at,active,assigned_at,completed_at').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false}).limit(200),
+   sb.from('tic_class_board_items').select('id,class_id,title,description,item_type,status,position,created_at').in('class_id',ids).order('position').order('created_at',{ascending:false}).limit(100)
+ ]);
+ const cls=classes||[],map=new Map(cls.map(c=>[c.id,c])),taMap=new Map((tas||[]).map(t=>[t.assignment_id,t])),assignmentMap=new Map((allAssignments||[]).map(a=>[a.id,a]));
+ let selected=cls[0]?.id||'';
+ const go=name=>{document.querySelectorAll('[data-v44cp]').forEach(b=>b.classList.toggle('active',b.dataset.v44cp===name));document.querySelectorAll('[data-v44pane]').forEach(p=>p.classList.toggle('active',p.dataset.v44pane===name));};
+ const render=()=>{
+  const c=map.get(selected)||cls[0];if(!c)return;selected=c.id;
+  const cs=(sessions||[]).filter(x=>x.class_id===c.id),now=new Date(),past=cs.filter(x=>new Date(x.session_date)<now).sort((a,b)=>new Date(b.session_date)-new Date(a.session_date)),next=cs.filter(x=>new Date(x.session_date)>=now).sort((a,b)=>new Date(a.session_date)-new Date(b.session_date))[0];
+  const rs=(links||[]).filter(x=>x.class_id===c.id);
+  const as=(allAssignments||[]).filter(x=>x.class_id===c.id);
+  const lessons=as.filter(x=>String(x.assignment_type||'').toLowerCase()==='lesson');
+  /* CRITICAL: Materials are now ONLY materials assigned to this student. */
+  const materials=as.filter(x=>String(x.assignment_type||'').toLowerCase()==='material' && taMap.has(x.id));
+  const tasks=as.filter(x=>!['lesson','material'].includes(String(x.assignment_type||'').toLowerCase()));
+  const myTasks=tasks.filter(x=>taMap.has(x.id));
+  const bi=(boards||[]).filter(x=>x.class_id===c.id);
+  setPage('My Class',`${c.name} · conteúdo separado por categoria`);
+  $('content').innerHTML=`<div class="v44-class-page">
+   <div class="v44-class-hero"><div><span class="eyebrow" style="color:#fff">MY CLASS</span><h2>🏫 ${x51(c.name)}</h2><p>${x51(c.level||'')} ${c.schedule_text?'· '+x51(c.schedule_text):''}</p></div><select id="v44ClassSelect" class="v44-class-select">${cls.map(z=>`<option value="${z.id}" ${z.id===c.id?'selected':''}>${x51(z.name)} · ${x51(z.level||'')}</option>`).join('')}</select></div>
+   <div class="v44-kpis"><div class="v44-kpi"><span>📖 Aulas anteriores</span><b>${past.length}</b></div><div class="v44-kpi"><span>📚 Lessons da Class</span><b>${lessons.length}</b></div><div class="v44-kpi"><span>🔗 Resources</span><b>${rs.length}</b></div><div class="v44-kpi"><span>📂 Meus materiais</span><b>${materials.length}</b></div></div>
+   <nav class="v44-class-nav"><button class="active" data-v44cp="home">🏠 Visão geral</button><button data-v44cp="lessons">📚 Lessons</button><button data-v44cp="materials">📂 Materials</button><button data-v44cp="resources">🔗 Resources</button><button data-v44cp="tasks">📝 Minhas tarefas</button><button data-v44cp="previous">📖 Aulas anteriores</button><button data-v44cp="board">📌 Board</button></nav>
+   <section class="v44-class-pane active" data-v44pane="home"><div class="v44-class-grid"><div class="v44-card"><h3>📅 Próxima aula</h3><p class="desc">Somente a próxima aula registrada pelo Teacher.</p>${next?`<div class="v44-row"><div class="v44-row-icon">📅</div><div class="v44-row-main"><b>${x51(next.lesson_title||'Aula')}</b><small>${dt44(next.session_date)} · ${next.duration_minutes||'—'} min</small></div>${c.meeting_url?`<a class="btn sm primary" href="${x51(c.meeting_url)}" target="_blank" rel="noopener">Entrar ↗</a>`:''}</div>`:'<div class="v44-empty">Nenhuma próxima aula registrada.</div>'}</div><div class="v44-card"><h3>🏫 Minha Class</h3><p class="desc">Informações da turma, sem misturar conteúdos.</p><div class="v44-row"><div class="v44-row-icon">🏫</div><div class="v44-row-main"><b>${x51(c.name)}</b><small>${x51(c.level||'')} · ${x51(c.schedule_text||'Horário não definido')}</small></div></div></div></div></section>
+   <section class="v44-class-pane" data-v44pane="lessons"><div class="v44-card"><h3>📚 Lessons</h3><p class="desc">Somente conteúdos classificados como Lesson para esta Class.</p><div class="v44-list">${lessons.map(a=>`<div class="v44-row" style="cursor:pointer" onclick="viewStudentLessonAssignmentV51('${a.id}')"><div class="v44-row-icon">📚</div><div class="v44-row-main"><b>${x51(a.title)}</b><small>Lesson${a.cefr_level?' · '+x51(a.cefr_level):''}${a.skill?' · '+x51(a.skill):''}</small></div><span class="badge green">Abrir ↗</span></div>`).join('')||'<div class="v44-empty">Nenhuma Lesson foi disponibilizada para esta Class.</div>'}</div></div></section>
+   <section class="v44-class-pane" data-v44pane="materials"><div class="v44-card"><div class="section-head"><div><h3>📂 Materials</h3><p class="desc">Somente materiais atribuídos especificamente a você pelo Teacher.</p></div><span class="badge blue">${materials.length}</span></div><div class="v44-list">${materials.map(a=>{const ta=taMap.get(a.id),count=Array.isArray(a.resource_items)?a.resource_items.filter(r=>r&&r.url).length:0;return `<div class="v51-material-card" onclick="openStudentMaterialV51('${ta.id}')"><span class="v51-material-icon">📂</span><div class="v51-material-main"><b>${x51(a.title)}</b><small>${count} recurso(s) · ${a.created_at?dt44(a.created_at):'Material'}</small></div><span class="v51-material-private">Somente para você</span><span class="v51-material-open">Abrir ↗</span></div>`}).join('')||'<div class="v44-empty">Nenhum Material foi atribuído especificamente para você nesta Class.</div>'}</div></div></section>
+   <section class="v44-class-pane" data-v44pane="resources"><div class="v44-card"><h3>🔗 Resources</h3><p class="desc">Somente links/arquivos publicados como Resource para a Class inteira.</p><div class="v44-list">${rs.map(r=>`<div class="v44-row"><div class="v44-row-icon">${String(r.material_type||'').toLowerCase()==='video'?'🎬':String(r.material_type||'').toLowerCase()==='audio'?'🎧':String(r.material_type||'').toLowerCase()==='pdf'?'📄':'🔗'}</div><div class="v44-row-main"><b>${x51(r.title)}</b><small>${x51(r.material_type||'link')}${r.note?' · '+x51(r.note):''}</small></div><a class="btn sm secondary" href="${x51(r.url||'#')}" target="_blank" rel="noopener">Abrir ↗</a></div>`).join('')||'<div class="v44-empty">Nenhum Resource foi disponibilizado para esta Class.</div>'}</div></div></section>
+   <section class="v44-class-pane" data-v44pane="tasks"><div class="v44-card"><h3>📝 Minhas tarefas</h3><p class="desc">Somente Assignments que foram atribuídos a você nesta Class.</p><div class="v44-list">${myTasks.map(a=>{const t=taMap.get(a.id);return `<div class="v44-row"><div class="v44-row-icon">📝</div><div class="v44-row-main"><b>${x51(a.title)}</b><small>${typ44(a.assignment_type)} · ${a.due_at?'Prazo '+dt44(a.due_at):'Sem prazo'}${a.skill?' · '+x51(a.skill):''}</small></div>${typeof badge==='function'?badge(t?.status||'pending'):'<span class="badge yellow">Pendente</span>'}</div>`}).join('')||'<div class="v44-empty">Nenhuma tarefa atribuída a você nesta Class.</div>'}</div></div></section>
+   <section class="v44-class-pane" data-v44pane="previous"><div class="v44-card"><h3>📖 Aulas anteriores</h3><p class="desc">Somente aulas que o Teacher registrou em Class → Aulas.</p><div class="v44-list">${past.map(a=>`<div class="v44-session"><div class="v44-date"><b>${new Date(a.session_date).getDate()}</b><small>${new Date(a.session_date).toLocaleDateString('pt-BR',{month:'short'}).replace('.','')}</small></div><div><b>${x51(a.lesson_title||'Aula')}</b><small>${dt44(a.session_date)} · ${a.duration_minutes||'—'} min${a.summary?' · '+x51(a.summary):''}</small></div><span class="badge ${a.status==='completed'?'green':'blue'}">${x51(a.status||'Registrada')}</span></div>`).join('')||'<div class="v44-empty">Nenhuma aula anterior foi registrada pelo Teacher.</div>'}</div></div></section>
+   <section class="v44-class-pane" data-v44pane="board"><div class="v44-card"><h3>📌 Board</h3><p class="desc">Somente avisos e itens publicados no Board desta Class.</p><div class="v44-list">${bi.map(b=>`<div class="v44-row"><div class="v44-row-icon">📌</div><div class="v44-row-main"><b>${x51(b.title)}</b><small>${x51(b.description||'')}${b.item_type?' · '+x51(b.item_type):''}</small></div><span class="badge ${b.status==='completed'?'green':b.status==='in_progress'?'yellow':'blue'}">${x51(b.status||'Publicado')}</span></div>`).join('')||'<div class="v44-empty">Nenhum item no Board.</div>'}</div></div></section>
+  </div>`;
+  document.querySelectorAll('[data-v44cp]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.v44cp)));
+  $('v44ClassSelect')?.addEventListener('change',ev=>{selected=ev.target.value;render()});
+ };
+ render();
+};
+
+window.viewStudentLessonAssignmentV51=async function(assignmentId){
+ const s=await studentRecord();if(!s)return;
+ const {data:x,error}=await sb.from('tic_task_assignments').select('id,student_id,assignment_id,tic_assignments(id,title,instructions,assignment_type,resource_items,html_enabled,html_content,lesson_id)').eq('assignment_id',assignmentId).eq('student_id',s.id).eq('active',true).maybeSingle();
+ if(error||!x)return toast('Lesson não está atribuída a você.','error');
+ if(x.tic_assignments?.lesson_id&&typeof viewStudentLessonInteractive==='function')return viewStudentLessonInteractive(x.tic_assignments.lesson_id);
+ if(typeof openStudentTask==='function')return openStudentTask(x.id);
+};
+})();
+</script>
