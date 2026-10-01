@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Teacher Platform · V46 Separated Content</title>
+<title>Teacher Platform · V47 Separated Content</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
@@ -667,7 +667,17 @@ async function classCenterTab(classId,tab){
  else if(tab==='lessons'){body.innerHTML=`<div class="class-center-panel"><h3>📚 Aulas</h3><p>Últimas e próximas aulas registradas.</p><button class="btn primary" onclick="openClassLessonForm('${classId}')">+ Registrar aula</button><div class="class-center-list" style="margin-top:14px">${evs.map(e=>`<div class="class-center-list-item"><div><b>${esc(e.title)}</b><small>${esc(e.event_type||'aula')} · ${esc(e.notes||'')}</small></div><small>${fmt(e.starts_at||e.created_at)}</small></div>`).join('')||'<div class="class-center-empty">Nenhuma aula registrada.</div>'}</div></div>`}
  else if(tab==='students'){body.innerHTML=`<div class="class-center-panel"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><h3>👥 Alunos da turma</h3><p>${students.length} aluno(s) ativo(s). Agora você pode adicionar conteúdo para a turma inteira ou somente para um aluno.</p></div><button class="btn primary" onclick="openClassMembers('${classId}')">👥 Gerenciar alunos</button></div><div class="class-center-student-grid" style="margin-top:14px">${students.map(st=>`<article class="class-center-student-card"><div class="class-center-student-main"><span class="class-center-avatar">👤</span><div><b>${esc(st.display_name)}</b><small>${esc(st.current_level||'')} · ${esc(st.email||'')}</small><span class="badge green">${esc(st.status||'active')}</span></div></div><div class="class-center-student-actions"><button class="btn sm primary" onclick="openClassStudentContent('${classId}','${st.id}')">➕ Adicionar conteúdo</button><button class="btn sm secondary" onclick="openStudentView('${st.id}')">👤 Abrir aluno</button></div></article>`).join('')||'<div class="class-center-empty">Nenhum aluno vinculado.</div>'}</div></div>`}
  else if(tab==='tasks'||tab==='topics'){body.innerHTML=`<div class="class-center-panel"><h3>${tab==='tasks'?'📝 Tasks':'📚 Assuntos & Tópicos'}</h3><p>${tab==='tasks'?'Tarefas e atribuições desta turma.':'Conteúdos organizados por CEFR e skill.'}</p><button class="btn primary" onclick="openClassAssign('${classId}')">📤 Atribuir conteúdo</button><div class="class-center-list" style="margin-top:14px">${tasks.map(t=>`<div class="class-center-list-item"><div><b>${esc(t.title)}</b><small>${esc(t.assignment_type||'task')} · ${esc(t.skill||'')} · ${esc(t.cefr_level||cls.level||'')}</small></div><small>${fmt(t.due_at)}</small></div>`).join('')||'<div class="class-center-empty">Nenhum registro.</div>'}</div></div>`}
- else if(tab==='materials'){const rs=tasks.flatMap(t=>Array.isArray(t.resource_items)?t.resource_items.map(r=>({...r,task:t.title})):[]);body.innerHTML=`<div class="class-center-panel"><h3>🔗 Materiais e links</h3><p>Recursos preservados nas atribuições da turma.</p><div class="class-center-list">${rs.map(r=>`<div class="class-center-list-item"><div><b>${esc(r.title||'Recurso')}</b><small>${esc(r.type||'link')} · ${esc(r.task)}</small></div>${r.url?`<a class="btn sm secondary" href="${esc(r.url)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}</div>`).join('')||'<div class="class-center-empty">Nenhum recurso encontrado.</div>'}</div></div>`}
+ else if(tab==='materials'){
+  /* V47: Materials is a dedicated content area. It must not reuse the old
+     assignment-resource renderer. The V45 material module is defined later
+     in this same HTML and is available by the time the user clicks the tab. */
+  if(typeof window.renderMaterialsTab45==='function'){
+    await window.renderMaterialsTab45(classId);
+    return;
+  }
+  const rs=tasks.flatMap(t=>Array.isArray(t.resource_items)?t.resource_items.map(r=>({...r,task:t.title})):[]);
+  body.innerHTML=`<div class="class-center-panel"><h3>🔗 Materiais e links</h3><p>Recursos preservados nas atribuições da turma.</p><div class="class-center-list">${rs.map(r=>`<div class="class-center-list-item"><div><b>${esc(r.title||'Recurso')}</b><small>${esc(r.type||'link')} · ${esc(r.task)}</small></div>${r.url?`<a class="btn sm secondary" href="${esc(r.url)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}</div>`).join('')||'<div class="class-center-empty">Nenhum recurso encontrado.</div>'}</div></div>`
+}
  else if(tab==='resources'){
   body.innerHTML=`<div class="class-center-panel"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><h3>🧰 Resources da turma</h3><p>Centralize links, PDFs, vídeos, áudios, Drive, Docs, worksheets e outros recursos. Você pode adicionar à turma inteira ou somente a um aluno.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" onclick="openResourceFormV39('${classId}')">+ Novo resource</button><button class="btn secondary" onclick="openResourcePickerV39('${classId}')">📚 Inserir existente</button></div></div><div id="classResourceListV39" class="class-resource-grid-v39"><div class="loading">Carregando resources...</div></div></div>`;
   loadClassResourcesV39(classId);
@@ -4696,7 +4706,7 @@ function renderMaterialCards45(rows){
     </div>`;
 }
 
-async function renderMaterialsTab45(classId){
+window.renderMaterialsTab45=async function renderMaterialsTab45(classId){
   /* The original Class Center shell does not carry data-class-center.
      It uses one #classCenterBody in the active workspace, so target that
      real body instead of returning silently. */
