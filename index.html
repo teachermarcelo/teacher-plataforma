@@ -336,6 +336,7 @@ body{overflow:hidden;}
   <button data-view="assignments">✅ <span>Assignments</span></button>
   <button data-view="feedback">📝 <span>Feedback & Corrections</span></button>
   <button data-view="materials">📂 <span>Materials</span></button>
+  <button data-view="teacherMaterials">🗂️ <span>Teacher Materials</span></button>
   <button data-view="resources">🧰 <span>Resources</span></button>
   <button data-view="calendar">📅 <span>Calendar</span></button>
   <button data-view="progress">📊 <span>Progress</span></button>
@@ -520,6 +521,7 @@ async function loadView(v){
  assignments:['Assignments','Atividades, prazos e correções.','<button class="btn primary" onclick="openAssignmentForm()">+ Nova tarefa</button>'],
  feedback:['Feedback & Corrections','Veja as entregas dos alunos, dê nota e envie feedback.',''],
  materials:['Materials','PDF, links, vídeo, áudio e arquivos.','<button class="btn primary" onclick="openMaterialForm()">+ Novo material</button>'],
+ teacherMaterials:['Teacher Materials','Sua biblioteca privada de links, websites, PDFs, vídeos, ferramentas e materiais diversos.','<button class="btn primary" onclick="openTeacherMaterialFormV53()">+ Novo Teacher Material</button>'],
  calendar:['Calendar','Agenda de aulas e compromissos.','<button class="btn primary" onclick="openEventForm()">+ Novo evento</button>'],
  progress:['Progress','Acompanhe o desenvolvimento por habilidade.',''],
  messages:['Messages','Comunicação individual com alunos.',''],
@@ -547,6 +549,7 @@ async function loadView(v){
  if(v==='assignments')return assignmentsPage();
  if(v==='feedback')return feedbackPage();
  if(v==='materials')return genericTable('materials');
+ if(v==='teacherMaterials')return teacherMaterialsPageV53();
  if(v==='calendar'||v==='studentCalendar')return calendarPage(v.startsWith('student'));
  if(v==='progress'||v==='studentProgress')return progressPage(v.startsWith('student'));
  if(v==='messages'||v==='studentMessages')return messagesPage(v.startsWith('student'));
@@ -721,7 +724,7 @@ async function genericTable(type){
  const {data}=await sb.from(cfg[0]).select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
  // Evita que uma consulta iniciada em uma aba anterior sobrescreva a aba que o Teacher acabou de abrir.
  if((window.__ticViewToken||0)!==viewToken || currentView!==type)return;
- $('content').innerHTML=`<div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Nome</th><th>${cfg[2]}</th><th>${cfg[3]}</th><th>Ações</th></tr></thead><tbody>${(data||[]).map(x=>`<tr><td><b>${esc(x[cfg[1]])}</b></td><td>${esc(x[cfg[2]]||'—')}</td><td>${esc(x[cfg[3]]||'—')}</td><td><button onclick='editGeneric("${type}",${JSON.stringify(x)})'>Editar</button> ${type==='classes'?`<button onclick='openClassMembers("${x.id}")'>👥 Alunos</button><button onclick='openClassAssign("${x.id}")'>📤 Atribuir</button>`:''} ${type==='materials'?`<button onclick='openAssignContent("material",${JSON.stringify(x)})'>📤 Atribuir</button>`:''} <button onclick="deleteRow('${cfg[0]}','${x.id}','${type}')">Excluir</button></td></tr>`).join('')||`<tr><td colspan="4" class="empty">Nenhum registro.</td></tr>`}</tbody></table></div></div>`;
+ $('content').innerHTML=`<div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Nome</th><th>${cfg[2]}</th><th>${cfg[3]}</th><th>Ações</th></tr></thead><tbody>${(data||[]).map(x=>`<tr><td><b>${esc(x[cfg[1]])}</b></td><td>${esc(x[cfg[2]]||'—')}</td><td>${esc(x[cfg[3]]||'—')}</td><td><button onclick='editGeneric("${type}",${JSON.stringify(x)})'>Editar</button> ${type==='classes'?`<button onclick='openClassMembers("${x.id}")'>👥 Alunos</button><button onclick='openClassAssign("${x.id}")'>📤 Atribuir</button>`:''} ${type==='materials'?`<button onclick='openMaterialAssignV52(${JSON.stringify(x)})'>📤 Atribuir</button>`:''} <button onclick="deleteRow('${cfg[0]}','${x.id}','${type}')">Excluir</button></td></tr>`).join('')||`<tr><td colspan="4" class="empty">Nenhum registro.</td></tr>`}</tbody></table></div></div>`;
 }
 async function openClassMembers(classId){const [{data:cls},{data:students},{data:members}]=await Promise.all([sb.from('tic_classes').select('id,name,level').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle(),sb.from('tic_students').select('id,display_name,current_level').eq('teacher_id',session.user.id).eq('status','active').order('display_name'),sb.from('tic_class_students').select('student_id,status').eq('class_id',classId)]);if(!cls)return toast('Turma não encontrada.','error');const current=new Set((members||[]).filter(m=>m.status==='active').map(m=>m.student_id));openModal(`👥 Alunos · ${cls.name}`,`<form class="form" onsubmit="saveClassMembers(event,'${classId}')"><div class="notice">Selecione os alunos que pertencem à turma. Ao salvar, os vínculos são atualizados.</div><div class="field"><label>Alunos</label><select id="cmStudents" multiple size="10" style="min-height:220px">${(students||[]).map(st=>`<option value="${st.id}" ${current.has(st.id)?'selected':''}>${esc(st.display_name)} · ${esc(st.current_level)}</option>`).join('')}</select></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar alunos</button></div></form>`)}
 async function saveClassMembers(e,classId){e.preventDefault();const ids=[...($('cmStudents')?.selectedOptions||[])].map(o=>o.value);const {data:old}=await sb.from('tic_class_students').select('id,student_id').eq('class_id',classId);const selected=new Set(ids);const oldMap=new Map((old||[]).map(x=>[x.student_id,x.id]));const remove=(old||[]).filter(x=>!selected.has(x.student_id)).map(x=>x.id);if(remove.length){const r=await sb.from('tic_class_students').delete().in('id',remove);if(r.error)return toast('Não foi possível remover vínculos: '+r.error.message,'error')}const add=ids.filter(id=>!oldMap.has(id)).map(student_id=>({class_id:classId,student_id,status:'active'}));if(add.length){const r=await sb.from('tic_class_students').insert(add);if(r.error)return toast('Não foi possível adicionar alunos: '+r.error.message,'error')}closeModal();toast('Alunos da turma atualizados.','success');loadView('classes')}
@@ -840,6 +843,49 @@ async function assignExistingTaskToStudent(classId,studentId){
 function editGeneric(type,x){if(type==='classes')openClassForm(x);else if(type==='courses')openCourseForm(x);else openMaterialForm(x)}
 function openClassForm(x=null){openModal(x?'Editar turma':'Nova turma',`<form class="form" onsubmit="saveGeneric(event,'tic_classes','${x?.id||''}','classes')"><div class="field"><label>Nome</label><input id="g1" value="${esc(x?.name||'')}" required></div><div class="form-grid"><div class="field"><label>Nível</label><select id="g2">${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Horário</label><input id="g3" value="${esc(x?.schedule_text||'')}"></div></div><div class="field"><label>Link da aula</label><input id="g4" value="${esc(x?.meeting_url||'')}"></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`)}
 function openCourseForm(x=null){openModal(x?'Editar curso':'Novo curso',`<form class="form" onsubmit="saveGeneric(event,'tic_courses','${x?.id||''}','courses')"><div class="field"><label>Título</label><input id="g1" value="${esc(x?.title||'')}" required></div><div class="field"><label>Nível</label><select id="g2">${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Descrição</label><textarea id="g3">${esc(x?.description||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`)}
+
+/* V53 — Teacher Materials: biblioteca privada do professor. Nunca é publicada automaticamente para alunos. */
+async function teacherMaterialsPageV53(){
+ const {data,error}=await sb.from('tic_teacher_materials').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+ if(error){$('content').innerHTML=`<div class="card attention"><b>Teacher Materials ainda não está disponível.</b><p>${esc(error.message)}</p><small>Execute o SQL V53 no Supabase para criar a biblioteca privada.</small></div>`;return}
+ window.__teacherMaterialsV53=data||[];
+ $('content').innerHTML=`<div class="notice">🔒 <b>Biblioteca privada do Teacher.</b> Tudo aqui é para sua organização. Nada é enviado ao aluno ou à Class automaticamente. Quando quiser usar um item com um aluno, você poderá copiar o link para Materials/Resources ou criar uma atribuição específica.</div>
+ <div class="card section"><div class="toolbar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="tm53Search" class="input" style="flex:1;min-width:220px" placeholder="🔎 Buscar website, material, ferramenta..." oninput="renderTeacherMaterialsV53()"><select id="tm53Cat" onchange="renderTeacherMaterialsV53()" style="min-width:160px"><option value="">Todas as categorias</option><option value="website">🌐 Website</option><option value="tool">🛠️ Ferramenta</option><option value="ai">🤖 IA</option><option value="pdf">📄 PDF</option><option value="video">🎬 Vídeo</option><option value="audio">🎧 Áudio</option><option value="worksheet">📝 Worksheet</option><option value="book">📚 Livro</option><option value="other">📦 Outros</option></select><button class="btn primary" onclick="openTeacherMaterialFormV53()">＋ Novo</button></div></div>
+ <div id="tm53Grid" class="grid cols3 section"></div>`;
+ renderTeacherMaterialsV53();
+}
+function renderTeacherMaterialsV53(){
+ const q=($('tm53Search')?.value||'').toLowerCase().trim(),cat=$('tm53Cat')?.value||'';
+ const data=(window.__teacherMaterialsV53||[]).filter(x=>!cat||x.category===cat).filter(x=>!q||[x.title,x.description,x.notes,x.tags].join(' ').toLowerCase().includes(q));
+ $('tm53Grid').innerHTML=data.map(x=>{const rs=Array.isArray(x.resource_items)?x.resource_items.filter(r=>r?.url||r?.value):[];return `<article class="card" style="position:relative"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><span class="badge blue">${esc(x.category||'other')}</span><span class="badge gray">${rs.length} recurso(s)</span></div><h3 style="margin:12px 0 6px">${esc(x.title)}</h3><p style="color:var(--muted);font-size:12px;min-height:34px">${esc(x.description||'')}</p>${x.tags?`<small style="color:var(--muted)">🏷️ ${esc(x.tags)}</small>`:''}<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:14px"><button class="btn secondary" onclick="openTeacherMaterialViewV53('${x.id}')">👁️ Abrir</button><button class="btn secondary" onclick='openTeacherMaterialFormV53(${JSON.stringify(x)})'>✏️ Editar</button><button class="btn danger" onclick="deleteTeacherMaterialV53('${x.id}')">Excluir</button></div></article>`}).join('')||'<div class="card empty" style="grid-column:1/-1">Nenhum Teacher Material encontrado. Clique em <b>+ Novo</b> para guardar seu primeiro website, link, PDF ou ferramenta.</div>';
+}
+function openTeacherMaterialFormV53(x=null){
+ openModal(x?'✏️ Editar Teacher Material':'🗂️ Novo Teacher Material',`<form class="form" onsubmit="saveTeacherMaterialV53(event,'${x?.id||''}')">
+ <div class="field"><label>Nome / título</label><input id="tm1" value="${esc(x?.title||'')}" placeholder="Ex.: ESL Games Plus, British Council, Canva..." required></div>
+ <div class="form-grid"><div class="field"><label>Categoria</label><select id="tm2">${['website','tool','ai','pdf','video','audio','worksheet','book','other'].map(c=>`<option value="${c}" ${c===(x?.category||'website')?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Nível (opcional)</label><select id="tm3"><option value="">Todos</option>${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div></div>
+ <div class="field"><label>Descrição</label><textarea id="tm4" rows="3" placeholder="Para que serve? O que você quer lembrar sobre este recurso?">${esc(x?.description||'')}</textarea></div>
+ <div class="field"><label>Tags</label><input id="tm5" value="${esc(x?.tags||'')}" placeholder="A1, grammar, listening, AI, free, worksheets..."></div>
+ <div class="resource-box"><div class="resource-head"><b>🔗 Links e arquivos guardados</b><button type="button" class="btn secondary" onclick="addResourceRow('tmResources')">＋ Adicionar recurso</button></div><div id="tmResources"></div><div class="resource-help">Você pode guardar vários links no mesmo card: website + YouTube + PDF + Drive + ferramenta + outros.</div></div>
+ <div class="field"><label>Notas privadas do Teacher</label><textarea id="tm6" rows="4" placeholder="Anotações, senha não deve ser colocada aqui, ideias de uso, observações...">${esc(x?.notes||'')}</textarea></div>
+ <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">💾 Guardar na biblioteca</button></div></form>`);
+ renderResourceRows('tmResources',x?.resource_items||[]);
+}
+async function saveTeacherMaterialV53(e,id){
+ e.preventDefault();
+ const resources=collectResources('tmResources').filter(r=>r.url||r.value);
+ if(!resources.length)return toast('Adicione pelo menos um link ou recurso.','error');
+ const o={teacher_id:session.user.id,title:$('tm1').value.trim(),category:$('tm2').value,level:$('tm3').value||null,description:$('tm4').value.trim()||null,tags:$('tm5').value.trim()||null,notes:$('tm6').value.trim()||null,resource_items:resources};
+ const r=id?await sb.from('tic_teacher_materials').update(o).eq('id',id).eq('teacher_id',session.user.id):await sb.from('tic_teacher_materials').insert(o);
+ if(r.error)return toast('Não foi possível guardar: '+r.error.message,'error');
+ closeModal();toast(id?'Teacher Material atualizado.':'Teacher Material guardado na sua biblioteca.','success');await teacherMaterialsPageV53();
+}
+function openTeacherMaterialViewV53(id){
+ const x=(window.__teacherMaterialsV53||[]).find(z=>z.id===id);if(!x)return;
+ const rs=Array.isArray(x.resource_items)?x.resource_items:[];
+ openModal(`🗂️ ${esc(x.title)}`,`<div class="notice">🔒 Biblioteca privada do Teacher · ${esc(x.category||'other')}</div><p>${esc(x.description||'')}</p><div class="viewer-panel"><div class="viewer-panel-head"><b>🔗 Recursos</b></div>${rs.map((r,i)=>r.url?`<div class="row"><div><b>${esc(r.title||'Recurso '+(i+1))}</b><small>${esc(r.description||r.type||'link')}</small></div><a class="btn secondary" href="${esc(r.url)}" target="_blank" rel="noopener">Abrir ↗</a></div>`:'').join('')||'<div class="empty">Nenhum link válido.</div>'}</div><div class="viewer-panel" style="margin-top:10px"><b>🏷️ Tags</b><p>${esc(x.tags||'—')}</p><b>📝 Notas privadas</b><p>${esc(x.notes||'—')}</p></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Fechar</button><button class="btn primary" onclick='closeModal();openTeacherMaterialFormV53(${JSON.stringify(x)})'>✏️ Editar</button></div>`);
+}
+async function deleteTeacherMaterialV53(id){if(!confirm('Excluir este Teacher Material da sua biblioteca?'))return;const r=await sb.from('tic_teacher_materials').delete().eq('id',id).eq('teacher_id',session.user.id);if(r.error)return toast(r.error.message,'error');toast('Teacher Material excluído.','success');await teacherMaterialsPageV53();}
+
 function openMaterialForm(x=null){openModal(x?'Editar material':'Novo material',`<form class="form" onsubmit="saveMaterial(event,'${x?.id||''}')"><div class="field"><label>Título</label><input id="g1" value="${esc(x?.title||'')}" required></div><div class="form-grid"><div class="field"><label>Tipo principal</label><select id="g2">${['pdf','video','audio','link','file','worksheet','other'].map(l=>`<option ${l===x?.material_type?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Nível</label><select id="g3"><option value="">—</option>${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div></div><div class="field"><label>Imagem de capa (opcional)</label><div class="cover-upload"><input id="gCover" value="${esc(x?.cover_image_url||'')}" placeholder="URL da imagem ou upload"><input type="file" accept="image/*" onchange="uploadCover(this,'gCover')"></div></div><div class="field"><label>Descrição</label><textarea id="g5" rows="3">${esc(x?.description||'')}</textarea></div><div class="resource-box"><div class="resource-head"><b>📚 Recursos deste material</b><button type="button" class="btn secondary" onclick="addResourceRow('gResources')">+ Adicionar recurso</button></div><div id="gResources"></div><div class="resource-help">Um material pode conter quantos links, PDFs, vídeos, áudios ou atividades manuais você quiser.</div></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar material</button></div></form>`);renderResourceRows('gResources',x?.resource_items||((x?.external_url||x?.file_url)?[{type:x?.material_type||'link',title:x?.title||'Recurso',url:x?.external_url||x?.file_url}]:[]))}
 async function saveMaterial(e,id){e.preventDefault();const o={teacher_id:session.user.id,title:$('g1').value.trim(),material_type:$('g2').value,level:$('g3').value||null,description:$('g5').value.trim()||null,resource_items:collectResources('gResources'),cover_image_url:$('gCover').value.trim()||null};const first=o.resource_items[0];if(first?.url){if(o.material_type==='pdf')o.file_url=first.url;else o.external_url=first.url}const r=id?await sb.from('tic_materials').update(o).eq('id',id):await sb.from('tic_materials').insert(o);if(r.error)return toast('Não foi possível salvar o material: '+r.error.message,'error');closeModal();toast(id?'Material atualizado.':'Material criado.','success');loadView('materials')}
 async function saveGeneric(e,table,id,type){e.preventDefault();let o={teacher_id:session.user.id};if(table==='tic_classes')Object.assign(o,{name:$('g1').value,level:$('g2').value,schedule_text:$('g3').value,meeting_url:$('g4').value||null});if(table==='tic_courses')Object.assign(o,{title:$('g1').value,level:$('g2').value,description:$('g3').value});const r=id?await sb.from(table).update(o).eq('id',id):await sb.from(table).insert(o);if(r.error)return toast('Não foi possível salvar: '+r.error.message,'error');closeModal();toast('Registro salvo.','success');loadView(type)}
@@ -2797,7 +2843,7 @@ async function sendStudentMessageV18(e){
 
   function renderMaterialCards(items,folderMap){
     if(!items.length)return '<div class="material-empty">📂 Nenhum material encontrado com esses filtros.<br><button class="btn primary" style="margin-top:12px" onclick="openMaterialForm()">+ Criar material</button></div>';
-    return `<div class="materials-grid">${items.map(m=>{const folder=folderMap.get(m.folder_id);const folderName=folder?.name||m.folder||'Sem pasta';const folderColor=folder?.color||m.color||'#6d4aff';const url=m.external_url||m.file_url||((m.resource_items||[])[0]?.url);return `<article class="material-card" data-material-level="${escm(m.level||'')}" data-material-type="${escm(m.material_type||'')}"><div class="material-cover" style="border-top:5px solid ${escm(folderColor)}">${m.cover_image_url?`<img src="${escm(m.cover_image_url)}" alt="">`:`<span class="material-icon">${materialIcon(m.material_type)}</span>`}</div><div class="material-card-body"><div class="material-meta"><span class="badge blue">${escm(m.material_type||'material')}</span>${m.level?`<span class="badge gray">${escm(m.level)}</span>`:''}</div><div class="material-card-title">${escm(m.title)}</div><div class="material-card-desc">${escm(m.description||'Sem descrição')}</div><div><span class="material-folder-dot" style="background:${escm(folderColor)}"></span><small>${escm(folderName)}</small></div><div class="material-created">Criado em ${safeDate(m.created_at)}${m.updated_at&&m.updated_at!==m.created_at?' · atualizado '+safeDate(m.updated_at):''}</div><div class="material-actions">${url?`<a class="btn secondary" href="${escm(url)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}<button class="btn secondary" onclick='openMaterialForm(${JSON.stringify(m)})'>✏️ Editar</button><button class="btn secondary" onclick='openAssignContent("material",${JSON.stringify(m)})'>📤 Atribuir</button><button class="btn danger" onclick="deleteMaterialV38('${escm(m.id)}')">🗑️ Remover</button></div></div></article>`}).join('')}</div>`;
+    return `<div class="materials-grid">${items.map(m=>{const folder=folderMap.get(m.folder_id);const folderName=folder?.name||m.folder||'Sem pasta';const folderColor=folder?.color||m.color||'#6d4aff';const url=m.external_url||m.file_url||((m.resource_items||[])[0]?.url);return `<article class="material-card" data-material-level="${escm(m.level||'')}" data-material-type="${escm(m.material_type||'')}"><div class="material-cover" style="border-top:5px solid ${escm(folderColor)}">${m.cover_image_url?`<img src="${escm(m.cover_image_url)}" alt="">`:`<span class="material-icon">${materialIcon(m.material_type)}</span>`}</div><div class="material-card-body"><div class="material-meta"><span class="badge blue">${escm(m.material_type||'material')}</span>${m.level?`<span class="badge gray">${escm(m.level)}</span>`:''}</div><div class="material-card-title">${escm(m.title)}</div><div class="material-card-desc">${escm(m.description||'Sem descrição')}</div><div><span class="material-folder-dot" style="background:${escm(folderColor)}"></span><small>${escm(folderName)}</small></div><div class="material-created">Criado em ${safeDate(m.created_at)}${m.updated_at&&m.updated_at!==m.created_at?' · atualizado '+safeDate(m.updated_at):''}</div><div class="material-actions">${url?`<a class="btn secondary" href="${escm(url)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}<button class="btn secondary" onclick='openMaterialForm(${JSON.stringify(m)})'>✏️ Editar</button><button class="btn secondary" onclick='openMaterialAssignV52(${JSON.stringify(m)})'>📤 Atribuir</button><button class="btn danger" onclick="deleteMaterialV38('${escm(m.id)}')">🗑️ Remover</button></div></div></article>`}).join('')}</div>`;
   }
 
   function renderFolderAdmin(allFolders,realFolders,materials){
@@ -2835,6 +2881,226 @@ async function sendStudentMessageV18(e){
 .class-center-student-main{display:flex;gap:11px;align-items:center}.class-center-student-main b{display:block;font-size:14px}.class-center-student-main small{display:block;color:var(--muted);margin:4px 0 7px;font-size:11px}.class-center-avatar{width:40px;height:40px;border-radius:12px;background:#f0ebff;display:grid;place-items:center;font-size:20px}.class-center-student-actions{display:flex;gap:7px;flex-wrap:wrap}
 @media(max-width:760px){.class-center-student-grid{grid-template-columns:1fr}}
 </style>
+
+
+<style id="tic-v52-material-assignment">
+.v52-assign-note{background:#f7f3ff;border:1px solid #e3d8f7;border-radius:12px;padding:11px 13px;font-size:10px;color:#5f5570;line-height:1.5}
+.v52-assign-target{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:700px){.v52-assign-target{grid-template-columns:1fr}}
+.v52-material-preview{display:flex;gap:10px;align-items:center;padding:11px;border:1px solid #e9e3f1;border-radius:12px;background:#fbfaff}
+.v52-material-preview-icon{width:40px;height:40px;border-radius:11px;background:#eee7ff;display:grid;place-items:center;font-size:20px}
+</style>
+<script id="tic-v52-material-assignment-js">
+(function(){
+'use strict';
+const e52=v=>{try{return typeof esc==='function'?esc(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]) )}catch(_){return String(v??'')}};
+
+window.openMaterialAssignV52=async function(material){
+  const sourceId=material?.id;
+  if(!sourceId)return toast('Material inválido.','error');
+
+  const [{data:students,error:se},{data:classes,error:ce}]=await Promise.all([
+    sb.from('tic_students')
+      .select('id,display_name,current_level,email,status')
+      .eq('teacher_id',session.user.id).eq('status','active').order('display_name'),
+    sb.from('tic_classes')
+      .select('id,name,level,status')
+      .eq('teacher_id',session.user.id).eq('status','active').order('name')
+  ]);
+  if(se)return toast('Não foi possível carregar os alunos: '+se.message,'error');
+  if(ce)return toast('Não foi possível carregar as turmas: '+ce.message,'error');
+  if(!students?.length)return toast('Cadastre pelo menos um aluno antes de atribuir um Material.','info');
+  if(!classes?.length)return toast('Crie pelo menos uma Class antes de atribuir um Material.','info');
+
+  const title=material.title||'Material';
+  const itemCount=Array.isArray(material.resource_items)?material.resource_items.filter(r=>r?.url).length:((material.external_url||material.file_url)?1:0);
+
+  openModal('📤 Atribuir Material ao aluno',`
+    <form class="form" onsubmit="saveMaterialAssignV52(event,'${e52(sourceId)}')">
+      <div class="v52-material-preview">
+        <div class="v52-material-preview-icon">📂</div>
+        <div style="min-width:0;flex:1">
+          <b>${e52(title)}</b>
+          <small style="display:block;color:var(--muted);margin-top:3px">${itemCount} recurso(s) · ${e52(material.level||'Material')}</small>
+        </div>
+      </div>
+
+      <div class="v52-assign-note">
+        <b>Como funciona:</b> este Material será entregue <b>somente ao aluno escolhido</b> e ficará ligado à <b>Class escolhida</b>. Assim ele aparecerá corretamente em <b>My Class → Materials</b>.
+      </div>
+
+      <div class="v52-assign-target">
+        <div class="field">
+          <label>👤 Aluno destinatário</label>
+          <select id="v52Student" required onchange="loadStudentClassesV52()">
+            <option value="">Selecione o aluno...</option>
+            ${students.map(s=>`<option value="${e52(s.id)}">${e52(s.display_name)} · ${e52(s.current_level||'')}${s.email?' · '+e52(s.email):''}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>🏫 Class onde aparecerá</label>
+          <select id="v52Class" required>
+            <option value="">Selecione primeiro o aluno...</option>
+          </select>
+          <small id="v52ClassHelp" style="color:var(--muted)">O aluno precisa estar vinculado à Class.</small>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Mensagem para o aluno</label>
+        <textarea id="v52Message" rows="3" placeholder="Ex.: Faça este material antes da próxima aula."></textarea>
+      </div>
+
+      <div class="field">
+        <label>Prazo opcional</label>
+        <input id="v52Due" type="datetime-local">
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button>
+        <button class="btn primary" id="v52Save">📤 Atribuir somente a este aluno</button>
+      </div>
+    </form>`);
+};
+
+window.loadStudentClassesV52=async function(){
+  const studentId=$('v52Student')?.value;
+  const select=$('v52Class'),help=$('v52ClassHelp');
+  if(!select)return;
+  select.innerHTML='<option value="">Carregando Classes...</option>';
+  if(!studentId){select.innerHTML='<option value="">Selecione primeiro o aluno...</option>';return;}
+
+  const {data:members,error}=await sb.from('tic_class_students')
+    .select('class_id,status')
+    .eq('student_id',studentId).eq('status','active');
+  if(error){select.innerHTML='<option value="">Erro ao carregar</option>';if(help)help.textContent=error.message;return;}
+
+  const ids=(members||[]).map(x=>x.class_id).filter(Boolean);
+  if(!ids.length){
+    select.innerHTML='<option value="">Aluno sem Class ativa</option>';
+    if(help)help.textContent='Vincule o aluno a uma Class em Class Center → Alunos.';
+    return;
+  }
+
+  const {data:classes,error:ce}=await sb.from('tic_classes')
+    .select('id,name,level,status').in('id',ids).eq('teacher_id',session.user.id).eq('status','active').order('name');
+  if(ce){select.innerHTML='<option value="">Erro ao carregar</option>';if(help)help.textContent=ce.message;return;}
+
+  select.innerHTML=(classes||[]).map(c=>`<option value="${e52(c.id)}">${e52(c.name)} · ${e52(c.level||'')}</option>`).join('');
+  if(help)help.textContent=`${classes?.length||0} Class(es) disponível(is) para este aluno.`;
+};
+
+window.saveMaterialAssignV52=async function(ev,sourceId){
+  ev.preventDefault();
+  const btn=$('v52Save');if(btn){btn.disabled=true;btn.textContent='Atribuindo...';}
+  try{
+    const studentId=$('v52Student')?.value;
+    const classId=$('v52Class')?.value;
+    const message=$('v52Message')?.value.trim()||'';
+    const due=$('v52Due')?.value;
+
+    if(!studentId)throw new Error('Selecione o aluno.');
+    if(!classId)throw new Error('Selecione a Class onde o material aparecerá.');
+
+    // Verify the student really belongs to the selected Class.
+    const {data:member,error:me}=await sb.from('tic_class_students')
+      .select('student_id,class_id,status')
+      .eq('student_id',studentId).eq('class_id',classId).eq('status','active').maybeSingle();
+    if(me)throw me;
+    if(!member)throw new Error('Este aluno não está vinculado à Class escolhida.');
+
+    // Read the source material from the teacher's library.
+    const {data:source,error:se}=await sb.from('tic_materials')
+      .select('*').eq('id',sourceId).eq('teacher_id',session.user.id).maybeSingle();
+    if(se)throw se;
+    if(!source)throw new Error('Material não encontrado na biblioteca.');
+
+    let items=Array.isArray(source.resource_items)?source.resource_items.filter(r=>r&&r.url):[];
+    if(!items.length && (source.external_url||source.file_url)){
+      items=[{type:source.material_type||'link',title:source.title||'Recurso',url:source.external_url||source.file_url}];
+    }
+    if(!items.length)throw new Error('Este Material não possui nenhum link/arquivo para entregar.');
+
+    // Reuse an existing assignment for the same material + Class when possible.
+    let assignment=null;
+    const {data:existing,error:ee}=await sb.from('tic_assignments')
+      .select('id')
+      .eq('teacher_id',session.user.id)
+      .eq('class_id',classId)
+      .eq('source_type','material')
+      .eq('source_id',sourceId)
+      .eq('assignment_type','material')
+      .maybeSingle();
+    if(ee)throw ee;
+
+    if(existing?.id){
+      const {data:a,error:ae}=await sb.from('tic_assignments')
+        .update({
+          title:source.title,
+          instructions:message||source.description||'',
+          resource_items:items,
+          cover_image_url:source.cover_image_url||null,
+          due_at:due?new Date(due).toISOString():null,
+          active:true
+        })
+        .eq('id',existing.id).eq('teacher_id',session.user.id).select().single();
+      if(ae)throw ae;
+      assignment=a;
+    }else{
+      const {data:a,error:ae}=await sb.from('tic_assignments').insert({
+        teacher_id:session.user.id,
+        lesson_id:null,
+        class_id:classId,
+        title:source.title,
+        instructions:message||source.description||'',
+        assignment_type:'material',
+        due_at:due?new Date(due).toISOString():null,
+        points:0,
+        priority:'normal',
+        resource_items:items,
+        cover_image_url:source.cover_image_url||null,
+        source_type:'material',
+        source_id:sourceId,
+        active:true
+      }).select().single();
+      if(ae)throw ae;
+      assignment=a;
+    }
+
+    // Avoid duplicate student assignments.
+    const {data:already,error:de}=await sb.from('tic_task_assignments')
+      .select('id,active,status')
+      .eq('assignment_id',assignment.id).eq('student_id',studentId).maybeSingle();
+    if(de)throw de;
+
+    if(already?.id){
+      const {error:ue}=await sb.from('tic_task_assignments')
+        .update({active:true,status:already.status==='completed'?'completed':'pending',assigned_at:new Date().toISOString(),due_at:due?new Date(due).toISOString():null})
+        .eq('id',already.id);
+      if(ue)throw ue;
+    }else{
+      const {error:te}=await sb.from('tic_task_assignments').insert({
+        assignment_id:assignment.id,
+        student_id:studentId,
+        status:'pending',
+        active:true,
+        assigned_at:new Date().toISOString(),
+        due_at:due?new Date(due).toISOString():null
+      });
+      if(te)throw te;
+    }
+
+    closeModal();
+    toast(`“${source.title}” foi atribuído somente a ${$('v52Student')?.selectedOptions?.[0]?.textContent?.split(' · ')[0]||'este aluno'}.`,'success');
+    if(typeof materialsPage==='function' && currentView==='materials')await materialsPage();
+  }catch(err){
+    toast(err?.message||'Não foi possível atribuir o Material.','error');
+    if(btn){btn.disabled=false;btn.textContent='📤 Atribuir somente a este aluno';}
+  }
+};
+})();
+</script>
+
 </body>
 </html>
 
