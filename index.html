@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Teacher Platform · V44 Separated Content</title>
+<title>Teacher Platform · V45 Separated Content</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
@@ -4606,6 +4606,255 @@ window.studentDashboard=async function(){
    </aside>
   </div>
  </div>`;
+};
+})();
+</script>
+
+
+
+<style id="tic-v45-material-center">
+/* V45 — Materials are a separate Class Center area.
+   Class Materials use tic_class_material_links and are NOT converted into Assignments. */
+.v45-material-wrap{display:grid;gap:15px}
+.v45-material-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.v45-material-actions{display:flex;gap:8px;flex-wrap:wrap}
+.v45-material-banner{background:linear-gradient(135deg,#f4efff,#fbfaff);border:1px solid #e3d9f8;border-radius:16px;padding:14px 16px;color:#655a77;font-size:11px}
+.v45-material-banner b{color:#4f299f}
+.v45-material-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.v45-material-card{background:#fff;border:1px solid #e8e2f1;border-radius:18px;padding:16px;box-shadow:0 7px 22px rgba(46,28,81,.055);transition:.18s;display:flex;flex-direction:column;gap:11px}
+.v45-material-card:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(46,28,81,.09)}
+.v45-material-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.v45-material-icon{width:43px;height:43px;border-radius:13px;background:#f0eaff;display:grid;place-items:center;font-size:21px;flex:0 0 43px}
+.v45-material-card h3{font:800 15px 'Plus Jakarta Sans';margin:0;line-height:1.25}
+.v45-material-card p{margin:0;color:var(--muted);font-size:10px;line-height:1.5}
+.v45-material-links{display:grid;gap:7px;margin-top:2px}
+.v45-material-link{display:flex;align-items:center;gap:9px;background:#faf9fd;border:1px solid #eeeaf4;border-radius:11px;padding:9px 10px;text-decoration:none;color:inherit}
+.v45-material-link:hover{border-color:#d8ccf1;background:#f7f3ff}
+.v45-material-link .mini-icon{width:29px;height:29px;border-radius:8px;background:#eee7ff;display:grid;place-items:center;flex:0 0 29px;font-size:13px}
+.v45-material-link .link-copy{min-width:0;flex:1}.v45-material-link b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v45-material-link small{display:block;color:var(--muted);font-size:8px;margin-top:2px}
+.v45-material-card-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:auto;padding-top:2px}
+.v45-material-empty{padding:38px 18px;text-align:center;border:1px dashed #dcd3eb;border-radius:16px;color:var(--muted);font-size:11px;background:#fcfbfe}
+.v45-material-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.v45-material-count{background:#fff;border:1px solid #e8e2f1;border-radius:14px;padding:12px}.v45-material-count span{font-size:9px;color:var(--muted)}.v45-material-count b{display:block;font:800 20px 'Plus Jakarta Sans';margin-top:3px}
+.v45-multi-help{font-size:10px;color:var(--muted);margin-top:5px}
+.v45-audience-box{border:1px solid #e7e0f1;border-radius:13px;padding:12px;background:#fbf9fe}
+@media(max-width:850px){.v45-material-grid{grid-template-columns:1fr}.v45-material-counts{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.v45-material-counts{grid-template-columns:1fr}}
+</style>
+
+<script id="tic-v45-material-center-js">
+(function(){
+'use strict';
+
+const e45=v=>{try{return typeof esc==='function'?esc(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}catch(_){return String(v??'')}};
+const icon45=t=>{const x=String(t||'link').toLowerCase();return x==='pdf'?'📄':x==='video'?'🎬':x==='audio'?'🎧':x==='file'?'📎':x==='worksheet'?'📝':x==='drive'?'📁':x==='doc'?'📃':'🔗'};
+const label45=t=>({pdf:'PDF',video:'Vídeo',audio:'Áudio',file:'Arquivo',worksheet:'Worksheet',drive:'Drive',doc:'Documento',link:'Link'})[String(t||'link').toLowerCase()]||String(t||'Link');
+
+async function fetchClassMaterials45(classId){
+  const {data,error}=await sb.from('tic_class_material_links')
+    .select('id,class_id,title,url,material_type,note,position,created_at,updated_at')
+    .eq('class_id',classId)
+    .order('position',{ascending:true})
+    .order('created_at',{ascending:false});
+  return {data:data||[],error};
+}
+
+function renderMaterialCards45(rows){
+  /* Group consecutive links with the same title/note into a single beautiful card. */
+  const groups=[];
+  const map=new Map();
+  (rows||[]).forEach(r=>{
+    const key=`${r.title||'Material'}|${r.note||''}`;
+    let g=map.get(key);
+    if(!g){g={title:r.title||'Material',note:r.note||'',links:[],created_at:r.created_at};map.set(key,g);groups.push(g)}
+    g.links.push(r);
+  });
+  return groups.map(g=>`
+    <article class="v45-material-card">
+      <div class="v45-material-card-top">
+        <div style="display:flex;gap:10px;align-items:flex-start;min-width:0">
+          <span class="v45-material-icon">${icon45(g.links[0]?.material_type)}</span>
+          <div style="min-width:0"><h3>${e45(g.title)}</h3><p>${g.links.length} recurso(s) neste material${g.note?' · '+e45(g.note):''}</p></div>
+        </div>
+        <span class="badge blue">Material</span>
+      </div>
+      <div class="v45-material-links">
+        ${g.links.map(r=>`<a class="v45-material-link" href="${e45(r.url||'#')}" target="_blank" rel="noopener">
+          <span class="mini-icon">${icon45(r.material_type)}</span>
+          <span class="link-copy"><b>${e45(r.title||'Abrir recurso')}</b><small>${e45(label45(r.material_type))}</small></span>
+          <span style="color:var(--p);font-weight:900">↗</span>
+        </a>`).join('')}
+      </div>
+      <div class="v45-material-card-footer">
+        <small style="color:var(--muted);font-size:8px">Adicionado ${g.created_at?new Date(g.created_at).toLocaleDateString('pt-BR'):'—'}</small>
+        <span class="badge green">Disponível na Class</span>
+      </div>
+    </article>`).join('')||`<div class="v45-material-empty" style="grid-column:1/-1">
+      <div style="font-size:28px;margin-bottom:8px">📂</div>
+      <b>Nenhum material nesta Class ainda.</b>
+      <div style="margin-top:5px">Use <b>+ Novo material</b> ou <b>Inserir da biblioteca</b> para adicionar.</div>
+    </div>`;
+}
+
+async function renderMaterialsTab45(classId){
+  const body=document.querySelector('.class-center-shell[data-class-center="'+classId+'"] #classCenterBody');
+  if(!body)return;
+  body.innerHTML=`<div class="v45-material-wrap">
+    <div class="v45-material-head">
+      <div><h3 style="margin:0;font:800 18px 'Plus Jakarta Sans'">📂 Materiais da Class</h3>
+        <p style="margin:4px 0 0;color:var(--muted);font-size:10px">Área exclusiva para materiais. <b>Não cria Task, Assignment ou Lesson.</b></p>
+      </div>
+      <div class="v45-material-actions">
+        <button class="btn primary" onclick="openClassMaterialFormV45('${classId}')">＋ Novo material</button>
+        <button class="btn secondary" onclick="openClassMaterialLibraryV45('${classId}')">📚 Inserir da biblioteca</button>
+        <button class="btn ghost" onclick="openClassStudentContentChooserV45('${classId}')">👤 Material para aluno</button>
+      </div>
+    </div>
+    <div class="v45-material-banner">💡 <b>Como funciona:</b> materiais inseridos aqui ficam vinculados à <b>Class</b>. Você pode colocar vários links/arquivos dentro de um único card. Para uma atribuição individual, use <b>Material para aluno</b>.</div>
+    <div id="v45MaterialCounts" class="v45-material-counts"></div>
+    <div id="v45MaterialGrid" class="v45-material-grid"><div class="loading">Carregando materiais...</div></div>
+  </div>`;
+  const {data,error}=await fetchClassMaterials45(classId);
+  if(error){$('v45MaterialGrid').innerHTML=`<div class="v45-material-empty">${e45(error.message)}</div>`;return}
+  const rows=data||[];
+  const types=new Set(rows.map(x=>String(x.material_type||'link').toLowerCase()));
+  $('v45MaterialCounts').innerHTML=`
+    <div class="v45-material-count"><span>📂 Materiais</span><b>${new Set(rows.map(x=>`${x.title}|${x.note||''}`)).size}</b></div>
+    <div class="v45-material-count"><span>🔗 Links/arquivos</span><b>${rows.length}</b></div>
+    <div class="v45-material-count"><span>🧩 Tipos usados</span><b>${types.size}</b></div>`;
+  $('v45MaterialGrid').innerHTML=renderMaterialCards45(rows);
+}
+
+window.openClassMaterialFormV45=function(classId){
+  openModal(`📂 Novo material · ${e45(window.__ticClassCenter?.cls?.name||'Class')}`,`
+    <form class="form" onsubmit="saveClassMaterialV45(event,'${classId}')">
+      <div class="notice"><b>Este formulário cria MATERIAL, não Assignment.</b> O card pode ter vários links, PDFs, vídeos, áudios, Drive ou documentos.</div>
+      <div class="field"><label>Nome do material</label><input id="cm45Title" required placeholder="Ex.: A0 — Personal Information"></div>
+      <div class="field"><label>Observação / instrução</label><textarea id="cm45Note" rows="2" placeholder="Ex.: Use estes materiais para revisar antes da próxima aula."></textarea></div>
+      <div class="resource-box">
+        <div class="resource-head"><b>🔗 Links e arquivos deste material</b><button type="button" class="btn secondary" onclick="addResourceRow('cm45Rows')">＋ Adicionar item</button></div>
+        <div id="cm45Rows"></div>
+        <div class="v45-multi-help">Você pode adicionar quantos itens quiser no mesmo card: PDF + vídeo + áudio + link + Drive etc.</div>
+      </div>
+      <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">💾 Salvar material na Class</button></div>
+    </form>`);
+  renderResourceRows('cm45Rows',[]);
+  addResourceRow('cm45Rows');
+};
+
+window.saveClassMaterialV45=async function(ev,classId){
+  ev.preventDefault();
+  const title=$('cm45Title')?.value.trim();
+  const note=$('cm45Note')?.value.trim()||null;
+  const resources=typeof collectResources==='function'?collectResources('cm45Rows'):[];
+  if(!title)return toast('Informe o nome do material.','error');
+  if(!resources.length)return toast('Adicione pelo menos um link/arquivo.','error');
+  const rows=resources.filter(r=>r.url).map((r,i)=>({
+    class_id:classId,
+    title:title,
+    url:r.url,
+    material_type:r.type||'link',
+    note:note,
+    position:Date.now()+i
+  }));
+  if(!rows.length)return toast('Cada item precisa ter uma URL/link válido.','error');
+  const {error}=await sb.from('tic_class_material_links').insert(rows);
+  if(error)return toast('Não foi possível salvar o material: '+error.message,'error');
+  closeModal();
+  toast(`Material criado com ${rows.length} recurso(s) e disponibilizado na Class.`,'success');
+  await renderMaterialsTab45(classId);
+};
+
+window.openClassMaterialLibraryV45=async function(classId){
+  const {data,error}=await sb.from('tic_materials').select('id,title,level,material_type,resource_items,description,external_url,file_url,created_at').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+  if(error)return toast(error.message,'error');
+  openModal('📚 Inserir materiais da biblioteca',`
+    <div class="form">
+      <div class="notice">Selecione <b>um ou vários materiais</b>. Eles serão copiados para a Class como materiais independentes. Isso <b>não cria Assignment</b>.</div>
+      <div class="field"><label>Materiais</label>
+        <select id="cm45Library" multiple size="10" style="min-height:230px">
+          ${(data||[]).map(x=>`<option value="${x.id}">${e45(x.title)} · ${e45(x.level||'')} · ${e45(x.material_type||'material')}</option>`).join('')||'<option value="">Nenhum material cadastrado</option>'}
+        </select>
+        <div class="v45-multi-help">Use Ctrl/Cmd para selecionar vários materiais.</div>
+      </div>
+      <div class="field"><label>Observação para a Class</label><textarea id="cm45LibraryNote" rows="2" placeholder="Opcional"></textarea></div>
+      <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="insertClassLibraryMaterialsV45('${classId}')">📂 Inserir selecionados</button></div>
+    </div>`);
+};
+
+window.insertClassLibraryMaterialsV45=async function(classId){
+  const ids=[...($('cm45Library')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
+  if(!ids.length)return toast('Selecione pelo menos um material.','error');
+  const {data:materials,error}=await sb.from('tic_materials').select('id,title,material_type,resource_items,description,external_url,file_url').in('id',ids).eq('teacher_id',session.user.id);
+  if(error)return toast(error.message,'error');
+  const note=$('cm45LibraryNote')?.value.trim()||null;
+  const rows=[];
+  (materials||[]).forEach(m=>{
+    let rs=Array.isArray(m.resource_items)?m.resource_items.filter(r=>r?.url):[];
+    if(!rs.length&&(m.external_url||m.file_url))rs=[{type:m.material_type||'link',title:m.title,url:m.external_url||m.file_url}];
+    rs.forEach((r,i)=>rows.push({class_id:classId,title:m.title,url:r.url,material_type:r.type||m.material_type||'link',note:note||m.description||null,position:Date.now()+rows.length}));
+  });
+  if(!rows.length)return toast('Os materiais selecionados não possuem links/arquivos para inserir.','error');
+  const {error:ie}=await sb.from('tic_class_material_links').insert(rows);
+  if(ie)return toast('Não foi possível inserir os materiais: '+ie.message,'error');
+  closeModal();toast(`${ids.length} material(is) inserido(s) na Class com ${rows.length} recurso(s).`,'success');await renderMaterialsTab45(classId);
+};
+
+window.openClassStudentContentChooserV45=async function(classId){
+  /* Reuse the existing individual-content flow, but open it from Materials
+     and explain that it is a private/student-specific assignment. */
+  const {data:students}=await sb.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active');
+  const ids=(students||[]).map(x=>x.student_id);
+  const {data:people}=ids.length?await sb.from('tic_students').select('id,display_name,current_level,email').in('id',ids).order('display_name'):({data:[]});
+  if(!people?.length)return toast('Não há alunos ativos nesta Class.','info');
+  openModal('👤 Material para aluno específico',`
+    <div class="form">
+      <div class="notice">Este caminho cria uma <b>atribuição individual</b>. O material ficará somente para o aluno escolhido e não aparecerá como material geral da Class.</div>
+      <div class="field"><label>Aluno</label><select id="cm45Student">${people.map(x=>`<option value="${x.id}">${e45(x.display_name)} · ${e45(x.current_level||'')}</option>`).join('')}</select></div>
+      <div class="field"><label>Material</label><select id="cm45StudentMaterial"></select></div>
+      <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="insertIndividualMaterialV45('${classId}')">📤 Enviar para este aluno</button></div>
+    </div>`);
+  const {data:mats}=await sb.from('tic_materials').select('id,title,level,material_type').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+  $('cm45StudentMaterial').innerHTML=(mats||[]).map(m=>`<option value="${m.id}">${e45(m.title)} · ${e45(m.level||'')}</option>`).join('')||'<option value="">Nenhum material</option>';
+};
+
+window.insertIndividualMaterialV45=async function(classId){
+  const studentId=$('cm45Student')?.value, materialId=$('cm45StudentMaterial')?.value;
+  if(!studentId||!materialId)return toast('Selecione aluno e material.','error');
+  /* Use the existing individual attribution mechanism; it stays separate from
+     class-wide tic_class_material_links. */
+  const {data:source,error}=await sb.from('tic_materials').select('*').eq('id',materialId).eq('teacher_id',session.user.id).maybeSingle();
+  if(error||!source)return toast('Material não encontrado.','error');
+  const payload={
+    teacher_id:session.user.id,class_id:classId,title:source.title,
+    instructions:source.description||'',assignment_type:'material',due_at:null,points:0,
+    priority:'normal',resource_items:Array.isArray(source.resource_items)?source.resource_items:[],
+    cover_image_url:source.cover_image_url||null,source_type:'material',source_id:source.id
+  };
+  const {data:a,error:ae}=await sb.from('tic_assignments').insert(payload).select().single();
+  if(ae)return toast('Não foi possível criar a atribuição individual: '+ae.message,'error');
+  const {error:te}=await sb.from('tic_task_assignments').insert({assignment_id:a.id,student_id:studentId,status:'pending'});
+  if(te){await sb.from('tic_assignments').delete().eq('id',a.id);return toast('Não foi possível enviar ao aluno: '+te.message,'error');}
+  closeModal();toast(`Material “${source.title}” enviado somente para o aluno.`,'success');
+};
+
+window.deleteClassMaterialV45=async function(id,classId){
+  if(!confirm('Remover este material desta Class? O material original da biblioteca não será apagado.'))return;
+  const {error}=await sb.from('tic_class_material_links').delete().eq('id',id).eq('class_id',classId);
+  if(error)return toast(error.message,'error');
+  toast('Item removido da Class.','success');renderMaterialsTab45(classId);
+};
+
+/* Override only the Materials tab. All other Class Center tabs keep the existing implementation. */
+const oldClassCenterTabV45=window.classCenterTab;
+window.classCenterTab=async function(classId,tab){
+  if(tab==='materials'){
+    const root=document.querySelector('.class-center-shell[data-class-center="'+classId+'"]');
+    if(root)root.querySelectorAll('.class-center-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+    await renderMaterialsTab45(classId);
+    return;
+  }
+  return oldClassCenterTabV45.apply(this,arguments);
 };
 })();
 </script>
