@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Teacher Platform · V45 Separated Content</title>
+<title>Teacher Platform · V46 Separated Content</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
@@ -4697,7 +4697,11 @@ function renderMaterialCards45(rows){
 }
 
 async function renderMaterialsTab45(classId){
-  const body=document.querySelector('.class-center-shell[data-class-center="'+classId+'"] #classCenterBody');
+  /* The original Class Center shell does not carry data-class-center.
+     It uses one #classCenterBody in the active workspace, so target that
+     real body instead of returning silently. */
+  const root=document.querySelector('.class-center-shell');
+  const body=root?.querySelector('#classCenterBody') || document.getElementById('classCenterBody');
   if(!body)return;
   body.innerHTML=`<div class="v45-material-wrap">
     <div class="v45-material-head">
@@ -4849,12 +4853,47 @@ window.deleteClassMaterialV45=async function(id,classId){
 const oldClassCenterTabV45=window.classCenterTab;
 window.classCenterTab=async function(classId,tab){
   if(tab==='materials'){
-    const root=document.querySelector('.class-center-shell[data-class-center="'+classId+'"]');
+    const root=document.querySelector('.class-center-shell');
     if(root)root.querySelectorAll('.class-center-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
     await renderMaterialsTab45(classId);
     return;
   }
   return oldClassCenterTabV45.apply(this,arguments);
 };
+})();
+</script>
+
+
+
+<script id="tic-v46-material-visible-action">
+(function(){
+  function addVisibleMaterialAction(){
+    const shell=document.querySelector('.class-center-shell');
+    if(!shell)return;
+    const actions=shell.querySelector('.class-center-actions');
+    if(!actions || actions.querySelector('[data-v46-material-action]'))return;
+    const b=document.createElement('button');
+    b.className='btn primary';
+    b.setAttribute('data-v46-material-action','1');
+    b.innerHTML='📂＋ Material';
+    b.onclick=function(){
+      const id=window.__ticClassCenter?.classId;
+      if(id)openClassMaterialFormV45(id);
+    };
+    actions.insertBefore(b,actions.firstChild);
+  }
+  window.addEventListener('load',addVisibleMaterialAction);
+  const old=window.classCenterTab;
+  window.classCenterTab=async function(classId,tab){
+    const r=await old.apply(this,arguments);
+    addVisibleMaterialAction();
+    if(tab==='materials'){
+      const body=document.getElementById('classCenterBody');
+      if(body && !body.querySelector('.v45-material-wrap') && typeof renderMaterialsTab45==='function'){
+        await renderMaterialsTab45(classId);
+      }
+    }
+    return r;
+  };
 })();
 </script>
