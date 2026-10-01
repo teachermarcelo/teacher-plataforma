@@ -3774,8 +3774,22 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
       return;
     }
     if(tab==='materials'){
-      const resources=tasks.flatMap(t=>(Array.isArray(t.resource_items)?t.resource_items:[]).map(r=>({...r,_task:t.title})));
-      body.innerHTML=kpis+`<div class="v41-panel"><h3>🔗 Materiais</h3><p>Recursos preservados dentro das atribuições da Class.</p><div class="v41-list">${resources.map(r=>`<div class="v41-list-row"><div><b>${escV41(r.title||'Recurso')}</b><small>${escV41(r.type||'link')} · ${escV41(r._task)}</small></div>${r.url||r.link?`<a class="btn sm secondary" href="${escV41(r.url||r.link)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}</div>`).join('')||'<div class="v41-empty">Nenhum material encontrado.</div>'}</div></div>`;
+      /* V50: Materiais is a private-to-student workspace. The old branch only
+         listed resource_items and had no creation/assignment mechanism. */
+      if(typeof window.renderPrivateMaterialsV49==='function'){
+        await window.renderPrivateMaterialsV49(classId);
+        return;
+      }
+      body.innerHTML=kpis+`<div class="v41-panel">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+          <div><h3>👤 Materiais exclusivos por aluno</h3><p>Crie materiais com vários links/arquivos e envie somente ao aluno escolhido.</p></div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <button class="btn primary" onclick="openPrivateMaterialFormV49('${classId}')">＋ Novo material para aluno</button>
+            <button class="btn secondary" onclick="openPrivateMaterialLibraryV49('${classId}')">📚 Inserir material existente</button>
+          </div>
+        </div>
+        <div class="v41-empty">Nenhum material individual encontrado.</div>
+      </div>`;
       return;
     }
     if(tab==='resources'){
