@@ -4912,3 +4912,322 @@ window.classCenterTab=async function(classId,tab){
   };
 })();
 </script>
+
+
+
+<style id="tic-v49-private-materials">
+.v49-private-wrap{display:grid;gap:16px}
+.v49-private-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.v49-private-actions{display:flex;gap:8px;flex-wrap:wrap}
+.v49-private-banner{background:linear-gradient(135deg,#f4efff,#fbfaff);border:1px solid #e3d9f8;border-radius:16px;padding:14px 16px;color:#655a77;font-size:11px}
+.v49-private-banner b{color:#4f299f}
+.v49-private-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.v49-private-kpi{background:#fff;border:1px solid #e8e2f1;border-radius:14px;padding:13px}
+.v49-private-kpi span{font-size:9px;color:var(--muted)}
+.v49-private-kpi b{display:block;font:800 21px 'Plus Jakarta Sans';margin-top:4px}
+.v49-private-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.v49-private-card{background:#fff;border:1px solid #e8e2f1;border-radius:18px;padding:16px;box-shadow:0 7px 22px rgba(46,28,81,.055)}
+.v49-private-card-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.v49-private-icon{width:43px;height:43px;border-radius:13px;background:#f0eaff;display:grid;place-items:center;font-size:21px}
+.v49-private-card h3{margin:0;font:800 15px 'Plus Jakarta Sans'}
+.v49-private-card p{margin:4px 0 0;color:var(--muted);font-size:10px;line-height:1.5}
+.v49-private-links{display:grid;gap:7px;margin-top:12px}
+.v49-private-link{display:flex;align-items:center;gap:9px;background:#faf9fd;border:1px solid #eeeaf4;border-radius:11px;padding:9px 10px;text-decoration:none;color:inherit}
+.v49-private-link .mini{width:29px;height:29px;border-radius:8px;background:#eee7ff;display:grid;place-items:center}
+.v49-private-link .copy{min-width:0;flex:1}
+.v49-private-link b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v49-private-link small{display:block;color:var(--muted);font-size:8px;margin-top:2px}
+.v49-private-footer{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:12px}
+.v49-private-empty{padding:34px 18px;text-align:center;border:1px dashed #dcd3eb;border-radius:16px;color:var(--muted);font-size:11px;background:#fcfbfe;grid-column:1/-1}
+@media(max-width:850px){.v49-private-grid{grid-template-columns:1fr}}
+@media(max-width:650px){.v49-private-kpis{grid-template-columns:1fr}}
+</style>
+
+<script id="tic-v49-private-materials-js">
+(function(){
+'use strict';
+
+const e49=v=>{try{return typeof esc==='function'?esc(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}catch(_){return String(v??'')}};
+const icon49=t=>{const x=String(t||'link').toLowerCase();return x==='pdf'?'📄':x==='video'?'🎬':x==='audio'?'🎧':x==='file'?'📎':x==='worksheet'?'📝':x==='drive'?'📁':x==='doc'?'📃':'🔗'};
+
+async function getClassStudentIds49(classId){
+  const {data,error}=await sb.from('tic_class_students')
+    .select('student_id,status')
+    .eq('class_id',classId)
+    .eq('status','active');
+  if(error) return {ids:[],error};
+  return {ids:(data||[]).map(x=>x.student_id),error:null};
+}
+
+async function getClassStudents49(classId){
+  const {ids,error}=await getClassStudentIds49(classId);
+  if(error||!ids.length)return {data:[],error};
+  return await sb.from('tic_students')
+    .select('id,display_name,current_level,email,status')
+    .in('id',ids)
+    .order('display_name');
+}
+
+function renderPrivateCards49(rows){
+  const groups=new Map();
+  (rows||[]).forEach(x=>{
+    const a=x.tic_assignments||{};
+    const key=x.assignment_id||a.id;
+    if(!groups.has(key)){
+      groups.set(key,{assignmentId:key,title:a.title||'Material',student:x.tic_students||{},instructions:a.instructions||'',created_at:a.created_at,items:Array.isArray(a.resource_items)?a.resource_items:[]});
+    }
+  });
+  const list=[...groups.values()];
+  if(!list.length)return `<div class="v49-private-empty">
+    <div style="font-size:28px;margin-bottom:8px">👤</div>
+    <b>Nenhum material individual ainda.</b>
+    <div style="margin-top:5px">Use <b>＋ Novo material para aluno</b> ou <b>📚 Inserir material existente</b>.</div>
+  </div>`;
+  return list.map(g=>`
+    <article class="v49-private-card">
+      <div class="v49-private-card-top">
+        <div style="display:flex;gap:10px;align-items:flex-start;min-width:0">
+          <span class="v49-private-icon">👤</span>
+          <div style="min-width:0">
+            <h3>${e49(g.title)}</h3>
+            <p>Para: <b>${e49(g.student?.display_name||'Aluno')}</b>${g.student?.current_level?' · '+e49(g.student.current_level):''}</p>
+          </div>
+        </div>
+        <span class="badge purple">Individual</span>
+      </div>
+      ${g.instructions?`<p style="margin-top:10px">${e49(g.instructions)}</p>`:''}
+      <div class="v49-private-links">
+        ${(g.items||[]).map(r=>`
+          <a class="v49-private-link" href="${e49(r.url||r.link||'#')}" target="_blank" rel="noopener">
+            <span class="mini">${icon49(r.type)}</span>
+            <span class="copy"><b>${e49(r.title||'Abrir recurso')}</b><small>${e49(r.type||'link')}</small></span>
+            <span style="color:var(--p);font-weight:900">↗</span>
+          </a>`).join('')||'<small style="color:var(--muted)">Este material não possui links/arquivos.</small>'}
+      </div>
+      <div class="v49-private-footer">
+        <small style="color:var(--muted);font-size:8px">${g.created_at?new Date(g.created_at).toLocaleDateString('pt-BR'):'—'}</small>
+        <span class="badge green">Somente este aluno</span>
+      </div>
+    </article>`).join('');
+}
+
+window.renderPrivateMaterialsV49=async function(classId){
+  const body=document.getElementById('ticV41ClassBody')||document.getElementById('classCenterBody');
+  if(!body)return;
+  body.innerHTML=`<div class="v49-private-wrap">
+    <div class="v49-private-head">
+      <div>
+        <h3 style="margin:0;font:800 18px 'Plus Jakarta Sans'">👤 Materiais exclusivos por aluno</h3>
+        <p style="margin:4px 0 0;color:var(--muted);font-size:10px">Crie ou envie materiais com vários links/arquivos para <b>um aluno específico</b>. Não publica para a Class inteira.</p>
+      </div>
+      <div class="v49-private-actions">
+        <button class="btn primary" onclick="openPrivateMaterialFormV49('${classId}')">＋ Novo material para aluno</button>
+        <button class="btn secondary" onclick="openPrivateMaterialLibraryV49('${classId}')">📚 Inserir material existente</button>
+        <button class="btn ghost" onclick="openClassStudentContent('${classId}',window.__ticClassCenterV41?.students?.[0]?.id||'')">👤 Atribuir conteúdo</button>
+      </div>
+    </div>
+    <div class="v49-private-banner">💡 <b>Regra desta área:</b> o material é criado como conteúdo do tipo <b>Material</b> e vinculado ao aluno escolhido. Outros alunos não recebem. Você pode reutilizar o mesmo material da biblioteca para alunos diferentes.</div>
+    <div id="v49PrivateKpis" class="v49-private-kpis"></div>
+    <div id="v49PrivateGrid" class="v49-private-grid"><div class="loading">Carregando...</div></div>
+  </div>`;
+
+  const {data:members,error}=await sb.from('tic_task_assignments')
+    .select('id,assignment_id,student_id,status,tic_students(id,display_name,current_level),tic_assignments(id,title,instructions,assignment_type,class_id,resource_items,created_at,source_type,source_id)')
+    .eq('status','pending');
+
+  if(error){
+    $('v49PrivateGrid').innerHTML=`<div class="v49-private-empty">${e49(error.message)}</div>`;
+    return;
+  }
+
+  const rows=(members||[]).filter(x=>{
+    const a=x.tic_assignments||{};
+    return a.class_id===classId && String(a.assignment_type||'').toLowerCase()==='material';
+  });
+
+  const students=new Set(rows.map(x=>x.student_id));
+  const resources=rows.reduce((n,x)=>n+(Array.isArray(x.tic_assignments?.resource_items)?x.tic_assignments.resource_items.length:0),0);
+  $('v49PrivateKpis').innerHTML=`
+    <div class="v49-private-kpi"><span>👤 Alunos com material</span><b>${students.size}</b></div>
+    <div class="v49-private-kpi"><span>📂 Materiais individuais</span><b>${rows.length}</b></div>
+    <div class="v49-private-kpi"><span>🔗 Links/arquivos</span><b>${resources}</b></div>`;
+  $('v49PrivateGrid').innerHTML=renderPrivateCards49(rows);
+};
+
+window.openPrivateMaterialFormV49=async function(classId){
+  const {data:students,error}=await getClassStudents49(classId);
+  if(error)return toast(error.message,'error');
+  if(!students?.length)return toast('Adicione pelo menos um aluno à Class antes de enviar material individual.','info');
+
+  openModal('👤 Novo material exclusivo para aluno',`
+    <form class="form" onsubmit="savePrivateMaterialV49(event,'${classId}')">
+      <div class="notice"><b>Somente o aluno escolhido receberá este material.</b> Você pode adicionar vários links/arquivos no mesmo card.</div>
+      <div class="field"><label>Aluno destinatário</label>
+        <select id="v49PrivateStudent" required>
+          ${students.map(s=>`<option value="${s.id}">${e49(s.display_name)} · ${e49(s.current_level||'')} ${s.email?'· '+e49(s.email):''}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Nome do material</label><input id="v49PrivateTitle" required placeholder="Ex.: Review — Personal Information"></div>
+      <div class="field"><label>Mensagem / instrução</label><textarea id="v49PrivateNote" rows="2" placeholder="Ex.: Faça estes materiais antes da próxima aula."></textarea></div>
+      <div class="resource-box">
+        <div class="resource-head"><b>🔗 Links e arquivos</b><button type="button" class="btn secondary" onclick="addResourceRow('v49PrivateRows')">＋ Adicionar item</button></div>
+        <div id="v49PrivateRows"></div>
+        <div class="v49-private-banner" style="margin-top:9px">Você pode misturar PDF + vídeo + áudio + link + Drive + documento.</div>
+      </div>
+      <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">📤 Enviar somente para este aluno</button></div>
+    </form>`);
+  renderResourceRows('v49PrivateRows',[]);
+  addResourceRow('v49PrivateRows');
+};
+
+window.savePrivateMaterialV49=async function(ev,classId){
+  ev.preventDefault();
+  const studentId=$('v49PrivateStudent')?.value;
+  const title=$('v49PrivateTitle')?.value.trim();
+  const note=$('v49PrivateNote')?.value.trim()||'';
+  const resources=typeof collectResources==='function'?collectResources('v49PrivateRows'):[];
+  const items=resources.filter(r=>r?.url).map(r=>({type:r.type||'link',title:r.title||r.type||'Recurso',url:r.url,description:r.description||''}));
+  if(!studentId)return toast('Selecione o aluno.','error');
+  if(!title)return toast('Informe o nome do material.','error');
+  if(!items.length)return toast('Adicione pelo menos um link/arquivo.','error');
+
+  const payload={
+    teacher_id:session.user.id,
+    lesson_id:null,
+    class_id:classId,
+    title,
+    instructions:note,
+    assignment_type:'material',
+    due_at:null,
+    points:0,
+    priority:'normal',
+    resource_items:items,
+    cover_image_url:null,
+    source_type:'private_material',
+    source_id:null
+  };
+
+  const {data:a,error:ae}=await sb.from('tic_assignments').insert(payload).select().single();
+  if(ae)return toast('Não foi possível criar o material: '+ae.message,'error');
+
+  const {error:te}=await sb.from('tic_task_assignments').insert({
+    assignment_id:a.id,
+    student_id:studentId,
+    status:'pending'
+  });
+
+  if(te){
+    await sb.from('tic_assignments').delete().eq('id',a.id);
+    return toast('Não foi possível vincular o material ao aluno: '+te.message,'error');
+  }
+
+  closeModal();
+  toast(`“${title}” enviado somente para o aluno.`, 'success');
+  await renderPrivateMaterialsV49(classId);
+};
+
+window.openPrivateMaterialLibraryV49=async function(classId){
+  const {data:students,error:se}=await getClassStudents49(classId);
+  if(se)return toast(se.message,'error');
+  if(!students?.length)return toast('Adicione alunos à Class antes de enviar materiais.','info');
+
+  const {data:mats,error}=await sb.from('tic_materials')
+    .select('id,title,level,material_type,resource_items,description,external_url,file_url')
+    .eq('teacher_id',session.user.id)
+    .order('created_at',{ascending:false});
+  if(error)return toast(error.message,'error');
+
+  openModal('📚 Enviar material da biblioteca para aluno',`
+    <div class="form">
+      <div class="notice">Selecione o <b>aluno</b> e um ou vários materiais. Cada material será entregue <b>somente</b> ao aluno escolhido.</div>
+      <div class="field"><label>Aluno destinatário</label>
+        <select id="v49LibStudent">${students.map(s=>`<option value="${s.id}">${e49(s.display_name)} · ${e49(s.current_level||'')}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Materiais da biblioteca</label>
+        <select id="v49LibMaterials" multiple size="10" style="min-height:230px">
+          ${(mats||[]).map(m=>`<option value="${m.id}">${e49(m.title)} · ${e49(m.level||'')} · ${e49(m.material_type||'material')}</option>`).join('')||'<option value="">Nenhum material cadastrado</option>'}
+        </select>
+        <div class="v45-multi-help">Use Ctrl/Cmd para selecionar vários.</div>
+      </div>
+      <div class="field"><label>Mensagem opcional</label><textarea id="v49LibNote" rows="2" placeholder="Ex.: Material complementar para esta semana."></textarea></div>
+      <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="sendLibraryMaterialsV49('${classId}')">📤 Enviar para este aluno</button></div>
+    </div>`);
+};
+
+window.sendLibraryMaterialsV49=async function(classId){
+  const studentId=$('v49LibStudent')?.value;
+  const ids=[...($('v49LibMaterials')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
+  const note=$('v49LibNote')?.value.trim()||'';
+  if(!studentId)return toast('Selecione o aluno.','error');
+  if(!ids.length)return toast('Selecione pelo menos um material.','error');
+
+  const {data:mats,error}=await sb.from('tic_materials')
+    .select('id,title,material_type,resource_items,description,external_url,file_url')
+    .in('id',ids)
+    .eq('teacher_id',session.user.id);
+  if(error)return toast(error.message,'error');
+
+  let sent=0;
+  for(const m of (mats||[])){
+    let items=Array.isArray(m.resource_items)?m.resource_items.filter(r=>r?.url):[];
+    if(!items.length && (m.external_url||m.file_url)){
+      items=[{type:m.material_type||'link',title:m.title,url:m.external_url||m.file_url}];
+    }
+    if(!items.length)continue;
+
+    const {data:a,error:ae}=await sb.from('tic_assignments').insert({
+      teacher_id:session.user.id,lesson_id:null,class_id:classId,
+      title:m.title,instructions:note||m.description||'',
+      assignment_type:'material',due_at:null,points:0,priority:'normal',
+      resource_items:items,cover_image_url:null,
+      source_type:'private_material',source_id:m.id
+    }).select().single();
+
+    if(ae)continue;
+
+    const {error:te}=await sb.from('tic_task_assignments').insert({
+      assignment_id:a.id,student_id:studentId,status:'pending'
+    });
+
+    if(te){
+      await sb.from('tic_assignments').delete().eq('id',a.id);
+      continue;
+    }
+    sent++;
+  }
+
+  if(!sent)return toast('Nenhum dos materiais selecionados possui links/arquivos válidos para enviar.','error');
+  closeModal();
+  toast(`${sent} material(is) enviado(s) somente para o aluno.`,'success');
+  await renderPrivateMaterialsV49(classId);
+};
+
+/* The real Class Center uses classCenterTabV41, not classCenterTab.
+   This override is deliberately limited to the Materials tab. */
+const oldClassCenterTabV49=window.classCenterTabV41;
+if(typeof oldClassCenterTabV49==='function'){
+  window.classCenterTabV41=async function(classId,tab){
+    if(tab==='materials'){
+      await renderPrivateMaterialsV49(classId);
+      return;
+    }
+    return oldClassCenterTabV49.apply(this,arguments);
+  };
+}
+
+/* Extra click delegation protects against cached/previous tab handlers.
+   Only the Materials button is intercepted. */
+document.addEventListener('click',function(ev){
+  const b=ev.target.closest?.('.v41-tabs button[data-tab="materials"]');
+  if(!b)return;
+  const shell=b.closest('.v41-class-shell');
+  const classId=shell?.getAttribute('data-v41-class');
+  if(!classId)return;
+  ev.preventDefault();
+  ev.stopImmediatePropagation();
+  document.querySelectorAll('.v41-tabs button').forEach(x=>x.classList.toggle('active',x===b));
+  renderPrivateMaterialsV49(classId);
+},true);
+
+})();
+</script>
