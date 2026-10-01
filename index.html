@@ -4711,7 +4711,9 @@ window.renderMaterialsTab45=async function renderMaterialsTab45(classId){
      It uses one #classCenterBody in the active workspace, so target that
      real body instead of returning silently. */
   const root=document.querySelector('.class-center-shell');
-  const body=root?.querySelector('#classCenterBody') || document.getElementById('classCenterBody');
+  const body = root?.querySelector('#classCenterBody, #ticV41ClassBody')
+    || document.getElementById('classCenterBody')
+    || document.getElementById('ticV41ClassBody');
   if(!body)return;
   body.innerHTML=`<div class="v45-material-wrap">
     <div class="v45-material-head">
@@ -4865,6 +4867,9 @@ window.classCenterTab=async function(classId,tab){
   if(tab==='materials'){
     const root=document.querySelector('.class-center-shell');
     if(root)root.querySelectorAll('.class-center-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+    document.querySelectorAll('.class-center-tabs button').forEach(b=>{
+      if(b.dataset.tab) b.classList.toggle('active', b.dataset.tab===tab);
+    });
     await renderMaterialsTab45(classId);
     return;
   }
@@ -4898,7 +4903,7 @@ window.classCenterTab=async function(classId,tab){
     const r=await old.apply(this,arguments);
     addVisibleMaterialAction();
     if(tab==='materials'){
-      const body=document.getElementById('classCenterBody');
+      const body=document.getElementById('classCenterBody') || document.getElementById('ticV41ClassBody');
       if(body && !body.querySelector('.v45-material-wrap') && typeof renderMaterialsTab45==='function'){
         await renderMaterialsTab45(classId);
       }
