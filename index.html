@@ -2097,6 +2097,7 @@ function ticResponsiveSrcdoc(content){
   }
 
   window.ticStudentActivityEvent=saEvent;
+  window.ticStudentActivityPage=saPage;
 
   function saInjectNav(){
     if(!window.profile || !['teacher','admin'].includes(saRole()))return;
@@ -2204,6 +2205,26 @@ function ticResponsiveSrcdoc(content){
       return r;
     };
   }
+})();
+</script>
+
+
+<script id="tic-student-activity-final-router">
+/* FINAL ROUTER PATCH: Student Activity is handled before all later loadView wrappers. */
+(function(){
+  const previousLoadView = window.loadView;
+  if(typeof previousLoadView!=='function') return;
+  window.loadView = async function(v){
+    if(v==='studentActivity'){
+      document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+      currentView=v;
+      if(typeof window.ticStudentActivityPage==='function') return window.ticStudentActivityPage();
+    }
+    return previousLoadView.apply(this,arguments);
+  };
+  const nav=document.getElementById('teacherNav');
+  const item=nav?.querySelector('[data-view="studentActivity"]');
+  if(item) item.onclick=()=>window.loadView('studentActivity');
 })();
 </script>
 
