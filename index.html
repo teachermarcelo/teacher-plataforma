@@ -7194,3 +7194,257 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
 
 })();
 </script>
+
+
+<!-- V62: RESTORE STUDENT ACTIVITY + FIX ROUTING + FIXED WEEKLY PLANNING. Additive only. -->
+<style id="tic-v62-activity-planning-css">
+.v62-plan-wrap{display:grid;gap:16px}
+.v62-plan-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.v62-plan-toolbar .input{min-width:180px}
+.v62-week{display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));gap:10px;overflow:auto;padding-bottom:6px}
+.v62-day{background:#f8f6fd;border:1px solid #e5def2;border-radius:15px;min-height:180px;padding:10px}
+.v62-day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;font-weight:800;font-size:12px}
+.v62-day-head span{font-size:10px;color:#7b718b;font-weight:600}
+.v62-plan-card{background:#fff;border:1px solid #e5def2;border-radius:12px;padding:10px;margin-bottom:8px;box-shadow:0 4px 12px #24124b08}
+.v62-plan-card b{display:block;font-size:12px}
+.v62-plan-card small{display:block;color:#766d82;font-size:10px;margin-top:4px}
+.v62-plan-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.v62-plan-actions button{font-size:10px!important;padding:6px 8px!important}
+.v62-empty{padding:28px;text-align:center;border:1px dashed #d8d0e5;border-radius:13px;color:#766d82;background:#fbfaff}
+.v62-activity-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.v62-activity-card{background:#fff;border:1px solid #e5def2;border-radius:16px;padding:15px;box-shadow:0 6px 18px #24124b0a}
+.v62-activity-head{display:flex;gap:10px;align-items:center}
+.v62-activity-avatar{width:38px;height:38px;border-radius:12px;background:#efe9ff;display:grid;place-items:center}
+.v62-activity-head b{display:block}
+.v62-activity-head small{display:block;color:#766d82;font-size:10px;margin-top:3px}
+.v62-online,.v62-offline{font-size:10px;font-weight:800;white-space:nowrap}
+.v62-online{color:#14804a}.v62-offline{color:#7a7282}
+.v62-activity-metrics{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}
+.v62-activity-metric{background:#faf9fd;border:1px solid #eee8f6;border-radius:10px;padding:8px}
+.v62-activity-metric span{display:block;color:#766d82;font-size:9px}
+.v62-activity-metric b{display:block;font-size:11px;margin-top:3px}
+.v62-activity-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
+.v62-error{border-left:4px solid #ef4444}
+@media(max-width:1050px){.v62-activity-grid{grid-template-columns:1fr 1fr}.v62-week{grid-template-columns:repeat(4,minmax(150px,1fr))}}
+@media(max-width:700px){.v62-activity-grid{grid-template-columns:1fr}.v62-week{grid-template-columns:repeat(2,minmax(150px,1fr))}}
+</style>
+<script id="tic-v62-activity-planning">
+(function(){
+  const V62DAYS=[
+    ['0','Domingo'],['1','Segunda-feira'],['2','Terça-feira'],['3','Quarta-feira'],
+    ['4','Quinta-feira'],['5','Sexta-feira'],['6','Sábado']
+  ];
+  const esc62=x=>typeof esc==='function'?esc(x??''):String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const fmt62=x=>x?new Date(x).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';
+  const dur62=x=>{
+    x=Number(x)||0; const h=Math.floor(x/3600),m=Math.floor((x%3600)/60),s=x%60;
+    return h?`${h}h ${String(m).padStart(2,'0')}min`:m?`${m}min ${String(s).padStart(2,'0')}s`:`${s}s`;
+  };
+  const online62=x=>x && (Date.now()-new Date(x).getTime()<120000);
+  const toast62=(m,t)=>typeof toast==='function'?toast(m,t):alert(m);
+
+  /* ---------- NAVIGATION: Student Activity + Planning ---------- */
+  function ensureV62Nav(){
+    const nav=$('teacherNav'); if(!nav || !(profile?.role==='teacher'||profile?.role==='admin')) return;
+    if(!nav.querySelector('[data-view="studentActivity"]')){
+      const ref=nav.querySelector('[data-view="students"]');
+      const b=document.createElement('button');
+      b.dataset.view='studentActivity'; b.innerHTML='👁️ <span>Student Activity</span>';
+      (ref?.parentNode)?.insertBefore(b,ref.nextSibling);
+      if(!ref)nav.appendChild(b);
+    }
+    if(!nav.querySelector('[data-view="planning"]')){
+      const ref=nav.querySelector('[data-view="calendar"]')||nav.querySelector('[data-view="teacherMaterials"]');
+      const b=document.createElement('button');
+      b.dataset.view='planning'; b.innerHTML='🗓️ <span>Planning</span>';
+      if(ref)ref.insertAdjacentElement('beforebegin',b); else nav.appendChild(b);
+    }
+    nav.querySelectorAll('[data-view]').forEach(b=>{
+      if(!b.dataset.v62bound){b.dataset.v62bound='1';b.addEventListener('click',()=>loadView(b.dataset.view));}
+    });
+  }
+  setTimeout(ensureV62Nav,700); setTimeout(ensureV62Nav,1800); setTimeout(ensureV62Nav,3500);
+  if($('teacherNav'))new MutationObserver(ensureV62Nav).observe($('teacherNav'),{childList:true,subtree:true});
+
+  /* ---------- STUDENT ACTIVITY: teacher page ---------- */
+  async function activityPage62(){
+    setPage('Student Activity','Acessos, sessões, tempo ativo e ações registradas pelos alunos.','<button class="btn secondary" onclick="activityPage62()">↻ Atualizar</button>');
+    const root=$('content');
+    root.innerHTML='<div class="card"><div class="v62-empty">Carregando atividade dos alunos...</div></div>';
+    const {data:students,error:se}=await sb.from('tic_students')
+      .select('id,display_name,email,current_level,status,auth_user_id')
+      .eq('teacher_id',session.user.id).order('display_name');
+    if(se){
+      root.innerHTML=`<div class="card v62-error"><b>Não foi possível carregar os alunos.</b><p>${esc62(se.message)}</p></div>`;
+      return;
+    }
+    const ids=(students||[]).map(s=>s.id);
+    let sessions=[],events=[],sessionError=null,eventError=null;
+    if(ids.length){
+      const [ar,er]=await Promise.all([
+        sb.from('tic_student_activity').select('id,student_id,auth_user_id,started_at,last_seen_at,duration_seconds,user_agent,created_at').in('student_id',ids).order('started_at',{ascending:false}).limit(5000),
+        sb.from('tic_student_activity_events').select('id,student_id,event_type,event_label,view_name,entity_type,entity_id,metadata,created_at').in('student_id',ids).order('created_at',{ascending:false}).limit(5000)
+      ]);
+      sessions=ar.data||[]; events=er.data||[]; sessionError=ar.error?.message||null; eventError=er.error?.message||null;
+    }
+    const by={}; (students||[]).forEach(s=>by[s.id]={student:s,last:null,seen:null,total:0,count:0,events:0});
+    sessions.forEach(r=>{const x=by[r.student_id];if(!x)return;x.count++;x.total+=Number(r.duration_seconds)||0;if(!x.last||new Date(r.started_at)>new Date(x.last))x.last=r.started_at;if(!x.seen||new Date(r.last_seen_at)>new Date(x.seen))x.seen=r.last_seen_at});
+    events.forEach(r=>{if(by[r.student_id])by[r.student_id].events++});
+    window.__v62Act={by,sessions,events};
+    root.innerHTML=`
+      <div class="v62-plan-wrap">
+        ${sessionError?`<div class="card v62-error"><b>A tabela de atividade não pôde ser consultada.</b><p>${esc62(sessionError)}</p><small>Os registros anteriores não foram apagados pelo código. Verifique as políticas/grants do SQL V62.</small></div>`:''}
+        <div class="grid stats section">
+          <div class="card"><div class="stat-label">👥 Alunos</div><div class="stat-value">${students?.length||0}</div></div>
+          <div class="card"><div class="stat-label">🟢 Online agora</div><div class="stat-value">${students.filter(s=>online62(by[s.id]?.seen)).length}</div></div>
+          <div class="card"><div class="stat-label">📝 Com atividade</div><div class="stat-value">${students.filter(s=>by[s.id]?.count).length}</div></div>
+          <div class="card"><div class="stat-label">⏱️ Tempo acumulado</div><div class="stat-value">${dur62(students.reduce((n,s)=>n+(by[s.id]?.total||0),0))}</div></div>
+        </div>
+        <div class="card">
+          <div class="v62-plan-toolbar">
+            <input id="v62ActSearch" class="input" style="flex:1;min-width:220px" placeholder="🔎 Buscar aluno..." oninput="renderActivity62()">
+            <select id="v62ActFilter" class="input" style="width:170px" onchange="renderActivity62()"><option value="">Todos</option><option value="online">🟢 Online</option><option value="activity">Com atividade</option><option value="none">Sem atividade</option></select>
+            <button class="btn primary" onclick="activityPage62()">↻ Atualizar</button>
+          </div>
+        </div>
+        <div id="v62ActivityGrid" class="v62-activity-grid"></div>
+      </div>`;
+    renderActivity62();
+  }
+  window.renderActivity62=function(){
+    const grid=$('v62ActivityGrid');if(!grid)return;
+    const q=($('v62ActSearch')?.value||'').toLowerCase().trim(),f=$('v62ActFilter')?.value||'',A=window.__v62Act||{by:{}};
+    const rows=Object.values(A.by).filter(x=>{
+      const s=x.student;
+      if(q&&!`${s.display_name||''} ${s.email||''}`.toLowerCase().includes(q))return false;
+      if(f==='online'&&!online62(x.seen))return false;
+      if(f==='activity'&&!x.count)return false;
+      if(f==='none'&&x.count)return false;
+      return true;
+    }).sort((a,b)=>new Date(b.last||0)-new Date(a.last||0));
+    grid.innerHTML=rows.map(x=>{const s=x.student,on=online62(x.seen);return `
+      <article class="v62-activity-card">
+        <div class="v62-activity-head"><div class="v62-activity-avatar">👤</div><div style="min-width:0;flex:1"><b>${esc62(s.display_name||'Aluno')}</b><small>${esc62(s.current_level||'')} · ${esc62(s.email||'')}</small></div><span class="${on?'v62-online':'v62-offline'}">${on?'🟢 Online':'⚪ Offline'}</span></div>
+        <div class="v62-activity-metrics">
+          <div class="v62-activity-metric"><span>🕐 Último login</span><b>${fmt62(x.last)}</b></div>
+          <div class="v62-activity-metric"><span>👀 Última atividade</span><b>${fmt62(x.seen)}</b></div>
+          <div class="v62-activity-metric"><span>⏱️ Tempo ativo</span><b>${dur62(x.total)}</b></div>
+          <div class="v62-activity-metric"><span>🔁 Sessões / ações</span><b>${x.count} / ${x.events}</b></div>
+        </div>
+        <div class="v62-activity-actions"><button class="btn sm primary" onclick="openActivity62('${s.id}')">Ver detalhes</button><button class="btn sm secondary" onclick="loadView('students')">Abrir aluno</button></div>
+      </article>`}).join('')||'<div class="v62-empty">Nenhum aluno corresponde ao filtro.</div>';
+  };
+  window.openActivity62=function(studentId){
+    const A=window.__v62Act||{},x=A.by?.[studentId];if(!x)return;
+    const ss=(A.sessions||[]).filter(r=>r.student_id===studentId),ee=(A.events||[]).filter(r=>r.student_id===studentId);
+    openModal(`📊 ${esc62(x.student.display_name||'Aluno')} · Student Activity`,`
+      <div class="form">
+        <div class="notice success"><b>Último login:</b> ${fmt62(x.last)} · <b>Última atividade:</b> ${fmt62(x.seen)} · <b>Tempo:</b> ${dur62(x.total)}</div>
+        <div class="card"><div class="section-head"><h3>🔐 Sessões</h3><span>${ss.length}</span></div>${ss.slice(0,50).map(r=>`<div class="row"><div><b>${fmt62(r.started_at)}</b><small>Última atividade: ${fmt62(r.last_seen_at)} · ${esc62(r.user_agent||'')}</small></div><b>${dur62(r.duration_seconds)}</b></div>`).join('')||'<div class="empty">Nenhuma sessão.</div>'}</div>
+        <div class="card"><div class="section-head"><h3>🧭 Ações</h3><span>${ee.length}</span></div>${ee.slice(0,100).map(r=>`<div class="row"><div><b>${esc62(r.event_label||r.event_type||'Ação')}</b><small>${fmt62(r.created_at)} · ${esc62(r.view_name||'')}</small></div><small>${esc62(r.entity_type||'')}</small></div>`).join('')||'<div class="empty">Nenhuma ação registrada.</div>'}</div>
+      </div>`);
+  };
+
+  /* ---------- FIXED WEEKLY PLANNING ---------- */
+  async function loadPlanData62(){
+    const [sr,cr,pr]=await Promise.all([
+      sb.from('tic_students').select('id,display_name,email,current_level,status').eq('teacher_id',session.user.id).order('display_name'),
+      sb.from('tic_classes').select('id,name,level,status').eq('teacher_id',session.user.id).order('name'),
+      sb.from('tic_planning').select('*').eq('teacher_id',session.user.id).order('weekday').order('start_time')
+    ]);
+    return {students:sr.data||[],classes:cr.data||[],plans:pr.data||[],error:sr.error||cr.error||pr.error};
+  }
+  window.openPlanningForm62=async function(id){
+    const D=window.__v62PlanData||await loadPlanData62();window.__v62PlanData=D;
+    const p=(D.plans||[]).find(x=>x.id===id)||{};
+    openModal(id?'✏️ Editar planejamento':'🗓️ Novo planejamento',`
+      <form class="form" id="v62PlanForm" onsubmit="savePlanning62(event,'${id||''}')">
+        <div class="form-grid">
+          <div class="field"><label>Aluno *</label><select id="v62Student" required>${D.students.map(s=>`<option value="${s.id}" ${p.student_id===s.id?'selected':''}>${esc62(s.display_name)} · ${esc62(s.current_level||'')}</option>`).join('')}</select></div>
+          <div class="field"><label>Turma (opcional)</label><select id="v62Class"><option value="">— Sem turma —</option>${D.classes.map(c=>`<option value="${c.id}" ${p.class_id===c.id?'selected':''}>${esc62(c.name)} · ${esc62(c.level||'')}</option>`).join('')}</select></div>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>Dia fixo *</label><select id="v62Weekday" required>${V62DAYS.map(d=>`<option value="${d[0]}" ${String(p.weekday??'1')===d[0]?'selected':''}>${d[1]}</option>`).join('')}</select></div>
+          <div class="field"><label>Horário inicial *</label><input id="v62Start" type="time" required value="${p.start_time||'19:00'}"></div>
+          <div class="field"><label>Horário final *</label><input id="v62End" type="time" required value="${p.end_time||'20:30'}"></div>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>Início da rotina</label><input id="v62StartDate" type="date" value="${p.start_date||''}"></div>
+          <div class="field"><label>Fim da rotina</label><input id="v62EndDate" type="date" value="${p.end_date||''}"></div>
+        </div>
+        <div class="field"><label>Local / sala</label><input id="v62Location" value="${esc62(p.location||'')}" placeholder="Ex.: Online / Sala 2"></div>
+        <div class="field"><label>Link da aula</label><input id="v62Meeting" type="url" value="${esc62(p.meeting_url||'')}" placeholder="https://..."></div>
+        <div class="field"><label>Observações</label><textarea id="v62Notes" rows="3" placeholder="Observações do planejamento...">${esc62(p.notes||'')}</textarea></div>
+        <div class="field"><label><input id="v62Active" type="checkbox" ${p.active===false?'':'checked'}> Planejamento ativo</label></div>
+        <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">${id?'Salvar alterações':'Criar planejamento'}</button></div>
+      </form>`);
+  };
+  window.savePlanning62=async function(ev,id){
+    ev.preventDefault();
+    const row={
+      teacher_id:session.user.id,
+      student_id:$('v62Student').value,
+      class_id:$('v62Class').value||null,
+      weekday:Number($('v62Weekday').value),
+      start_time:$('v62Start').value,
+      end_time:$('v62End').value,
+      start_date:$('v62StartDate').value||null,
+      end_date:$('v62EndDate').value||null,
+      location:$('v62Location').value.trim()||null,
+      meeting_url:$('v62Meeting').value.trim()||null,
+      notes:$('v62Notes').value.trim()||null,
+      active:$('v62Active').checked,
+      updated_at:new Date().toISOString()
+    };
+    const r=id?await sb.from('tic_planning').update(row).eq('id',id).eq('teacher_id',session.user.id):await sb.from('tic_planning').insert(row);
+    if(r.error){toast62(r.error.message,'error');return}
+    closeModal();toast62(id?'Planejamento atualizado.':'Planejamento criado.','success');await planningPage62();
+  };
+  window.deletePlanning62=async function(id){
+    if(!confirm('Remover este planejamento?'))return;
+    const r=await sb.from('tic_planning').delete().eq('id',id).eq('teacher_id',session.user.id);
+    if(r.error){toast62(r.error.message,'error');return}
+    toast62('Planejamento removido.','success');await planningPage62();
+  };
+  async function planningPage62(){
+    setPage('Planning','Dias fixos, horários e planejamento individual dos alunos.','<button class="btn primary" onclick="openPlanningForm62()">+ Novo planejamento</button>');
+    const root=$('content');root.innerHTML='<div class="card"><div class="v62-empty">Carregando planejamento...</div></div>';
+    const D=await loadPlanData62();window.__v62PlanData=D;
+    if(D.error){
+      root.innerHTML=`<div class="card v62-error"><b>Planning ainda não está disponível no banco.</b><p>${esc62(D.error.message)}</p><small>Execute o SQL V62 Planning no Supabase. Nenhum dado existente é apagado.</small></div>`;return;
+    }
+    const grouped={};V62DAYS.forEach(d=>grouped[d[0]]=[]);(D.plans||[]).forEach(p=>{(grouped[String(p.weekday)]||grouped['1']).push(p)});
+    root.innerHTML=`
+      <div class="v62-plan-wrap">
+        <div class="card"><div class="section-head"><div><h2>🗓️ Planejamento semanal</h2><span>Horários fixos por aluno. Cada registro pode ser editado ou removido.</span></div><button class="btn primary" onclick="openPlanningForm62()">+ Novo planejamento</button></div></div>
+        <div class="v62-week">${V62DAYS.map(d=>`<section class="v62-day"><div class="v62-day-head"><span>${d[1]}</span><span>${grouped[d[0]].length}</span></div>${grouped[d[0]].map(p=>{const s=D.students.find(x=>x.id===p.student_id),c=D.classes.find(x=>x.id===p.class_id);return `<article class="v62-plan-card"><b>${esc62(s?.display_name||'Aluno')}</b><small>⏰ ${esc62(p.start_time||'')} – ${esc62(p.end_time||'')}</small><small>${esc62(c?.name||p.location||'')}</small>${p.meeting_url?`<small>🔗 Link disponível</small>`:''}<div class="v62-plan-actions"><button class="btn sm secondary" onclick="openPlanningForm62('${p.id}')">✏️ Editar</button><button class="btn sm ghost" onclick="deletePlanning62('${p.id}')">🗑 Remover</button>${p.meeting_url?`<a class="btn sm primary" href="${esc62(p.meeting_url)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}</div></article>`}).join('')||'<div class="v62-empty">Sem aula fixa.</div>'}</section>`).join('')}</div>
+      </div>`;
+  }
+  window.planningPage62=planningPage62;
+
+  /* ---------- ACTIVITY START SAFETY ---------- */
+  async function ensureActivity62(){
+    try{
+      if(profile?.role==='student' && session?.user?.id){
+        if(typeof window.ticStartStudentActivityV58==='function') await window.ticStartStudentActivityV58();
+        else if(typeof window.ticStartStudentActivityV60==='function') await window.ticStartStudentActivityV60();
+      }
+    }catch(e){console.warn('[V62 activity]',e)}
+  }
+  setTimeout(ensureActivity62,1200);setTimeout(ensureActivity62,3500);
+  if(sb?.auth) sb.auth.onAuthStateChange((ev,s)=>{if(s?.user)setTimeout(ensureActivity62,1200)});
+
+  /* ---------- FINAL ROUTER: restores lost Student Activity route and adds Planning ---------- */
+  const baseLoadV62=window.loadView;
+  window.loadView=async function(v){
+    ensureV62Nav();
+    if(v==='studentActivity'){currentView=v;toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));await activityPage62();return;}
+    if(v==='planning'){currentView=v;toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));await planningPage62();return;}
+    if(profile?.role==='student' && String(v||'').startsWith('student')){
+      try{if(typeof window.ticLogStudentEventV58==='function')window.ticLogStudentEventV58('view',v,'student');}catch(_){}
+    }
+    return baseLoadV62.apply(this,arguments);
+  };
+  ensureV62Nav();
+})();
+</script>
