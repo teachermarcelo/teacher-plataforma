@@ -6099,5 +6099,542 @@ ensureTeacherActivityNavV58();
 })();
 </script>
 
+
+
+<!-- V59 FINAL REPAIR LAYER
+     Preserves V58 and fixes the real data-link problem:
+     student materials are resolved from tic_task_assignments first,
+     then tic_assignments. Existing V58 functions remain intact. -->
+<style id="tic-v59-final-fix-css">
+.v59-material-debug{margin-top:10px;padding:9px 11px;border:1px solid #e7def7;border-radius:10px;background:#fbf9ff;font-size:10px;color:var(--muted)}
+.v59-material-debug b{color:var(--text)}
+</style>
+<script id="tic-v59-final-fix-js">
+(function(){
+'use strict';
+
+async function v59StudentPrivateMaterials(studentId,classIds){
+  if(!studentId)return {rows:[],assignments:[],taskAssignments:[]};
+
+  /* Do NOT depend on tic_task_assignments.due_at.
+     That column belongs to tic_assignments. */
+  const tr=await sb.from('tic_task_assignments')
+    .select('id,assignment_id,status,active,assigned_at,completed_at')
+    .eq('student_id',studentId)
+    .eq('active',true)
+    .order('assigned_at',{ascending:false})
+    .limit(500);
+
+  if(tr.error){
+    console.warn('[V59 material links]',tr.error.message);
+    return {rows:[],assignments:[],taskAssignments:[]};
+  }
+
+  const taskAssignments=tr.data||[];
+  const assignmentIds=[...new Set(taskAssignments.map(x=>x.assignment_id).filter(Boolean))];
+  if(!assignmentIds.length)return {rows:[],assignments:[],taskAssignments};
+
+  const ar=await sb.from('tic_assignments')
+    .select('id,title,instructions,assignment_type,due_at,points,class_id,resource_items,cover_image_url,cefr_level,skill,created_at,active')
+    .in('id',assignmentIds)
+    .eq('active',true);
+
+  if(ar.error){
+    console.warn('[V59 materials]',ar.error.message);
+    return {rows:[],assignments:[],taskAssignments};
+  }
+
+  const assignments=(ar.data||[]).filter(a=>{
+    const type=String(a.assignment_type||'').toLowerCase();
+    return type==='material' && (!classIds?.length || classIds.includes(a.class_id));
+  });
+
+  const allowed=new Set(assignments.map(a=>a.id));
+  const rows=taskAssignments
+    .filter(t=>allowed.has(t.assignment_id))
+    .map(t=>({task:t,assignment:assignments.find(a=>a.id===t.assignment_id)}))
+    .filter(x=>x.assignment);
+
+  return {rows,assignments,taskAssignments};
+}
+
+/* ---------- FINAL Student My Class ---------- */
+window.studentClassPageV59=async function(){
+  const s=await studentRecord();
+  if(!s){
+    $('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';
+    return;
+  }
+
+  const {data:members,error:me}=await sb.from('tic_class_students')
+    .select('class_id,status')
+    .eq('student_id',s.id)
+    .eq('status','active');
+
+  if(me){
+    $('content').innerHTML=`<div class="card attention">${e58(me.message)}</div>`;
+    return;
+  }
+
+  const ids=[...(members||[]).map(x=>x.class_id).filter(Boolean)];
+  if(!ids.length){
+    $('content').innerHTML='<div class="card empty">🏫 Você ainda não está vinculado a uma Class.</div>';
+    return;
+  }
+
+  const [cr,sr,rr,ar,br,privateData]=await Promise.all([
+    sb.from('tic_classes').select('id,name,level,schedule_text,meeting_url,status').in('id',ids).eq('status','active').order('name'),
+    sb.from('tic_class_sessions').select('id,class_id,session_date,duration_minutes,lesson_title,summary,status').in('class_id',ids).order('session_date',{ascending:false}).limit(200),
+    sb.from('tic_class_material_links').select('id,class_id,title,url,material_type,note,position,created_at').in('class_id',ids).order('created_at',{ascending:false}).limit(200),
+    sb.from('tic_assignments').select('id,title,instructions,assignment_type,due_at,points,class_id,resource_items,cover_image_url,cefr_level,skill,created_at,active').in('class_id',ids).eq('active',true).order('created_at',{ascending:false}).limit(300),
+    sb.from('tic_class_board_items').select('id,class_id,title,description,item_type,status,position,created_at').in('class_id',ids).order('position').order('created_at',{ascending:false}).limit(200),
+    v59StudentPrivateMaterials(s.id,ids)
+  ]);
+
+  const cls=cr.data||[];
+  const sessions=sr.data||[];
+  const resources=rr.data||[];
+  const assignments=ar.data||[];
+  const boards=br.data||[];
+  const privateRows=privateData.rows||[];
+
+  const cmap=new Map(cls.map(c=>[c.id,c]));
+  const selectedId=cls[0]?.id||'';
+
+  const render=()=>{
+    const c=cmap.get(window.__v59SelectedClass||selectedId)||cls[0];
+    if(!c)return;
+
+    const cs=sessions.filter(x=>x.class_id===c.id);
+    const now=new Date();
+    const past=cs.filter(x=>new Date(x.session_date)<now).sort((a,b)=>new Date(b.session_date)-new Date(a.session_date));
+    const next=cs.filter(x=>new Date(x.session_date)>=now).sort((a,b)=>new Date(a.session_date)-new Date(b.session_date))[0];
+
+    const rs=resources.filter(x=>x.class_id===c.id);
+    const as=assignments.filter(x=>x.class_id===c.id);
+    const lessons=as.filter(x=>String(x.assignment_type||'').toLowerCase()==='lesson');
+
+    /* IMPORTANT:
+       Individual Materials come from the explicit student assignment.
+       Class Materials are allowed only when a material assignment belongs
+       to the student's Class. */
+    const privateForClass=privateRows.filter(x=>x.assignment?.class_id===c.id);
+    const privateIds=new Set(privateForClass.map(x=>x.assignment.id));
+
+    const classMaterials=as.filter(x=>
+      String(x.assignment_type||'').toLowerCase()==='material' &&
+      !privateIds.has(x.id)
+    );
+
+    const materials=[
+      ...privateForClass.map(x=>({assignment:x.assignment,task:x.task,scope:'private'})),
+      ...classMaterials.map(a=>({assignment:a,task:null,scope:'class'}))
+    ];
+
+    const taskAssignmentIds=new Set(privateForClass.map(x=>x.task.id));
+    const myTaskRows=(privateData.taskAssignments||[])
+      .filter(t=>t.active!==false && t.assignment_id && as.some(a=>a.id===t.assignment_id))
+      .map(t=>({task:t,assignment:as.find(a=>a.id===t.assignment_id)}))
+      .filter(x=>x.assignment && !['material','lesson'].includes(String(x.assignment.assignment_type||'').toLowerCase()));
+
+    const bi=boards.filter(x=>x.class_id===c.id);
+
+    setPage('My Class',`${c.name} · conteúdo separado por categoria`);
+
+    $('content').innerHTML=`
+      <div class="v44-class-page">
+        <div class="v44-class-hero">
+          <div>
+            <span class="eyebrow" style="color:#fff">MY CLASS</span>
+            <h2>🏫 ${e58(c.name)}</h2>
+            <p>${e58(c.level||'')} ${c.schedule_text?'· '+e58(c.schedule_text):''}</p>
+          </div>
+          <select id="v59ClassSelect" class="v44-class-select">
+            ${cls.map(z=>`<option value="${z.id}" ${z.id===c.id?'selected':''}>${e58(z.name)} · ${e58(z.level||'')}</option>`).join('')}
+          </select>
+        </div>
+
+        <div class="v44-kpis">
+          <div class="v44-kpi"><span>📖 Aulas anteriores</span><b>${past.length}</b></div>
+          <div class="v44-kpi"><span>📚 Lessons da Class</span><b>${lessons.length}</b></div>
+          <div class="v44-kpi"><span>🔗 Resources</span><b>${rs.length}</b></div>
+          <div class="v44-kpi"><span>📂 Meus materiais</span><b>${materials.length}</b></div>
+        </div>
+
+        <nav class="v44-class-nav">
+          <button class="active" data-v59cp="home">🏠 Visão geral</button>
+          <button data-v59cp="lessons">📚 Lessons</button>
+          <button data-v59cp="materials">📂 Materials</button>
+          <button data-v59cp="resources">🔗 Resources</button>
+          <button data-v59cp="tasks">📝 Minhas tarefas</button>
+          <button data-v59cp="previous">📖 Aulas anteriores</button>
+          <button data-v59cp="board">📌 Board</button>
+        </nav>
+
+        <section class="v44-class-pane active" data-v59pane="home">
+          <div class="v44-class-grid">
+            <div class="v44-card">
+              <h3>📅 Próxima aula</h3>
+              <p class="desc">Somente a próxima aula registrada pelo Teacher.</p>
+              ${next?`
+                <div class="v44-row">
+                  <div class="v44-row-icon">📅</div>
+                  <div class="v44-row-main">
+                    <b>${e58(next.lesson_title||'Aula')}</b>
+                    <small>${d58(next.session_date)} · ${next.duration_minutes||'—'} min</small>
+                  </div>
+                  ${c.meeting_url?`<a class="btn sm primary" href="${e58(c.meeting_url)}" target="_blank" rel="noopener">Entrar ↗</a>`:''}
+                </div>
+              `:'<div class="v44-empty">Nenhuma próxima aula registrada.</div>'}
+            </div>
+
+            <div class="v44-card">
+              <h3>🏫 Minha Class</h3>
+              <p class="desc">Informações da turma, sem misturar conteúdos.</p>
+              <div class="v44-row">
+                <div class="v44-row-icon">🏫</div>
+                <div class="v44-row-main">
+                  <b>${e58(c.name)}</b>
+                  <small>${e58(c.level||'')} · ${e58(c.schedule_text||'Horário não definido')}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="v44-class-pane" data-v59pane="lessons">
+          <div class="v44-card">
+            <h3>📚 Lessons</h3>
+            <p class="desc">Somente conteúdos classificados como Lesson para esta Class.</p>
+            <div class="v44-list">
+              ${lessons.map(a=>`
+                <div class="v44-row" style="cursor:pointer" onclick="ticLogStudentEventV58('lesson_open','${e58(a.title)}','studentClass','assignment','${a.id}');viewStudentLessonAssignmentV51('${a.id}')">
+                  <div class="v44-row-icon">📚</div>
+                  <div class="v44-row-main"><b>${e58(a.title)}</b><small>Lesson${a.cefr_level?' · '+e58(a.cefr_level):''}${a.skill?' · '+e58(a.skill):''}</small></div>
+                  <span class="badge green">Abrir ↗</span>
+                </div>
+              `).join('')||'<div class="v44-empty">Nenhuma Lesson foi disponibilizada para esta Class.</div>'}
+            </div>
+          </div>
+        </section>
+
+        <section class="v44-class-pane" data-v59pane="materials">
+          <div class="v44-card">
+            <div class="section-head">
+              <div>
+                <h3>📂 Materials</h3>
+                <p class="desc">Materiais enviados pelo Teacher. Os individuais aparecem somente para você; os publicados para a Class ficam disponíveis aos membros.</p>
+              </div>
+              <span class="badge blue">${materials.length}</span>
+            </div>
+
+            <div class="v58-student-material-grid">
+              ${materials.map(x=>{
+                const a=x.assignment;
+                const ta=x.task;
+                const count=Array.isArray(a.resource_items)?a.resource_items.filter(r=>r&&r.url).length:0;
+                const click=ta
+                  ? `openStudentMaterialV51('${ta.id}')`
+                  : `openClassMaterialStudentV58('${a.id}')`;
+                return `
+                  <article class="v58-material-card" onclick="ticLogStudentEventV58('material_open','${e58(a.title)}','studentClass','assignment','${a.id}');${click}">
+                    <span class="v58-material-icon">📂</span>
+                    <div class="v58-material-main">
+                      <b>${e58(a.title)}</b>
+                      <small>${count} recurso(s) · ${a.created_at?d58(a.created_at):'Material'}</small>
+                    </div>
+                    <span class="v58-material-scope">${x.scope==='private'?'Somente você':'Class'}</span>
+                  </article>
+                `;
+              }).join('')||'<div class="v58-empty">Nenhum Material disponível para esta Class.</div>'}
+            </div>
+
+            ${privateForClass.length?`<div class="v59-material-debug">✓ <b>${privateForClass.length}</b> material(is) individual(is) localizado(s) para este aluno.</div>`:''}
+          </div>
+        </section>
+
+        <section class="v44-class-pane" data-v59pane="resources">
+          <div class="v44-card">
+            <h3>🔗 Resources</h3>
+            <p class="desc">Somente links publicados como Resource. Não são Tasks nem Materials.</p>
+            <div class="v44-list">
+              ${rs.map(r=>`
+                <div class="v44-row">
+                  <div class="v44-row-icon">${String(r.material_type||'').toLowerCase()==='video'?'🎬':String(r.material_type||'').toLowerCase()==='audio'?'🎧':String(r.material_type||'').toLowerCase()==='pdf'?'📄':'🔗'}</div>
+                  <div class="v44-row-main"><b>${e58(r.title)}</b><small>${e58(r.material_type||'link')}${r.note?' · '+e58(r.note):''}</small></div>
+                  <a class="btn sm secondary" href="${e58(r.url||'#')}" target="_blank" rel="noopener">Abrir ↗</a>
+                </div>
+              `).join('')||'<div class="v44-empty">Nenhum Resource foi disponibilizado para esta Class.</div>'}
+            </div>
+          </div>
+        </section>
+
+        <section class="v44-class-pane" data-v59pane="tasks">
+          <div class="v44-card">
+            <h3>📝 Minhas tarefas</h3>
+            <p class="desc">Somente Tasks atribuídas a você.</p>
+            <div class="v44-list">
+              ${myTaskRows.map(x=>{
+                const a=x.assignment,t=x.task;
+                return `<div class="v44-row" style="cursor:pointer" onclick="ticLogStudentEventV58('task_open','${e58(a.title)}','studentClass','assignment','${a.id}');openStudentTask('${t.id}')">
+                  <div class="v44-row-icon">📝</div>
+                  <div class="v44-row-main"><b>${e58(a.title)}</b><small>${e58(a.assignment_type||'Task')} · ${a.due_at?'Prazo '+d58(a.due_at):'Sem prazo'}${a.skill?' · '+e58(a.skill):''}</small></div>
+                  <span class="badge yellow">${e58(t.status||'Pendente')}</span>
+                </div>`;
+              }).join('')||'<div class="v44-empty">Nenhuma tarefa atribuída a você nesta Class.</div>'}
+            </div>
+          </div>
+        </section>
+
+        <section class="v44-class-pane" data-v59pane="previous">
+          <div class="v44-card">
+            <h3>📖 Aulas anteriores</h3>
+            <p class="desc">Somente aulas que o Teacher registrou em Class → Aulas.</p>
+            <div class="v44-list">
+              ${past.map(a=>`
+                <div class="v44-session">
+                  <div class="v44-date"><b>${new Date(a.session_date).getDate()}</b><small>${new Date(a.session_date).toLocaleDateString('pt-BR',{month:'short'}).replace('.','')}</small></div>
+                  <div><b>${e58(a.lesson_title||'Aula')}</b><small>${d58(a.session_date)} · ${a.duration_minutes||'—'} min${a.summary?' · '+e58(a.summary):''}</small></div>
+                  <span class="badge ${a.status==='completed'?'green':'blue'}">${e58(a.status||'Registrada')}</span>
+                </div>
+              `).join('')||'<div class="v44-empty">Nenhuma aula anterior foi registrada pelo Teacher.</div>'}
+            </div>
+          </div>
+        </section>
+
+        <section class="v44-class-pane" data-v59pane="board">
+          <div class="v44-card">
+            <h3>📌 Board</h3>
+            <p class="desc">Somente avisos publicados nesta Class.</p>
+            <div class="v44-list">
+              ${bi.map(b=>`<div class="v44-row"><div class="v44-row-icon">📌</div><div class="v44-row-main"><b>${e58(b.title)}</b><small>${e58(b.description||'')}${b.item_type?' · '+e58(b.item_type):''}</small></div><span class="badge blue">${e58(b.status||'Publicado')}</span></div>`).join('')||'<div class="v44-empty">Nenhum item no Board.</div>'}
+            </div>
+          </div>
+        </section>
+      </div>`;
+
+    document.querySelectorAll('[data-v59cp]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.v59cp)));
+
+    $('v59ClassSelect')?.addEventListener('change',ev=>{
+      window.__v59SelectedClass=ev.target.value;
+      render();
+    });
+  };
+
+  function setTab(name){
+    document.querySelectorAll('[data-v59cp]').forEach(b=>b.classList.toggle('active',b.dataset.v59cp===name));
+    document.querySelectorAll('[data-v59pane]').forEach(p=>p.classList.toggle('active',p.dataset.v59pane===name));
+    window.__v59StudentClassTab=name;
+    if(typeof ticLogStudentEventV58==='function')ticLogStudentEventV58('view',name,'studentClass','tab',name);
+  }
+
+  render();
+};
+
+window.studentClassPage=window.studentClassPageV59;
+
+/* ---------- FINAL Student Dashboard repair ---------- */
+window.studentDashboardV59=async function(){
+  const s=await studentRecord();
+  if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno.</div>';return}
+
+  let prog={overall:0,done:0,total:0};
+  try{prog=await ticRecalculateStudentProgressV19(s.id)||prog}catch(_){}
+
+  const {data:members}=await sb.from('tic_class_students').select('class_id,status').eq('student_id',s.id).eq('status','active');
+  const ids=[...(members||[]).map(x=>x.class_id).filter(Boolean)];
+
+  const [classesRes,sessionsRes,assignRes,privateData]=await Promise.all([
+    ids.length?sb.from('tic_classes').select('id,name,level,schedule_text,meeting_url,status').in('id',ids).eq('status','active').order('name'):Promise.resolve({data:[]}),
+    ids.length?sb.from('tic_class_sessions').select('id,class_id,session_date,lesson_title,duration_minutes,status').in('class_id',ids).order('session_date',{ascending:false}).limit(100):Promise.resolve({data:[]}),
+    ids.length?sb.from('tic_assignments').select('id,title,assignment_type,class_id,created_at,resource_items,cover_image_url,due_at,cefr_level,skill,active').in('class_id',ids).eq('active',true).order('created_at',{ascending:false}).limit(300):Promise.resolve({data:[]}),
+    v59StudentPrivateMaterials(s.id,ids)
+  ]);
+
+  const classes=classesRes.data||[];
+  const sessions=sessionsRes.data||[];
+  const assignments=assignRes.data||[];
+  const amap=new Map(assignments.map(a=>[a.id,a]));
+  const now=new Date();
+  const past=sessions.filter(x=>new Date(x.session_date)<now).sort((a,b)=>new Date(b.session_date)-new Date(a.session_date));
+  const next=sessions.filter(x=>new Date(x.session_date)>=now).sort((a,b)=>new Date(a.session_date)-new Date(b.session_date))[0];
+
+  const privateIds=new Set((privateData.taskAssignments||[]).map(t=>t.assignment_id));
+  const materials=assignments.filter(a=>String(a.assignment_type||'').toLowerCase()==='material' && (privateIds.has(a.id)||ids.includes(a.class_id)));
+
+  const myTasks=(privateData.taskAssignments||[])
+    .map(t=>amap.get(t.assignment_id))
+    .filter(Boolean)
+    .filter(a=>!['material','lesson'].includes(String(a.assignment_type||'').toLowerCase()));
+
+  setPage('My Dashboard','Seu espaço de aprendizagem.');
+  $('content').innerHTML=`
+    <div class="s43">
+      <section class="s43-hero">
+        <span class="s43-kicker">MY LEARNING</span>
+        <h2>Olá, ${e58(s.display_name?.split(' ')[0]||'Student')} 👋</h2>
+        <p>${e58(s.current_level||'—')} · Objetivo ${e58(s.target_level||'—')} · ${prog.done||0}/${prog.total||0} lessons concluídas</p>
+        <div class="s43-progress"><i style="width:${Math.max(0,Math.min(100,Number(prog.overall||0)))}%"></i></div>
+        <p class="s43-progress-label">${Number(prog.overall||0)}% de progresso geral</p>
+      </section>
+      <div class="s43-stats">
+        <button class="s43-stat" onclick="loadView('studentTasks')"><span>📝 Minhas tarefas</span><b>${myTasks.length}</b><small>Abrir My Tasks →</small></button>
+        <button class="s43-stat" onclick="loadView('studentClass');setTimeout(()=>window.ticStudentClassOpenTabV58?.('previous'),350)"><span>📖 Aulas anteriores</span><b>${past.length}</b><small>Ver aulas registradas pelo Teacher →</small></button>
+        <button class="s43-stat" onclick="loadView('studentClass')"><span>🏫 Minhas Classes</span><b>${classes.length}</b><small>Abrir My Class →</small></button>
+        <button class="s43-stat" onclick="loadView('studentClass');setTimeout(()=>window.ticStudentClassOpenTabV58?.('materials'),350)"><span>🆕 Materiais enviados</span><b>${materials.length}</b><small>Ver somente Materials →</small></button>
+      </div>
+      <div class="s43-overview">
+        <section class="s43-overview-card">
+          <div class="s43-head"><div><h2>🎯 Acesso rápido</h2><p>Cada botão leva ao seu conteúdo específico.</p></div></div>
+          <div class="s43-list">
+            <div class="s43-item"><span class="s43-icon">📚</span><div class="s43-copy"><b>My Lessons</b><small>Lessons disponíveis para você.</small></div><button class="btn sm primary" onclick="loadView('studentLessons')">Abrir</button></div>
+            <div class="s43-item"><span class="s43-icon">📝</span><div class="s43-copy"><b>My Tasks</b><small>Somente tarefas atribuídas.</small></div><button class="btn sm primary" onclick="loadView('studentTasks')">Abrir</button></div>
+            <div class="s43-item"><span class="s43-icon">🏫</span><div class="s43-copy"><b>My Class</b><small>Lessons, Materials, Resources, Tasks, Board e aulas anteriores separados.</small></div><button class="btn sm primary" onclick="loadView('studentClass')">Abrir</button></div>
+          </div>
+        </section>
+        <aside class="s43-side">
+          <section class="s43-side-card"><h3>📅 Próxima aula</h3><p>Somente a próxima aula registrada pelo Teacher.</p>${next?`<div class="s43-mini"><span>${e58(next.lesson_title||'Aula')}</span><b>${new Date(next.session_date).toLocaleDateString('pt-BR')}</b></div><div style="font-size:9px;color:var(--muted);margin-top:7px">${d58(next.session_date)} · ${e58((classes.find(c=>c.id===next.class_id)||{}).name||'Class')}</div>`:'<div class="s43-empty">Nenhuma próxima aula registrada.</div>'}</section>
+          <section class="s43-side-card"><h3>📈 Meu progresso</h3><p>Resumo do currículo.</p><div class="progress" style="margin:8px 0 12px"><i style="width:${prog.overall||0}%"></i></div><div class="s43-mini"><span>Lessons concluídas</span><b>${prog.done||0}</b></div><div class="s43-mini"><span>Total</span><b>${prog.total||0}</b></div></section>
+        </aside>
+      </div>
+    </div>`;
+};
+window.studentDashboard=window.studentDashboardV59;
+
+/* ---------- FINAL activity display repair ----------
+   The database already contains activity rows. This renderer reads those
+   rows directly and does not depend on older V40/V41 renderers. */
+window.studentActivityPageV59=async function(){
+  setPage('Student Activity','Acessos, sessões, tempo ativo e ações registradas pelos alunos.','<button class="btn secondary" onclick="studentActivityPageV59()">↻ Atualizar</button>');
+  const root=$('content');
+  root.innerHTML='<div class="card"><div class="v58-empty">Carregando atividade dos alunos...</div></div>';
+
+  const {data:students,error:se}=await sb.from('tic_students')
+    .select('id,display_name,email,current_level,status,auth_user_id')
+    .eq('teacher_id',session.user.id)
+    .order('display_name');
+
+  if(se){
+    root.innerHTML=`<div class="card attention"><b>Erro ao carregar alunos.</b><p>${e58(se.message)}</p></div>`;
+    return;
+  }
+
+  const ids=(students||[]).map(s=>s.id);
+  let sessions=[],events=[];
+  if(ids.length){
+    const ar=await sb.from('tic_student_activity')
+      .select('id,student_id,auth_user_id,started_at,last_seen_at,duration_seconds,user_agent,created_at')
+      .in('student_id',ids).order('started_at',{ascending:false}).limit(5000);
+    const er=await sb.from('tic_student_activity_events')
+      .select('id,student_id,event_type,event_label,view_name,entity_type,entity_id,metadata,created_at')
+      .in('student_id',ids).order('created_at',{ascending:false}).limit(5000);
+    sessions=ar.data||[];
+    events=er.data||[];
+    if(ar.error)console.warn('[V59 activity]',ar.error.message);
+    if(er.error)console.warn('[V59 activity events]',er.error.message);
+  }
+
+  const by={};
+  (students||[]).forEach(s=>by[s.id]={student:s,last:null,seen:null,total:0,count:0,events:0});
+  sessions.forEach(r=>{
+    const x=by[r.student_id];if(!x)return;
+    x.count++;
+    x.total+=Number(r.duration_seconds||0);
+    if(!x.last||new Date(r.started_at)>new Date(x.last))x.last=r.started_at;
+    if(!x.seen||new Date(r.last_seen_at)>new Date(x.seen))x.seen=r.last_seen_at;
+  });
+  events.forEach(r=>{if(by[r.student_id])by[r.student_id].events++});
+
+  const online=x=>x?.seen && (Date.now()-new Date(x.seen).getTime())<120000;
+  const dur=s=>dur58(s||0);
+
+  root.innerHTML=`
+    <div class="v58-activity-wrap">
+      <div class="v58-activity-stats">
+        <div class="v58-activity-stat"><span>👥 Alunos</span><b>${students.length}</b></div>
+        <div class="v58-activity-stat"><span>🟢 Online agora</span><b>${students.filter(s=>online(by[s.id])).length}</b></div>
+        <div class="v58-activity-stat"><span>📝 Com atividade registrada</span><b>${students.filter(s=>by[s.id]?.count).length}</b></div>
+        <div class="v58-activity-stat"><span>⏱️ Tempo acumulado</span><b>${dur(students.reduce((n,s)=>n+(by[s.id]?.total||0),0))}</b></div>
+      </div>
+      <div class="card">
+        <div class="v58-activity-toolbar">
+          <input id="v59ActSearch" class="input" style="flex:1;min-width:230px" placeholder="🔎 Buscar aluno...">
+          <select id="v59ActFilter" class="input" style="width:170px">
+            <option value="">Todos</option><option value="online">🟢 Online</option><option value="activity">Com atividade</option><option value="none">Sem atividade</option>
+          </select>
+        </div>
+      </div>
+      <div id="v59ActivityGrid" class="v58-activity-grid"></div>
+    </div>`;
+
+  const render=()=>{
+    const q=($('v59ActSearch')?.value||'').toLowerCase().trim();
+    const f=$('v59ActFilter')?.value||'';
+    const rows=students.filter(s=>{
+      const x=by[s.id]||{};
+      if(q&&!`${s.display_name||''} ${s.email||''}`.toLowerCase().includes(q))return false;
+      if(f==='online'&&!online(x))return false;
+      if(f==='activity'&&!x.count)return false;
+      if(f==='none'&&x.count)return false;
+      return true;
+    });
+    $('v59ActivityGrid').innerHTML=rows.map(s=>{
+      const x=by[s.id]||{};
+      const os=online(x);
+      return `<article class="v58-activity-card">
+        <div class="v58-activity-head">
+          <div class="v58-activity-name-v40"><span class="student-activity-avatar-v40">👤</span><div><b>${e58(s.display_name||'Aluno')}</b><small>${e58(s.current_level||'')}${s.email?' · '+e58(s.email):''}</small></div></div>
+          <span class="student-activity-status-v40 ${os?'student-activity-online-v40':'student-activity-offline-v40'}">${os?'🟢 Online':'⚪ Offline'}</span>
+        </div>
+        <div class="student-activity-meta-v40">
+          <div class="student-activity-metric-v40"><span>🕐 Último login</span><b>${x.last?d58(x.last):'Nunca registrado'}</b></div>
+          <div class="student-activity-metric-v40"><span>👀 Última atividade</span><b>${x.seen?d58(x.seen):'—'}</b></div>
+          <div class="student-activity-metric-v40"><span>⏱️ Tempo ativo</span><b>${dur(x.total)}</b></div>
+          <div class="student-activity-metric-v40"><span>🔁 Sessões</span><b>${x.count||0}</b></div>
+        </div>
+        <div class="class-center-student-actions" style="margin-top:10px">
+          <button class="btn sm primary" onclick="openStudentActivityDetailsV59('${s.id}')">📊 Ver detalhes</button>
+          <button class="btn sm secondary" onclick="openStudentView('${s.id}')">👤 Abrir aluno</button>
+        </div>
+      </article>`;
+    }).join('')||'<div class="v58-empty">Nenhum aluno encontrado.</div>';
+  };
+
+  $('v59ActSearch').addEventListener('input',render);
+  $('v59ActFilter').addEventListener('change',render);
+  window.__v59ActivityDetail={by,sessions,events};
+  render();
+};
+
+window.openStudentActivityDetailsV59=function(studentId){
+  const d=window.__v59ActivityDetail||{};
+  const x=d.by?.[studentId];
+  if(!x)return;
+  const ss=(d.sessions||[]).filter(r=>r.student_id===studentId).slice(0,30);
+  const ee=(d.events||[]).filter(r=>r.student_id===studentId).slice(0,50);
+  openModal(`📊 ${e58(x.student.display_name||'Aluno')} · Student Activity`,`
+    <div class="form">
+      <div class="notice success"><b>Último login:</b> ${x.last?d58(x.last):'—'} · <b>Tempo:</b> ${dur58(x.total)} · <b>Sessões:</b> ${x.count}</div>
+      <div class="card"><div class="section-head"><h3>🔐 Sessões</h3><span>${ss.length}</span></div>
+        ${ss.map(r=>`<div class="row"><div><b>${d58(r.started_at)}</b><small>Última atividade: ${d58(r.last_seen_at)}</small></div><b>${dur58(r.duration_seconds)}</b></div>`).join('')||'<div class="empty">Nenhuma sessão.</div>'}
+      </div>
+      <div class="card"><div class="section-head"><h3>🧭 Ações registradas</h3><span>${ee.length}</span></div>
+        ${ee.map(r=>`<div class="row"><div><b>${e58(r.event_label||r.event_type||'Ação')}</b><small>${d58(r.created_at)} · ${e58(r.view_name||'')}</small></div><small>${e58(r.entity_type||'')}</small></div>`).join('')||'<div class="empty">Nenhuma ação registrada ainda.</div>'}
+      </div>
+    </div>`);
+};
+
+/* Ensure the final routes are the ones used after all older versions. */
+const v59LoadBase=window.loadView;
+window.loadView=async function(v){
+  if(v==='studentActivity')return studentActivityPageV59();
+  if(v==='studentClass')return studentClassPageV59();
+  if(v==='studentDashboard')return studentDashboardV59();
+  return v59LoadBase.apply(this,arguments);
+};
+
+})();
+</script>
+
 </body>
 </html>
