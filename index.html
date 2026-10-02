@@ -3280,6 +3280,63 @@ window.saveMaterialAssignV52=async function(ev,sourceId){
 })();
 </script>
 
+
+<script id="tic-student-activity-v57-final">
+/* V57 FINAL: route Student Activity after ALL existing route wrappers. No existing route is replaced. */
+(function(){
+  async function studentActivityPageFinal(){
+    try{
+      if(typeof setPage==='function') setPage('Student Activity','Acessos, sessões e atividade registrada dos alunos.','');
+      const c=document.getElementById('content'); if(!c)return;
+      c.innerHTML='<div class="card empty">Carregando Student Activity...</div>';
+      const uid=window.session?.user?.id;
+      if(!uid){c.innerHTML='<div class="card empty">Sessão do Teacher não encontrada.</div>';return}
+      const q=await window.sb.from('tic_students').select('id,display_name,current_level,email,status,teacher_id,auth_user_id').eq('teacher_id',uid).order('display_name');
+      if(q.error){c.innerHTML='<div class="card attention">Erro ao carregar alunos: '+(window.esc?q.error.message.replace(/[&<>"\']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])):q.error.message)+'</div>';return}
+      const students=q.data||[], ids=students.map(x=>x.id).filter(Boolean);
+      let acts=[];
+      if(ids.length){const a=await window.sb.from('tic_student_activity').select('*').in('student_id',ids).order('last_seen_at',{ascending:false}).limit(2000);if(!a.error)acts=a.data||[];}
+      const fmt=x=>x?new Date(x).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';
+      const dur=x=>{x=Math.max(0,Number(x)||0);const h=Math.floor(x/3600),m=Math.floor(x%3600/60);return h?h+'h '+m+'min':m+'min'};
+      const cutoff=Date.now()-5*60*1000;
+      const latest=new Map();acts.forEach(a=>{if(!latest.has(a.student_id))latest.set(a.student_id,a)});
+      const online=students.filter(s=>{const a=latest.get(s.id);return a&&new Date(a.last_seen_at).getTime()>=cutoff}).length;
+      const totalTime=acts.reduce((n,a)=>n+Number(a.duration_seconds||0),0);
+      c.innerHTML=`<div class="tic-sa-wrap"><div class="tic-sa-kpis">
+        <div class="tic-sa-kpi"><small>🟢 Online agora</small><b>${online}</b></div>
+        <div class="tic-sa-kpi"><small>👥 Alunos acompanhados</small><b>${students.length}</b></div>
+        <div class="tic-sa-kpi"><small>🔐 Sessões</small><b>${acts.length}</b></div>
+        <div class="tic-sa-kpi"><small>⏱️ Tempo registrado</small><b>${dur(totalTime)}</b></div>
+      </div><div class="tic-sa-toolbar"><input id="ticSA57Search" placeholder="🔎 Buscar aluno..."><select id="ticSA57Filter"><option value="all">Todos</option><option value="online">Online</option><option value="offline">Offline</option></select></div>
+      <div class="tic-sa-table"><div class="tic-sa-row tic-sa-head"><span>Aluno</span><span>Status</span><span>Último login</span><span>Última atividade</span><span>Tempo</span><span></span></div><div id="ticSA57Rows"></div></div><div id="ticSA57Detail"></div></div>`;
+      const render=()=>{
+        const term=(document.getElementById('ticSA57Search')?.value||'').toLowerCase(),filter=document.getElementById('ticSA57Filter')?.value||'all';
+        const rows=students.filter(s=>{
+          const a=latest.get(s.id),on=a&&new Date(a.last_seen_at).getTime()>=cutoff;
+          return (!term||String(s.display_name||'').toLowerCase().includes(term)||String(s.email||'').toLowerCase().includes(term))&&(filter==='all'||(filter==='online'?on:!on));
+        }).map(s=>{
+          const a=latest.get(s.id),on=a&&new Date(a.last_seen_at).getTime()>=cutoff, mine=acts.filter(x=>x.student_id===s.id), secs=mine.reduce((n,x)=>n+Number(x.duration_seconds||0),0), lastLogin=mine.slice().sort((x,y)=>new Date(y.started_at)-new Date(x.started_at))[0]?.started_at;
+          return `<div class="tic-sa-row"><div class="tic-sa-user"><span class="tic-sa-avatar">👤</span><div><b>${String(s.display_name||'Aluno').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}</b><div class="tic-sa-muted">${String(s.current_level||'')} · ${String(s.email||'')}</div></div></div><span><i class="tic-sa-dot ${on?'on':''}"></i>${on?'Online':'Offline'}</span><span class="tic-sa-muted">${fmt(lastLogin)}</span><span class="tic-sa-muted">${fmt(a?.last_seen_at)}</span><b>${dur(secs)}</b><button class="btn sm secondary" onclick="window.ticShowStudentActivity57('${s.id}')">Ver atividade</button></div>`;
+        }).join('')||'<div class="tic-sa-empty">Nenhum aluno encontrado.</div>';
+        document.getElementById('ticSA57Rows').innerHTML=rows;
+      };
+      document.getElementById('ticSA57Search').oninput=render;document.getElementById('ticSA57Filter').onchange=render;render();
+      window.__ticSA57={students,acts,latest,fmt,dur};
+    }catch(e){console.error(e);const c=document.getElementById('content');if(c)c.innerHTML='<div class="card attention">Não foi possível abrir Student Activity: '+String(e.message||e)+'</div>';}
+  }
+  window.ticStudentActivityPage=studentActivityPageFinal;
+  window.ticShowStudentActivity57=function(id){
+    const d=window.__ticSA57;if(!d)return;const s=d.students.find(x=>x.id===id);if(!s)return;
+    const ev=d.acts.filter(x=>x.student_id===id).sort((a,b)=>new Date(b.last_seen_at)-new Date(a.last_seen_at)).slice(0,100);
+    const h=String(s.display_name||'Aluno').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    document.getElementById('ticSA57Detail').innerHTML=`<div class="tic-sa-detail"><div class="section-head"><div><h2>👤 ${h}</h2><span>${String(s.current_level||'')} · ${String(s.email||'')}</span></div><button class="btn ghost" onclick="this.closest('.tic-sa-detail').remove()">Fechar</button></div><div class="tic-sa-events">${ev.map(a=>`<div class="tic-sa-event"><time>${d.fmt(a.last_seen_at)}</time><div><b>${String(a.event_label||a.event_type||'Sessão').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}</b><div class="tic-sa-muted">${a.duration_seconds?d.dur(a.duration_seconds)+' de atividade':''}</div></div></div>`).join('')||'<div class="tic-sa-empty">Nenhuma atividade registrada.</div>'}</div></div>`;
+  };
+  const old=window.loadView;
+  window.loadView=async function(v){if(v==='studentActivity')return window.ticStudentActivityPage();return old.apply(this,arguments)};
+  const bind=()=>{const b=document.querySelector('#teacherNav [data-view="studentActivity"]');if(b){b.onclick=function(e){e.preventDefault();e.stopPropagation();return window.loadView('studentActivity')}}};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();setTimeout(bind,500);setTimeout(bind,1500);
+})();
+</script>
 </body>
 </html>
 
