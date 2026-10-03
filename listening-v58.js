@@ -46,7 +46,9 @@ function speak(text,rate,voiceName,speaker){
 }
 
 async function teacherPage(){
- styles();setPage('🎧 Listening Studio','Crie Listening com TTS, transcript, dictation e exam.','<button class="btn primary" onclick="ticNewListening()">+ Novo Listening</button>');
+ styles();
+ if(typeof window.setPage!=='function' || typeof window.sb==='undefined'){throw new Error('A plataforma principal ainda não terminou de carregar.');}
+ setPage('🎧 Listening Studio','Crie Listening com TTS, transcript, dictation e exam.','<button class="btn primary" onclick="ticNewListening()">+ Novo Listening</button>');
  const r=await sb.from('tic_listening_lessons').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
  if(r.error){$('content').innerHTML='<div class="card attention"><b>Listening Studio indisponível.</b><p>'+E(r.error.message)+'</p></div>';return}
  const rows=r.data||[], levels=['A0','A1','A2','B1','B2','C1','C2'];
@@ -115,12 +117,21 @@ async function studentPage(){
  $('content').innerHTML='<div class="ticL"><div class="ticHero"><span class="ticPill">STUDENT</span><h2>🎧 Listening Practice</h2><p>Seus Listenings aparecem organizados por nível. Abra um card para estudar, ouvir, fazer dictation e exam.</p></div>'+(levelHtml||'<div class="ticEmpty">Nenhum Listening foi atribuído a você ainda.</div>')+'</div>';
 }
 function addNav(){
- const nav=$('teacherNav');if(!nav)return;const role=window.profile?.role;
+ const nav=$('teacherNav');if(!nav)return;const role=window.profile?.role||window.profile?.user_role||session?.user?.user_metadata?.role;
  const v=role==='teacher'||role==='admin'?'listeningStudio':role==='student'?'listeningPractice':null;if(!v||nav.querySelector('[data-view="'+v+'"]'))return;
  const b=document.createElement('button');b.dataset.view=v;b.innerHTML='🎧 <span>'+(role==='student'?'Listening Practice':'Listening Studio')+'</span>';b.addEventListener('click',()=>window.loadView(v));
  const a=nav.querySelector('[data-view="teacherMaterials"]')||nav.querySelector('[data-view="studentLessons"]')||nav.querySelector('[data-view="resources"]');if(a)a.parentNode.insertBefore(b,a.nextSibling);else nav.appendChild(b);
 }
-const oldLoad=window.loadView;window.loadView=async function(v){if(v==='listeningStudio')return teacherPage();if(v==='listeningPractice')return studentPage();return oldLoad.apply(this,arguments)};
+const oldLoad=window.loadView;
+window.loadView=async function(v){
+ if(v==='listeningStudio'){
+   try{return await teacherPage()}catch(e){console.error('Listening Studio:',e);const el=$('content');if(el)el.innerHTML='<div class="card attention"><h2>🎧 Listening Studio</h2><p>O módulo encontrou um erro ao abrir.</p><pre style="white-space:pre-wrap">'+E(e?.message||e)+'</pre><button class="btn primary" onclick="window.ticListeningTeacherPage()">Tentar novamente</button></div>';}
+ }
+ if(v==='listeningPractice'){
+   try{return await studentPage()}catch(e){console.error('Listening Practice:',e);const el=$('content');if(el)el.innerHTML='<div class="card attention"><h2>🎧 Listening Practice</h2><p>O módulo encontrou um erro ao abrir.</p><pre style="white-space:pre-wrap">'+E(e?.message||e)+'</pre><button class="btn primary" onclick="window.ticListeningStudentPage()">Tentar novamente</button></div>';}
+ }
+ return oldLoad.apply(this,arguments)
+};
 setTimeout(addNav,800);setTimeout(addNav,2000);setTimeout(addNav,4000);
 if($('teacherNav'))new MutationObserver(addNav).observe($('teacherNav'),{childList:true,subtree:true});
 window.ticListeningTeacherPage=teacherPage;window.ticListeningStudentPage=studentPage;
