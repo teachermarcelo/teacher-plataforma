@@ -19,12 +19,32 @@ function linesRaw(a){return (a||[]).map(x=>(x.speaker||'Speaker')+'|'+(x.text||'
 function parseLines(v){return String(v||'').split(/\n+/).map(x=>x.trim()).filter(Boolean).map((x,i)=>{let p=x.split('|');return{id:'l'+i,speaker:p.shift()||'Speaker',text:p.join('|').trim()}}).filter(x=>x.text)}
 function qsRaw(a){return (a||[]).map(x=>(x.prompt||'Question')+'|'+(x.options||[]).join('|')+'|'+(x.answer||'')).join('\n')}
 function parseQs(v){return String(v||'').split(/\n+/).map(x=>x.trim()).filter(Boolean).map((x,i)=>{let p=x.split('|');return{id:'q'+i,prompt:p[0]||'Question',options:p.slice(1,4),answer:p[4]||p[1]||''}})}
-function speak(text,rate,voiceName){
- if(!('speechSynthesis' in window))return toastL('Seu navegador não oferece TTS.','error');
- speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=voiceName||'en-US';u.rate=Number(rate)||1;
- const voices=speechSynthesis.getVoices();const v=voices.find(x=>x.lang===u.lang)||voices.find(x=>x.lang&&x.lang.toLowerCase().startsWith((u.lang||'en').slice(0,2)));
- if(v)u.voice=v;speechSynthesis.speak(u);
+function getTicVoices(lang){
+ const voices=speechSynthesis.getVoices();
+ const base=(lang||'en-US').toLowerCase().slice(0,2);
+ return voices.filter(v=>v.lang&&v.lang.toLowerCase().startsWith(base));
 }
+function getSpeakerProfile(speaker,lang){
+ const key=String(speaker||'Speaker').trim().toLowerCase();
+ const all=[...new Set((lesson?.lines||[]).map(x=>String(x.speaker||'Speaker').trim().toLowerCase()))];
+ let index=all.indexOf(key); if(index<0) index=0;
+ const voices=getTicVoices(lang);
+ const voice=voices[index % Math.max(voices.length,1)] || null;
+ return {voice,index};
+}
+function speak(text,rate,voiceName,speaker){
+ if(!('speechSynthesis' in window))return toastL('Seu navegador não oferece TTS.','error');
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);
+ const lang=voiceName||'en-US';
+ const profile=getSpeakerProfile(speaker,lang);
+ u.lang=lang;
+ u.rate=Number(rate)||1;
+ u.pitch=profile.index===0?0.92:profile.index===1?1.08:1+(profile.index%3-1)*0.08;
+ if(profile.voice)u.voice=profile.voice;
+ speechSynthesis.speak(u);
+}
+
 async function teacherPage(){
  styles();setPage('🎧 Listening Studio','Crie Listening com TTS, transcript, dictation e exam.','<button class="btn primary" onclick="ticNewListening()">+ Novo Listening</button>');
  const r=await sb.from('tic_listening_lessons').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
@@ -73,9 +93,9 @@ function ticRenderPlayer(isTeacher){
  const nav=`<div class="ticActions"><button class="btn ${mode==='learn'?'primary':'secondary'}" onclick="ticMode('learn')">Learn</button><button class="btn ${mode==='dictation'?'primary':'secondary'}" onclick="ticMode('dictation')">Dictation</button><button class="btn ${mode==='exam'?'primary':'secondary'}" onclick="ticMode('exam')">Exam</button></div>`;
  root.innerHTML='<div class="ticL"><div class="ticHero"><span class="ticPill">'+E(l.cefr_level||'A1')+'</span><h2>'+E(l.title)+'</h2><p>'+E(l.intro||'Listen carefully and practice.')+'</p>'+nav+'</div><div class="ticPlayer"><div class="ticScene">'+(l.cover_image_url?'<img src="'+E(l.cover_image_url)+'">':'')+'<div class="ticTranscript"><h3>Transcript</h3>'+transcript+'</div></div>'+right+'</div></div>';
 }
-window.ticPlay=n=>{const x=(lesson.lines||[])[n];if(x)speak(x.text,Number($('ticRate')?.value||1),lesson.accent||'en-US')};
+window.ticPlay=n=>{const x=(lesson.lines||[])[n];if(x)speak(x.text,Number($('ticRate')?.value||1),lesson.accent||'en-US',x.speaker)};
 window.ticLine=n=>{idx=n;ticRenderPlayer(false)};
-window.ticAll=()=>{speechSynthesis.cancel();let n=0;const go=()=>{const x=(lesson.lines||[])[n++];if(!x)return;speak(x.text,Number($('ticRate')?.value||1),lesson.accent||'en-US');setTimeout(go,Math.max(1200,x.text.length*65));};go()};
+window.ticAll=()=>{speechSynthesis.cancel();const ls=lesson.lines||[];let n=0;const go=()=>{const x=ls[n++];if(!x)return;const u=new SpeechSynthesisUtterance(x.text);const lang=lesson.accent||'en-US';const p=getSpeakerProfile(x.speaker,lang);u.lang=lang;u.rate=Number($('ticRate')?.value||1);u.pitch=p.index===0?0.92:p.index===1?1.08:1+(p.index%3-1)*0.08;if(p.voice)u.voice=p.voice;u.onend=go;speechSynthesis.speak(u)};go()};
 window.ticMode=m=>{mode=m;idx=0;ticRenderPlayer(false)};
 window.ticCheckDict=()=>{const x=(lesson.lines||[])[idx];if(!x)return;const a=String($('ticDict')?.value||'').trim().toLowerCase().replace(/[^a-z0-9' ]/g,''),b=x.text.trim().toLowerCase().replace(/[^a-z0-9' ]/g,'');const aw=a.split(/\s+/).filter(Boolean),bw=b.split(/\s+/).filter(Boolean);const ok=aw.filter((w,i)=>w===bw[i]).length;const score=bw.length?Math.round(ok/bw.length*100):0;answers[x.id]=$('ticDict').value;toastL('Dictation: '+score+'% ',score===100?'success':'info')};
 window.ticAnswer=async n=>{const q=(lesson.questions||[])[idx];if(!q)return;answers[q.id]=(q.options||[])[n];if(idx<(lesson.questions||[]).length-1){idx++;ticRenderPlayer(false);return}const qs=lesson.questions||[];const correct=qs.filter(q=>String(answers[q.id]||'').trim().toLowerCase()===String(q.answer||'').trim().toLowerCase()).length;const score=qs.length?Math.round(correct/qs.length*100):0;toastL('Exam: '+correct+'/'+qs.length+' · '+score+'%',score>=70?'success':'info');if(!isTeacherMode())try{const s=await studentRecord();if(s){const a=await sb.from('tic_listening_assignments').select('id').eq('listening_id',lesson.id).eq('student_id',s.id).eq('active',true).maybeSingle();await sb.from('tic_listening_results').insert({listening_id:lesson.id,student_id:s.id,assignment_id:a.data?.id||null,mode:'exam',score,correct,total:qs.length,details:answers})}}catch(e){console.warn(e)}};
