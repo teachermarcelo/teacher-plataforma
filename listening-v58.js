@@ -9,6 +9,8 @@ const toastL=(m,t)=>typeof window.toast==='function'?toast(m,t):alert(m);
 const CEFR=['Pre-A1','A0','A1','A2','B1','B2','C1','C2'];
 let lesson=null,mode='learn',idx=0,answers={};
 
+
+.ticLevel{margin:18px 0 26px}.ticLevelHead{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;margin-bottom:12px;background:#fff;border:1px solid #e6e1f4;border-radius:16px;box-shadow:0 6px 18px rgba(40,20,80,.05)}.ticLevelHead h3{margin:8px 0 0;font-size:18px}.ticLevelHead strong{font-size:12px;color:#6b5bb5}.ticLevel .ticGrid{margin-top:0}
 function styles(){
  if($('ticListeningCss'))return;
  const s=document.createElement('style');s.id='ticListeningCss';
@@ -49,9 +51,12 @@ async function teacherPage(){
  styles();setPage('🎧 Listening Studio','Crie Listening com TTS, transcript, dictation e exam.','<button class="btn primary" onclick="ticNewListening()">+ Novo Listening</button>');
  const r=await sb.from('tic_listening_lessons').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
  if(r.error){$('content').innerHTML='<div class="card attention"><b>Listening Studio indisponível.</b><p>'+E(r.error.message)+'</p></div>';return}
- const rows=r.data||[];
- $('content').innerHTML='<div class="ticL"><div class="ticHero"><span class="ticPill">TEACHER</span><h2>🎧 Listening Studio</h2><p>Crie atividades Pre-A1–C2 com TTS, transcript, dictation e exam.</p></div><div class="ticGrid">'+
- (rows.map(x=>'<article class="ticCard"><span class="ticPill">'+E(x.cefr_level||'A1')+'</span><h3>'+E(x.title)+'</h3><p>'+E(x.topic||'Listening')+' · '+E(x.accent||'en-US')+'</p><small>'+((x.lines||[]).length)+' linhas · '+((x.questions||[]).length)+' questões</small><div class="ticActions"><button class="btn sm primary" onclick="ticOpenListening(\''+x.id+'\',true)">👁 Ver</button><button class="btn sm secondary" onclick="ticEditListening(\''+x.id+'\')">✏️ Editar</button><button class="btn sm secondary" onclick="ticAssignListening(\''+x.id+'\')">📤 Atribuir</button><button class="btn sm secondary" onclick="ticDeleteListening(\''+x.id+'\')">🗑 Remover</button></div></article>').join('')||'<div class="ticEmpty">Nenhum Listening criado.</div>')+'</div></div>';
+ const rows=r.data||[], levels=['A0','A1','A2','B1','B2','C1','C2'];
+ const grouped=levels.map(level=>[level,rows.filter(x=>String(x.cefr_level||'').toUpperCase()===level)]).filter(g=>g[1].length);
+ const other=rows.filter(x=>!levels.includes(String(x.cefr_level||'').toUpperCase()));
+ if(other.length)grouped.push(['Outros',other]);
+ const levelHtml=grouped.map(([level,items])=>'<section class="ticLevel"><div class="ticLevelHead"><div><span class="ticPill">'+E(level)+'</span><h3>'+E(level==='A0'?'Beginner Foundation':level==='A1'?'Elementary':level==='A2'?'Elementary Plus':level==='B1'?'Intermediate':level==='B2'?'Upper-Intermediate':level==='C1'?'Advanced':'Proficiency')+'</h3></div><strong>'+items.length+' Listening'+(items.length!==1?'s':'')+'</strong></div><div class="ticGrid">'+items.map(x=>'<article class="ticCard">'+(x.cover_image_url?'<img src="'+E(x.cover_image_url)+'" style="width:100%;height:130px;object-fit:cover;border-radius:12px;margin-bottom:10px">':'')+'<span class="ticPill">'+E(x.cefr_level||level)+'</span><h3>'+E(x.title)+'</h3><p>'+E(x.topic||'Listening')+' · '+E(x.accent||'en-US')+'</p><small>'+((x.lines||[]).length)+' linhas · '+((x.questions||[]).length)+' questões</small><div class="ticActions"><button class="btn sm primary" onclick="ticOpenListening(\''+x.id+'\',true)">👁 Ver</button><button class="btn sm secondary" onclick="ticEditListening(\''+x.id+'\')">✏️ Editar</button><button class="btn sm secondary" onclick="ticAssignListening(\''+x.id+'\')">📤 Atribuir</button><button class="btn sm secondary" onclick="ticDeleteListening(\''+x.id+'\')">🗑 Remover</button></div></article>').join('')}</div></section>').join('');
+ $('content').innerHTML='<div class="ticL"><div class="ticHero"><span class="ticPill">TEACHER</span><h2>🎧 Listening Studio</h2><p>Crie e organize atividades Pre-A1–C2 por nível, tema e conteúdo.</p></div>'+ (levelHtml||'<div class="ticEmpty">Nenhum Listening criado.</div>')+'</div>';
 }
 window.ticNewListening=()=>ticEditListening();
 window.ticEditListening=async function(id){
@@ -104,7 +109,12 @@ async function studentPage(){
  const s=await studentRecord();if(!s){$('content').innerHTML='<div class="card empty">Sua conta não está vinculada a um aluno.</div>';return}
  const r=await sb.from('tic_listening_assignments').select('id,assigned_at,active,tic_listening_lessons(id,title,cefr_level,topic,accent,cover_image_url,lines,questions,intro)').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false});
  if(r.error){$('content').innerHTML='<div class="card attention"><b>Listening Practice indisponível.</b><p>'+E(r.error.message)+'</p></div>';return}
- const rows=r.data||[];$('content').innerHTML='<div class="ticL"><div class="ticHero"><span class="ticPill">STUDENT</span><h2>🎧 Listening Practice</h2><p>Escute, faça dictation e complete o exam.</p></div><div class="ticGrid">'+(rows.map(a=>{const x=a.tic_listening_lessons||{};return '<article class="ticCard">'+(x.cover_image_url?'<img src="'+E(x.cover_image_url)+'" style="width:100%;height:130px;object-fit:cover;border-radius:12px">':'')+'<span class="ticPill">'+E(x.cefr_level||'A1')+'</span><h3>'+E(x.title||'Listening')+'</h3><p>'+E(x.topic||'Listening')+' · '+((x.lines||[]).length)+' linhas</p><div class="ticActions"><button class="btn primary" onclick="ticOpenListening(\''+x.id+'\',false)">▶ Start Listening</button></div></article>'}).join('')||'<div class="ticEmpty">Nenhum Listening foi atribuído a você ainda.</div>')+'</div></div>';
+ const rows=r.data||[], levels=['A0','A1','A2','B1','B2','C1','C2'];
+ const grouped=levels.map(level=>[level,rows.filter(a=>String(a.tic_listening_lessons?.cefr_level||'').toUpperCase()===level)]).filter(g=>g[1].length);
+ const other=rows.filter(a=>!levels.includes(String(a.tic_listening_lessons?.cefr_level||'').toUpperCase()));
+ if(other.length)grouped.push(['Outros',other]);
+ const levelHtml=grouped.map(([level,items])=>'<section class="ticLevel"><div class="ticLevelHead"><div><span class="ticPill">'+E(level)+'</span><h3>'+E(level==='A0'?'Beginner Foundation':level==='A1'?'Elementary':level==='A2'?'Elementary Plus':level==='B1'?'Intermediate':level==='B2'?'Upper-Intermediate':level==='C1'?'Advanced':'Proficiency')+'</h3></div><strong>'+items.length+' atividade'+(items.length!==1?'s':'')+'</strong></div><div class="ticGrid">'+items.map(a=>{const x=a.tic_listening_lessons||{};return '<article class="ticCard">'+(x.cover_image_url?'<img src="'+E(x.cover_image_url)+'" style="width:100%;height:130px;object-fit:cover;border-radius:12px;margin-bottom:10px">':'')+'<span class="ticPill">'+E(x.cefr_level||level)+'</span><h3>'+E(x.title||'Listening')+'</h3><p>'+E(x.topic||'Listening')+' · '+((x.lines||[]).length)+' falas</p><small>Aprenda · Dictation · Exam</small><div class="ticActions"><button class="btn primary" onclick="ticOpenListening(\''+x.id+'\',false)">▶ Start Listening</button></div></article>'}).join('')}</div></section>').join('');
+ $('content').innerHTML='<div class="ticL"><div class="ticHero"><span class="ticPill">STUDENT</span><h2>🎧 Listening Practice</h2><p>Seus Listenings aparecem organizados por nível. Abra um card para estudar, ouvir, fazer dictation e exam.</p></div>'+(levelHtml||'<div class="ticEmpty">Nenhum Listening foi atribuído a você ainda.</div>')+'</div>';
 }
 function addNav(){
  const nav=$('teacherNav');if(!nav)return;const role=window.profile?.role;
