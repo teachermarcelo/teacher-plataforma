@@ -7461,6 +7461,14 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
     ensureV62Nav();
     if(v==='studentActivity'){currentView=v;toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));await activityPage62();return;}
     if(v==='planning'){currentView=v;toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));await planningPage62();return;}
+    if(v==='listeningStudio' && typeof window.ticListeningTeacherPage==='function'){
+      currentView=v;toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+      try{return await window.ticListeningTeacherPage();}catch(e){console.error('[Listening Studio]',e);$('content').innerHTML='<div class="card attention"><h2>🎧 Listening Studio</h2><p>Erro ao abrir o módulo.</p><pre style="white-space:pre-wrap">'+(e?.message||e)+'</pre></div>';return;}
+    }
+    if(v==='listeningPractice' && typeof window.ticListeningStudentPage==='function'){
+      currentView=v;toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+      try{return await window.ticListeningStudentPage();}catch(e){console.error('[Listening Practice]',e);$('content').innerHTML='<div class="card attention"><h2>🎧 Listening Practice</h2><p>Erro ao abrir o módulo.</p><pre style="white-space:pre-wrap">'+(e?.message||e)+'</pre></div>';return;}
+    }
     if(profile?.role==='student' && String(v||'').startsWith('student')){
       try{if(typeof window.ticLogStudentEventV58==='function')window.ticLogStudentEventV58('view',v,'student');}catch(_){}
     }
