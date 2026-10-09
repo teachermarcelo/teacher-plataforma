@@ -500,6 +500,7 @@ async function boot(){
   <button data-view="studentTasks">✅ <span>My Tasks</span></button>
   <button data-view="studentProgress">📊 <span>My Progress</span></button>
   <button data-view="studentLessons">📚 <span>My Lessons</span></button>
+  <button data-view="learningHub">📚 <span>Learning Hub</span></button>
   <button data-view="studentCalendar">📅 <span>Calendar</span></button>
   <button data-view="studentMessages">💬 <span>Messages</span></button>
   <div class="nav-label">Account</div><button onclick="logout()">↪ <span>Sair</span></button>`;
@@ -513,6 +514,7 @@ async function loadView(v){
  requestAnimationFrame(()=>{const c=document.querySelector('.main>.container');if(c)c.scrollTo({top:0,left:0,behavior:'instant'});});
  // Mantém a navegação sincronizada com a tela atual, inclusive para alunos.
  document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+ if(v==='learningHub'&&typeof window.ticLearningHubOpen==='function')return window.ticLearningHubOpen();
  const map={
  overview:['Overview','O que precisa da sua atenção hoje?',''],
  students:['Students','Cadastre, organize e acompanhe seus alunos.','<button class="btn primary" onclick="openStudentForm()">+ Novo aluno</button>'],
@@ -7481,6 +7483,6 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
 
 <script src="listening-v58.js?v=58.3"></script>
 <script src="exercises-v1.js?v=1.2"></script>
-<script src="learning-hub-v1.js?v=1.9"></script>
+<script src="learning-hub-v1.js?v=1.10"></script>
 </body>
 </html>
