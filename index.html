@@ -332,6 +332,7 @@ body{overflow:hidden;}
   <button data-view="classCenter">🎯 <span>Class Center</span></button>
   <button data-view="listeningStudio">🎧 <span>Listening Studio</span></button>
   <button data-view="learningHub">📚 <span>Learning Hub</span></button>
+  <button data-view="immersionPlanner">🌎 <span>Immersion Planner</span></button>
   <button data-view="courses">📚 <span>Courses</span></button>
   <button data-view="lessons">📝 <span>Lessons</span></button>
   <button data-view="plans">📋 <span>Lesson Plans</span></button>
@@ -501,6 +502,7 @@ async function boot(){
   <button data-view="studentProgress">📊 <span>My Progress</span></button>
   <button data-view="studentLessons">📚 <span>My Lessons</span></button>
   <button data-view="learningHub">📚 <span>Learning Hub</span></button>
+  <button data-view="immersionPlanner">🌎 <span>Immersion Planner</span></button>
   <button data-view="studentCalendar">📅 <span>Calendar</span></button>
   <button data-view="studentMessages">💬 <span>Messages</span></button>
   <div class="nav-label">Account</div><button onclick="logout()">↪ <span>Sair</span></button>`;
@@ -7484,5 +7486,6 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
 <script src="listening-v58.js?v=58.3"></script>
 <script src="exercises-v1.js?v=1.2"></script>
 <script src="learning-hub-v1.js?v=1.12"></script>
+<script src="immersion-planner-v1.js?v=1.0"></script>
 </body>
 </html>
