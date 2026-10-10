@@ -1,0 +1,170 @@
+/* Immersion Planner · 365 days · additive module */
+(function(){
+'use strict';
+var TABLE='tic_immersion_activities', PROGRESS='tic_immersion_progress';
+var monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var state={activities:[],progress:[],student:null,month:(new Date()).getMonth()+1,day:0,filter:'all',busy:false};
+var $i=function(id){return document.getElementById(id);};
+var e=function(v){return typeof esc==='function'?esc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+var msg=function(t,type){if(typeof toast==='function')toast(t,type||'info');else alert(t);};
+var teacherMode=function(){return typeof isTeacherRole==='function'&&isTeacherRole();};
+var urlOk=function(v){try{var u=new URL(String(v||''));return u.protocol==='https:'||u.protocol==='http:'?u.href:'';}catch(_){return '';}};
+var dayDate=function(n){return new Date(Date.UTC(2025,0,n));};
+var monthForDay=function(n){return dayDate(n).getUTCMonth()+1;};
+var monthDayForDay=function(n){return dayDate(n).getUTCDate();};
+var monthDays=function(m){return new Date(Date.UTC(2025,m,0)).getUTCDate();};
+var statusLabel=function(s){return s==='completed'?'Concluído':s==='in_progress'?'Em andamento':'Não iniciado';};
+var resourceType=function(t){return ({video:'Vídeo',audio:'Áudio',pdf:'PDF',article:'Artigo',link:'Link',image:'Imagem'})[t]||'Link';};
+function styles(){
+ if($i('ticImmersionStyles'))return;
+ var st=document.createElement('style');st.id='ticImmersionStyles';
+ st.textContent='.imm-shell{display:grid;gap:18px;color:var(--text,#292637)}.imm-hero{background:linear-gradient(125deg,#201534,#4d2b8d 65%,#8762db);color:#fff;border-radius:22px;padding:25px;position:relative;overflow:hidden}.imm-hero h2{font:800 29px "Plus Jakarta Sans",sans-serif;margin:7px 0}.imm-hero p{color:#e6dcff;max-width:750px;margin:0 0 15px}.imm-kicker{font-size:10px;letter-spacing:2px;font-weight:900;color:#d9caff}.imm-progress{height:8px;border-radius:99px;background:#ffffff30;overflow:hidden;max-width:620px;margin-top:12px}.imm-progress i{display:block;height:100%;background:#c7f2df;border-radius:99px}.imm-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.imm-stat,.imm-panel,.imm-day-card,.imm-act{background:var(--card,#fff);border:1px solid var(--line,#e7e2ef);border-radius:16px;padding:16px;box-shadow:0 5px 20px #26144408}.imm-stat small{display:block;color:var(--muted,#77748a);font-size:11px}.imm-stat strong{display:block;font:800 25px "Plus Jakarta Sans",sans-serif;margin:6px 0}.imm-toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.imm-toolbar select,.imm-toolbar input,.imm-field input,.imm-field textarea,.imm-field select{border:1px solid #ded8e9;border-radius:10px;padding:11px;background:#fff;color:#282438;max-width:100%;box-sizing:border-box}.imm-toolbar select{min-width:155px}.imm-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}.imm-weekday{text-align:center;font-size:10px;color:var(--muted,#777);font-weight:900;padding:5px 0}.imm-cal-day{min-height:65px;border:1px solid #e7e1f0;border-radius:11px;background:#fff;padding:7px;text-align:left;cursor:pointer;color:#292637;position:relative}.imm-cal-day:hover{border-color:#a48be7;background:#faf7ff}.imm-cal-day.selected{border:2px solid #6e49ce;background:#f1ebff}.imm-cal-day.has-items:after{content:"";width:6px;height:6px;border-radius:50%;background:#7954d5;position:absolute;right:8px;top:8px}.imm-cal-day b{display:block;font-size:12px}.imm-cal-day small{display:block;font-size:9px;color:#777;margin-top:7px}.imm-cal-day.done{background:#edfaf3;border-color:#bfe8d2}.imm-activities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.imm-act{display:flex;flex-direction:column;gap:10px;min-width:0}.imm-cover{width:100%;max-height:200px;object-fit:cover;border-radius:12px;background:#f1edf8}.imm-act h3{font:800 17px "Plus Jakarta Sans",sans-serif;margin:0}.imm-meta{display:flex;gap:6px;flex-wrap:wrap}.imm-pill{display:inline-flex;padding:5px 9px;border-radius:99px;background:#f0ebff;color:#50318f;font-size:10px;font-weight:800}.imm-pill.done{background:#e2f7eb;color:#176944}.imm-pill.work{background:#fff2d8;color:#865d0d}.imm-act p{font-size:12px;line-height:1.65;margin:0;white-space:pre-wrap}.imm-resource{border:1px solid #e8e2f2;border-radius:12px;overflow:hidden;margin-top:7px}.imm-resource-head{padding:10px 12px;background:#faf8fd;font-size:12px;font-weight:800;display:flex;justify-content:space-between;gap:10px}.imm-resource-body{padding:11px}.imm-resource-body iframe{width:100%;height:260px;border:0;border-radius:9px;background:#f5f3f8}.imm-resource-body video,.imm-resource-body audio{width:100%;max-width:100%}.imm-btn{border:0;border-radius:10px;padding:10px 13px;font-size:11px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}.imm-btn.primary{background:#6847c5;color:#fff}.imm-btn.secondary{background:#eee8ff;color:#51358e}.imm-btn.ghost{background:#fff;border:1px solid #ded8e9;color:#625875}.imm-btn.danger{background:#ffeaec;color:#a32e3b}.imm-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto;padding-top:6px}.imm-empty{padding:25px;text-align:center;border:1px dashed #d8cfe9;border-radius:14px;color:#77748a;font-size:12px}.imm-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.imm-field{display:grid;gap:6px;margin:10px 0;min-width:0}.imm-field label{font-size:11px;font-weight:800}.imm-field input,.imm-field textarea,.imm-field select{width:100%;font-size:13px}.imm-field textarea{min-height:90px;resize:vertical}.imm-resource-edit{display:grid;grid-template-columns:120px minmax(0,1fr) 35px;gap:7px;align-items:start;margin:8px 0;padding:10px;border:1px solid #e7e1ef;border-radius:12px}.imm-resource-edit input,.imm-resource-edit select{width:100%;min-width:0;padding:9px;border:1px solid #ded8e9;border-radius:8px;box-sizing:border-box}.imm-resource-edit .imm-res-fields{display:grid;gap:7px}.imm-student-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #eeeaf5}.imm-student-row:last-child{border-bottom:0}.imm-small{font-size:10px;color:var(--muted,#77748a)}.imm-viewer{margin-top:9px}.imm-day-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.imm-day-heading h3{margin:0;font-size:16px}@media(max-width:900px){.imm-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.imm-activities{grid-template-columns:1fr}}@media(max-width:600px){.imm-hero{padding:19px}.imm-hero h2{font-size:24px}.imm-calendar{gap:4px}.imm-cal-day{min-height:54px;padding:5px}.imm-cal-day small{font-size:8px}.imm-form-grid{grid-template-columns:1fr}.imm-resource-edit{grid-template-columns:1fr 35px}.imm-resource-edit>select{grid-column:1/-1}.imm-student-row{grid-template-columns:1fr auto}.imm-student-row .imm-student-progress{grid-column:1/-1}.imm-stat strong{font-size:22px}}';
+ document.head.appendChild(st);
+}
+function getResourceUrl(r){return urlOk(r&& (r.url||r.value));}
+function youtubeEmbed(url){try{var u=new URL(url),id='';if(u.hostname.indexOf('youtu.be')>=0)id=u.pathname.split('/').filter(Boolean)[0]||'';else if(u.hostname.indexOf('youtube.com')>=0){id=u.searchParams.get('v')||((u.pathname.split('/')[1]==='embed'||u.pathname.split('/')[1]==='shorts')?u.pathname.split('/')[2]:'');}return id?'https://www.youtube-nocookie.com/embed/'+encodeURIComponent(id):'';}catch(_){return '';}}
+function resourceMarkup(r,index,activityId,expanded){
+ var url=getResourceUrl(r),type=(r&&r.type)||'link',title=e(r&&r.title||resourceType(type)+' '+(index+1)),desc=e(r&&r.description||'');
+ if(!url&&type!=='article')return '';
+ var viewer='';
+ if(expanded&&url){
+  var yt=youtubeEmbed(url);
+  if(type==='video'&&yt)viewer='<iframe loading="lazy" src="'+yt+'" title="'+title+'" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>';
+  else if(type==='video'&&/\.(mp4|webm|ogg)(\?|#|$)/i.test(url))viewer='<video controls preload="metadata" src="'+e(url)+'"></video>';
+  else if(type==='audio'&&/\.(mp3|wav|ogg|m4a|aac|flac)(\?|#|$)/i.test(url))viewer='<audio controls preload="metadata" src="'+e(url)+'"></audio>';
+  else if(type==='pdf'&&/\.pdf(\?|#|$)/i.test(url))viewer='<iframe loading="lazy" title="'+title+'" src="'+e(url)+'"></iframe>';
+ }
+ return '<div class="imm-resource"><div class="imm-resource-head"><span>'+title+'</span><span>'+resourceType(type)+'</span></div><div class="imm-resource-body">'+(desc?'<p>'+desc+'</p>':'')+(viewer?viewer:'')+(url?'<div class="imm-actions"><a class="imm-btn secondary" href="'+e(url)+'" target="_blank" rel="noopener noreferrer">↗ Abrir '+resourceType(type).toLowerCase()+'</a>'+(viewer?'<button class="imm-btn ghost" onclick="ticImmToggleViewer(\''+activityId+'\',\''+index+'\')">Fechar visualizador</button>':'<button class="imm-btn ghost" onclick="ticImmToggleViewer(\''+activityId+'\',\''+index+'\')">Visualizar aqui</button>')+'</div>':'')+'</div></div>';
+}
+window.ticImmToggleViewer=function(id,index){var key='imm-view-'+id+'-'+index;var el=$i(key);if(el){el.remove();return;}var act=state.activities.find(function(x){return x.id===id;});if(!act)return;var box=$i('imm-resources-'+id);if(!box)return;var old=box.querySelector('[data-viewer-index="'+index+'"]');if(old){old.remove();return;}var r=(act.resources||[])[Number(index)];if(!r)return;var wrap=document.createElement('div');wrap.id=key;wrap.dataset.viewerIndex=index;wrap.innerHTML=resourceMarkup(r,Number(index),id,true);box.appendChild(wrap);};
+function statusFor(activityId){var p=state.progress.find(function(x){return x.activity_id===activityId;});return p?p.status:'not_started';}
+function activitiesForMonth(){return state.activities.filter(function(a){return monthForDay(a.day_number)===Number(state.month)&&(!state.day||monthDayForDay(a.day_number)===Number(state.day));}).sort(function(a,b){return a.day_number-b.day_number||(a.sort_order||0)-(b.sort_order||0);});}
+function dayActivityCount(n){return state.activities.filter(function(a){return a.day_number===n;}).length;}
+function dayDoneCount(n){return state.activities.filter(function(a){return a.day_number===n&&statusFor(a.id)==='completed';}).length;}
+function renderCalendar(){
+ var m=Number(state.month),days=monthDays(m),first=(dayDate((function(){var d=1;while(monthForDay(d)!==m)d++;return d;})()).getUTCDay()+6)%7;
+ var html=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(x){return '<div class="imm-weekday">'+x+'</div>';}).join('');
+ for(var i=0;i<first;i++)html+='<div></div>';
+ for(var d=1;d<=days;d++){var n=0;for(var x=1;x<=365;x++){if(monthForDay(x)===m&&monthDayForDay(x)===d){n=x;break;}}var count=dayActivityCount(n),done=dayDoneCount(n),sel=Number(state.day)===d,cls='imm-cal-day'+(sel?' selected':'')+(count?' has-items':'')+(count&&done===count?' done':'');html+='<button class="'+cls+'" onclick="ticImmSelectDay('+d+')" title="Dia '+d+'">'+ '<b>'+d+'</b><small>'+(count?(done+'/'+count+' feitas'):'—')+'</small></button>';}
+ return html;
+}
+window.ticImmSelectDay=function(d){state.day=Number(d)||0;renderWorkspace();};
+function progressCounts(){var total=state.activities.length,done=state.progress.filter(function(p){return p.status==='completed';}).length,working=state.progress.filter(function(p){return p.status==='in_progress';}).length;return {total:total,done:done,working:working,pct:total?Math.round(done/total*100):0};}
+function renderStudentCard(a){
+ var st=statusFor(a.id),res=Array.isArray(a.resources)?a.resources:[],done=st==='completed';
+ return '<article class="imm-act">'+(a.cover_image_url&&urlOk(a.cover_image_url)?'<img class="imm-cover" src="'+e(urlOk(a.cover_image_url))+'" alt="'+e(a.title)+'" loading="lazy">':'')+'<div class="imm-meta"><span class="imm-pill">Day '+monthDayForDay(a.day_number)+'</span><span class="imm-pill">'+e(a.cefr_level)+'</span><span class="imm-pill">'+e(a.skill)+'</span><span class="imm-pill">'+e(a.estimated_minutes)+' min</span><span class="imm-pill '+(done?'done':st==='in_progress'?'work':'')+'">'+statusLabel(st)+'</span></div><h3>'+e(a.title)+'</h3>'+(a.description?'<p>'+e(a.description)+'</p>':'')+(a.instructions?'<p><b>Instructions</b><br>'+e(a.instructions)+'</p>':'')+'<div id="imm-resources-'+a.id+'">'+res.map(function(r,i){return resourceMarkup(r,i,a.id,false);}).join('')+'</div><div class="imm-actions"><button class="imm-btn '+(done?'secondary':'primary')+'" onclick="ticImmSetStatus(\''+a.id+'\',\''+(done?'in_progress':'completed')+'\')">'+(done?'↩ Reabrir atividade':'✓ Marcar concluído')+'</button><button class="imm-btn ghost" onclick="ticImmSetStatus(\''+a.id+'\',\''+(st==='in_progress'?'not_started':'in_progress')+'\')">'+(st==='in_progress'?'Desmarcar início':'▶ Começar')+'</button></div></article>';
+}
+function renderTeacherCard(a){
+ var p=state.progress.filter(function(x){return x.activity_id===a.id;});
+ var done=p.filter(function(x){return x.status==='completed';}).length,working=p.filter(function(x){return x.status==='in_progress';}).length;
+ return '<article class="imm-act">'+(a.cover_image_url&&urlOk(a.cover_image_url)?'<img class="imm-cover" src="'+e(urlOk(a.cover_image_url))+'" alt="'+e(a.title)+'" loading="lazy">':'')+'<div class="imm-meta"><span class="imm-pill">Day '+monthDayForDay(a.day_number)+'</span><span class="imm-pill">'+e(a.cefr_level)+'</span><span class="imm-pill">'+e(a.skill)+'</span><span class="imm-pill '+(a.is_published?'done':'work')+'">'+(a.is_published?'Publicado':'Rascunho')+'</span></div><h3>'+e(a.title)+'</h3><p>'+e(a.description||'Sem descrição')+'</p><div class="imm-meta"><span class="imm-pill done">'+done+' concluíram</span><span class="imm-pill work">'+working+' em andamento</span><span class="imm-pill">'+p.length+' registros</span></div><div class="imm-actions"><button class="imm-btn secondary" onclick="ticImmEdit(\''+a.id+'\')">✎ Editar</button><button class="imm-btn ghost" onclick="ticImmDuplicate(\''+a.id+'\')">⧉ Duplicar</button><button class="imm-btn ghost" onclick="ticImmStudents(\''+a.id+'\')">👥 Acompanhar</button><button class="imm-btn '+(a.is_published?'ghost':'primary')+'" onclick="ticImmPublish(\''+a.id+'\','+(!a.is_published)+')">'+(a.is_published?'Retirar publicação':'Publicar')+'</button><button class="imm-btn danger" onclick="ticImmArchive(\''+a.id+'\')">Arquivar</button></div></article>';
+}
+function renderWorkspace(){
+ var root=$i('content');if(!root)return;
+ var c=progressCounts(),m=Number(state.month),dayTitle=state.day?('Day '+state.day+' · '+monthNames[m-1]):monthNames[m-1];
+ var monthOptions=monthNames.map(function(n,i){return '<option value="'+(i+1)+'" '+(m===i+1?'selected':'')+'>'+n+'</option>';}).join('');
+ var filtered=activitiesForMonth();
+ var header='<div class="imm-shell"><section class="imm-hero"><div class="imm-kicker">FLUENT IMMERSION · 365 DAYS</div><h2>Immersion Planner</h2><p>'+(teacherMode()?'Organize um ano inteiro de imersão e acompanhe o progresso individual dos seus alunos.':'Your year of English, one day at a time. Abra os materiais, pratique e marque cada atividade concluída.')+'</p><div class="imm-progress"><i style="width:'+c.pct+'%"></i></div><small>'+(teacherMode()?'Biblioteca anual de atividades':'Seu progresso geral')+' · '+c.pct+'%</small></section>';
+ var stats='<div class="imm-stats"><div class="imm-stat"><small>Atividades '+(teacherMode()?'criadas':'disponíveis')+'</small><strong>'+c.total+'</strong></div><div class="imm-stat"><small>Concluídas</small><strong>'+c.done+'</strong></div><div class="imm-stat"><small>Em andamento</small><strong>'+c.working+'</strong></div><div class="imm-stat"><small>Faltam</small><strong>'+Math.max(0,c.total-c.done)+'</strong></div></div>';
+ var toolbar='<div class="imm-toolbar"><label class="imm-small" for="immMonth">Mês</label><select id="immMonth" onchange="ticImmSetMonth(this.value)">'+monthOptions+'</select><button class="imm-btn ghost" onclick="ticImmSelectDay(0)">Ver mês inteiro</button>'+(teacherMode()?'<button class="imm-btn primary" onclick="ticImmNew('+((function(){var n=1;while(monthForDay(n)!==m)n++;return n;})())+')">+ Nova atividade</button><button class="imm-btn secondary" onclick="ticImmMonitoring()">📊 Progresso dos alunos</button>':'')+'</div>';
+ var cal='<section class="imm-panel"><div class="imm-day-heading"><div><h3>Annual calendar · '+monthNames[m-1]+'</h3><span class="imm-small">Selecione um dia para ver ou adicionar atividades. Os 365 dias permanecem disponíveis.</span></div></div><div class="imm-calendar">'+renderCalendar()+'</div></section>';
+ var actHead='<section class="imm-panel"><div class="imm-day-heading"><div><h3>'+(state.day?dayTitle:'Activities · '+monthNames[m-1])+'</h3><span class="imm-small">'+filtered.length+' atividade(s) neste período</span></div>'+(teacherMode()&&state.day?'<button class="imm-btn primary" onclick="ticImmNew('+((function(){var n=1;while(monthForDay(n)!==m)n++;return n;})()+state.day-1)+')">+ Adicionar neste dia</button>':'')+'</div>';
+ var cards=filtered.length?'<div class="imm-activities">'+filtered.map(function(a){return teacherMode()?renderTeacherCard(a):renderStudentCard(a);}).join('')+'</div>':'<div class="imm-empty">'+(teacherMode()?'Nenhuma atividade neste período. Use “Nova atividade” para montar o planner e adicionar vídeos, áudios, PDFs e links.':'Ainda não há atividades publicadas neste período. Seu teacher poderá adicionar materiais para estes dias.')+'</div>';
+ var monitor=teacherMode()?'<section class="imm-panel"><div class="imm-day-heading"><div><h3>Student progress</h3><span class="imm-small">Resumo dos alunos no planner anual.</span></div><button class="imm-btn secondary" onclick="ticImmMonitoring()">Ver acompanhamento completo →</button></div><div id="immQuickMonitoring"></div></section>':'';
+ root.innerHTML=header+stats+toolbar+cal+actHead+cards+'</section>'+monitor+'</div>';
+ if(teacherMode())renderQuickMonitoring();
+}
+window.ticImmSetMonth=function(m){state.month=Math.max(1,Math.min(12,Number(m)||1));state.day=0;renderWorkspace();};
+async function loadProgress(){
+ var q=sb.from(PROGRESS).select('*');
+ if(teacherMode())q=q.eq('teacher_id',session.user.id);
+ else if(state.student)q=q.eq('student_id',state.student.id);
+ else {state.progress=[];return;}
+ var r=await q;
+ if(r.error)throw r.error;
+ state.progress=r.data||[];
+}
+async function loadActivities(){
+ var q=sb.from(TABLE).select('*').eq('is_archived',false).order('day_number').order('sort_order');
+ if(teacherMode())q=q.eq('teacher_id',session.user.id);
+ else q=q.eq('teacher_id',state.student.teacher_id).eq('is_published',true);
+ var r=await q;if(r.error)throw r.error;state.activities=r.data||[];
+}
+async function renderQuickMonitoring(){
+ var box=$i('immQuickMonitoring');if(!box)return;
+ var r=await sb.from('tic_students').select('id,display_name,email,current_level').eq('teacher_id',session.user.id).eq('status','active').order('display_name');
+ if(r.error){box.innerHTML='<p class="imm-small">Não foi possível carregar os alunos: '+e(r.error.message)+'</p>';return;}
+ box.innerHTML=(r.data||[]).map(function(st){var ps=state.progress.filter(function(p){return p.student_id===st.id;});var done=ps.filter(function(p){return p.status==='completed';}).length;var work=ps.filter(function(p){return p.status==='in_progress';}).length;var pct=state.activities.length?Math.round(done/state.activities.length*100):0;return '<div class="imm-student-row"><div><b>'+e(st.display_name||st.email||'Aluno')+'</b><div class="imm-small">'+e(st.current_level||'')+' · '+done+' concluídas · '+work+' em andamento</div></div><div class="imm-student-progress"><div class="imm-progress" style="background:#eeeaf5"><i style="width:'+pct+'%;background:#7653d3"></i></div><small class="imm-small">'+pct+'% das atividades</small></div><button class="imm-btn secondary" onclick="ticImmMonitoring(\''+st.id+'\')">Ver detalhes</button></div>';}).join('')||'<div class="imm-empty">Nenhum aluno ativo encontrado.</div>';
+}
+window.ticImmNew=function(day){openEditor(null,Number(day)||1);};
+window.ticImmEdit=function(id){var a=state.activities.find(function(x){return x.id===id;});if(a)openEditor(a,a.day_number);};
+window.ticImmDuplicate=function(id){var a=state.activities.find(function(x){return x.id===id;});if(!a)return;var copy=Object.assign({},a,{id:null,title:a.title+' (copy)',is_published:false,resources:Array.isArray(a.resources)?a.resources.map(function(x){return Object.assign({},x);}):[]});openEditor(copy,a.day_number);};
+function resourceEditorRow(r,index){
+ var t=(r&&r.type)||'link';
+ return '<div class="imm-resource-edit" data-index="'+index+'"><select class="imm-rtype"><option value="video" '+(t==='video'?'selected':'')+'>Vídeo</option><option value="audio" '+(t==='audio'?'selected':'')+'>Áudio</option><option value="pdf" '+(t==='pdf'?'selected':'')+'>PDF</option><option value="article" '+(t==='article'?'selected':'')+'>Artigo</option><option value="image" '+(t==='image'?'selected':'')+'>Imagem</option><option value="link" '+(t==='link'?'selected':'')+'>Link</option></select><div class="imm-res-fields"><input class="imm-rtitle" placeholder="Título do material" value="'+e(r&&r.title||'')+'"><input class="imm-rurl" type="url" placeholder="https://..." value="'+e(r&&r.url||r&&r.value||'')+'"><input class="imm-rdesc" placeholder="Descrição opcional" value="'+e(r&&r.description||'')+'"></div><button type="button" class="imm-btn danger" onclick="this.closest(\'.imm-resource-edit\').remove()" title="Remover recurso">×</button></div>';
+}
+function openEditor(a,day){
+ var resources=Array.isArray(a&&a.resources)?a.resources:[];
+ if(typeof openModal!=='function')return msg('O modal da plataforma não está disponível.','error');
+ var body='<form class="form" onsubmit="ticImmSave(event,\''+(a&&a.id||'')+'\')"><div class="imm-form-grid"><div class="imm-field"><label>Título da atividade *</label><input id="immTitle" required maxlength="180" value="'+e(a&&a.title||'')+'" placeholder="Ex.: Listen to a podcast"></div><div class="imm-field"><label>Dia do ano (1–365) *</label><input id="immDay" required type="number" min="1" max="365" value="'+e(day||1)+'"></div></div><div class="imm-form-grid"><div class="imm-field"><label>Nível CEFR</label><select id="immLevel">'+['A0','A1','A2','B1','B2','C1','C2'].map(function(x){return '<option '+(x===(a&&a.cefr_level||'A1')?'selected':'')+'>'+x+'</option>';}).join('')+'</select></div><div class="imm-field"><label>Habilidade</label><select id="immSkill">'+['Listening','Speaking','Reading','Writing','Vocabulary','Grammar','Integrated Skills','Pronunciation'].map(function(x){return '<option '+(x===(a&&a.skill||'Integrated Skills')?'selected':'')+'>'+x+'</option>';}).join('')+'</select></div></div><div class="imm-form-grid"><div class="imm-field"><label>Duração estimada (minutos)</label><input id="immMinutes" type="number" min="1" max="600" value="'+e(a&&a.estimated_minutes||15)+'"></div><div class="imm-field"><label>URL da imagem de capa (opcional)</label><input id="immCover" type="url" value="'+e(a&&a.cover_image_url||'')+'" placeholder="https://..."></div></div><div class="imm-field"><label>Descrição</label><textarea id="immDescription" placeholder="Apresente a proposta da atividade...">'+e(a&&a.description||'')+'</textarea></div><div class="imm-field"><label>Instruções para o aluno</label><textarea id="immInstructions" placeholder="Explique o que fazer, quanto tempo dedicar e como praticar...">'+e(a&&a.instructions||'')+'</textarea></div><div class="imm-field"><label>Vídeos, áudios, PDFs e links</label><div id="immResourceEditor">'+resources.map(resourceEditorRow).join('')+'</div><button type="button" class="imm-btn secondary" onclick="ticImmAddResource()">+ Adicionar material</button><small class="imm-small">Cole links HTTPS de YouTube, áudio, PDF, artigo ou outro recurso. O aluno terá controles de reprodução quando o formato permitir.</small></div><div class="imm-field"><label><input id="immPublished" type="checkbox" style="width:auto" '+(a&&a.is_published?'checked':'')+'> Publicar para meus alunos ativos</label></div><div class="imm-actions"><button type="button" class="imm-btn ghost" onclick="closeModal()">Cancelar</button><button class="imm-btn primary" id="immSaveBtn">Salvar atividade</button></div></form>';
+ openModal(a&&a.id?'Editar atividade · Immersion Planner':'Nova atividade · Immersion Planner',body);
+}
+window.ticImmAddResource=function(r){var box=$i('immResourceEditor');if(!box)return;var idx=box.children.length;box.insertAdjacentHTML('beforeend',resourceEditorRow(r||{},idx));};
+window.ticImmSave=async function(ev,id){
+ ev.preventDefault();if(!teacherMode())return msg('Somente o teacher pode editar o planner.','error');
+ var btn=$i('immSaveBtn');if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+ try{
+  var day=Number($i('immDay').value),title=$i('immTitle').value.trim();
+  if(day<1||day>365||!title)throw new Error('Informe um título e um dia entre 1 e 365.');
+  var resources=Array.from(($i('immResourceEditor')||{children:[]}).children).map(function(row){return {type:row.querySelector('.imm-rtype').value,title:row.querySelector('.imm-rtitle').value.trim(),url:urlOk(row.querySelector('.imm-rurl').value),description:row.querySelector('.imm-rdesc').value.trim()};}).filter(function(r){return r.title||r.url;});
+  for(var i=0;i<resources.length;i++)if(!resources[i].url)throw new Error('Confira a URL do recurso '+(i+1)+'. Use links http:// ou https:// válidos.');
+  var payload={teacher_id:session.user.id,day_number:day,title:title,description:$i('immDescription').value.trim(),instructions:$i('immInstructions').value.trim(),cefr_level:$i('immLevel').value,skill:$i('immSkill').value,estimated_minutes:Number($i('immMinutes').value||15),cover_image_url:urlOk($i('immCover').value)||null,resources:resources,is_published:$i('immPublished').checked,is_archived:false,updated_at:new Date().toISOString()};
+  var r=id?await sb.from(TABLE).update(payload).eq('id',id).eq('teacher_id',session.user.id).select().single():await sb.from(TABLE).insert(payload).select().single();
+  if(r.error)throw r.error;
+  closeModal();msg('Atividade salva. O progresso dos alunos será mantido ao sair e voltar.','success');await refresh();
+ }catch(err){msg('Não foi possível salvar: '+(err.message||err),'error');if(btn){btn.disabled=false;btn.textContent='Salvar atividade';}}
+};
+window.ticImmPublish=async function(id,published){var r=await sb.from(TABLE).update({is_published:published,updated_at:new Date().toISOString()}).eq('id',id).eq('teacher_id',session.user.id);if(r.error)return msg('Não foi possível atualizar a publicação: '+r.error.message,'error');msg(published?'Atividade publicada.':'Atividade retirada da publicação.','success');refresh();};
+window.ticImmArchive=async function(id){if(!confirm('Arquivar esta atividade? O histórico de conclusão dos alunos será preservado.'))return;var r=await sb.from(TABLE).update({is_archived:true,is_published:false,updated_at:new Date().toISOString()}).eq('id',id).eq('teacher_id',session.user.id);if(r.error)return msg('Não foi possível arquivar: '+r.error.message,'error');msg('Atividade arquivada; registros preservados.','success');refresh();};
+window.ticImmSetStatus=async function(id,status){
+ if(teacherMode()||!state.student)return msg('Não foi possível identificar o aluno conectado.','error');
+ if(['not_started','in_progress','completed'].indexOf(status)<0)return;
+ var old=state.progress.find(function(x){return x.activity_id===id;});
+ var payload={activity_id:id,student_id:state.student.id,teacher_id:state.student.teacher_id,status:status,student_note:old&&old.student_note||'',started_at:status==='not_started'?(old&&old.started_at||null):(old&&old.started_at||new Date().toISOString()),completed_at:status==='completed'?new Date().toISOString():null,updated_at:new Date().toISOString()};
+ var r=await sb.from(PROGRESS).upsert(payload,{onConflict:'activity_id,student_id'}).select().single();
+ if(r.error)return msg('Não foi possível salvar seu progresso: '+r.error.message,'error');
+ var i=state.progress.findIndex(function(x){return x.activity_id===id;});if(i>=0)state.progress[i]=r.data;else state.progress.push(r.data);
+ msg(status==='completed'?'Atividade marcada como concluída!':status==='in_progress'?'Atividade iniciada.':'Status atualizado.','success');renderWorkspace();
+};
+window.ticImmMonitoring=async function(studentId){
+ if(!teacherMode())return;
+ var students=await sb.from('tic_students').select('id,display_name,email,current_level').eq('teacher_id',session.user.id).eq('status','active').order('display_name');
+ if(students.error)return msg('Não foi possível carregar alunos: '+students.error.message,'error');
+ var selected=(students.data||[]).filter(function(s){return !studentId||s.id===studentId;});
+ if(!selected.length)return msg('Aluno não encontrado.','error');
+ var p=await sb.from(PROGRESS).select('*').eq('teacher_id',session.user.id);
+ if(p.error)return msg('Não foi possível carregar progresso: '+p.error.message,'error');
+ var acts=await sb.from(TABLE).select('id,title,day_number').eq('teacher_id',session.user.id).eq('is_archived',false).order('day_number');
+ if(acts.error)return msg('Não foi possível carregar atividades: '+acts.error.message,'error');
+ var html=selected.map(function(st){var ps=(p.data||[]).filter(function(x){return x.student_id===st.id;});var done=ps.filter(function(x){return x.status==='completed';}).length,work=ps.filter(function(x){return x.status==='in_progress';}).length;var rows=(acts.data||[]).map(function(a){var q=ps.find(function(x){return x.activity_id===a.id;});return '<div class="imm-student-row"><div><b>Day '+monthDayForDay(a.day_number)+' · '+e(a.title)+'</b><div class="imm-small">'+(q?'Atualizado em '+new Date(q.updated_at).toLocaleString('pt-BR'):'Ainda não iniciado')+'</div></div><span class="imm-pill '+(q&&q.status==='completed'?'done':q&&q.status==='in_progress'?'work':'')+'">'+statusLabel(q?q.status:'not_started')+'</span><span class="imm-small">'+(q&&q.completed_at?'Concluído '+new Date(q.completed_at).toLocaleDateString('pt-BR'):'')+'</span></div>';}).join('');return '<section class="imm-panel"><div class="imm-day-heading"><div><h3>'+e(st.display_name||st.email)+'</h3><span class="imm-small">'+e(st.current_level||'')+' · '+done+' concluídas · '+work+' em andamento · '+ps.length+' com registro</span></div></div>'+rows+'</section>';}).join('');
+ openModal('📊 Acompanhamento do Immersion Planner',html);
+};
+async function refresh(){
+ state.busy=true;
+ try{await loadActivities();await loadProgress();renderWorkspace();}
+ catch(err){var root=$i('content');if(root)root.innerHTML='<div class="card attention"><h2>Immersion Planner</h2><p>Não foi possível carregar os dados: '+e(err.message||err)+'</p><p class="imm-small">Confira se a migração do banco foi aplicada e se sua conta tem permissão para acessar o planner.</p><button class="imm-btn primary" onclick="ticImmersionPlannerOpen()">Tentar novamente</button></div>';}
+ finally{state.busy=false;}
+}
+window.ticImmersionPlannerOpen=async function(){
+ if(!session||!session.user)return msg('Entre na plataforma para abrir o planner.','error');
+ if(!teacherMode()){
+  var sr=await sb.from('tic_students').select('id,teacher_id,display_name,current_level').eq('auth_user_id',session.user.id).eq('status','active').limit(1);
+  if(sr.error)return msg('Não foi possível localizar seu cadastro de aluno: '+sr.error.message,'error');
+  state.student=(sr.data||[])[0]||null;
+  if(!state.student){var root=$i('content');if(root)root.innerHTML='<div class="imm-shell"><section class="imm-hero"><div class="imm-kicker">FLUENT IMMERSION · 365 DAYS</div><h2>Immersion Planner</h2><p>Seu planner anual aparecerá aqui quando sua conta estiver vinculada ao cadastro de aluno pelo Teacher.</p></section><div class="imm-empty">Não encontramos um aluno ativo vinculado a este login. Peça ao teacher para conferir o vínculo da conta em Students.</div></div>';return;}
+ }
+ if(typeof setPage==='function')setPage('Immersion Planner','Seu plano anual de imersão em inglês.','');
+ var root=$i('content');if(root)root.innerHTML='<div class="imm-empty">Carregando seu planner anual...</div>';
+ styles();await refresh();
+};
+})();
