@@ -7611,9 +7611,48 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 document.addEventListener('visibilitychange',function(){if(!document.hidden)load()});
 setInterval(function(){if(!document.hidden)load()},60000);
 window.tpRefreshTopActivity=load;
+try{if(typeof sb!=='undefined'&&sb.auth)sb.auth.onAuthStateChange(function(){setTimeout(function(){addUI();load()},700)})}catch(_){}
 })();
 </script>
 
+
+
+<style id="tp-modern-ui-v1">
+:root{--tp-accent:#7048d8;--tp-accent-dark:#5030b2;--tp-surface:#fff;--tp-soft:#f7f4ff;--tp-line:#e9e3f3;--tp-ink:#29243b;--tp-muted:#777187}
+body{background:#f7f8fc;color:var(--tp-ink)}
+button,.btn,a.btn{transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease,border-color .16s ease}
+button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #bca9ff;outline-offset:2px}
+.btn{border-radius:12px;font-weight:750}
+.btn.primary{background:linear-gradient(135deg,#7651df,#5e3bc0);box-shadow:0 6px 16px #6b49cf25}
+.btn.primary:hover{background:linear-gradient(135deg,#6841d0,#4f2fae);box-shadow:0 9px 22px #6b49cf35;transform:translateY(-1px)}
+.btn.secondary,.btn.ghost{border-radius:12px}
+input:not([type=checkbox]):not([type=radio]),select,textarea{border-radius:11px;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:#9b83e8!important;box-shadow:0 0 0 3px #8b6be51a}
+.card,.section,.notice,.page-head,.student-course-card,.student-curriculum-item{border-radius:17px}
+.card,.section{box-shadow:0 5px 22px #2c194f08}
+.topbar{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.sidebar{box-shadow:8px 0 30px #28154508}
+#login{background:radial-gradient(ellipse at 15% 15%,#e9e1ff 0,transparent 36%),radial-gradient(ellipse at 90% 85%,#dff7ec 0,transparent 34%),linear-gradient(135deg,#f7f5ff,#f9fbff)}
+.login-card{border:1px solid #ffffffd9!important;border-radius:26px!important;box-shadow:0 24px 80px #30205c1c!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);overflow:hidden;position:relative}
+.login-card:before{content:"";display:block;height:5px;position:absolute;top:0;left:0;right:0;background:linear-gradient(90deg,#7651df,#c5b3ff,#6bd7a5)}
+.login-card h1{letter-spacing:-.7px}
+.login-card .btn{min-height:44px}
+.login-card .field{gap:7px}
+.login-card input:not([type=checkbox]){min-height:44px;background:#fff}
+#authMsg:empty{display:none}
+#authMsg{border-radius:12px}
+#teacherNav [data-view]{border-radius:11px;transition:background .15s,color .15s,transform .15s}
+#teacherNav [data-view]:hover{transform:translateX(2px)}
+#teacherNav [data-view].active{box-shadow:inset 3px 0 #8a6be6}
+.badge{border-radius:999px;font-weight:800}
+.progress,.bar{overflow:hidden;border-radius:999px}
+table{border-collapse:separate;border-spacing:0}
+th{font-size:11px;letter-spacing:.2px}
+td,th{padding-top:12px;padding-bottom:12px}
+.modal-card{border-radius:20px!important;box-shadow:0 25px 80px #1c133333!important}
+@media(max-width:800px){.login-card{width:min(100% - 28px,460px)!important;margin:14px auto}.page-head{gap:12px}.card,.section{border-radius:14px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+</style>
 
 </body>
 </html>
