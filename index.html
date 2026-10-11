@@ -7538,8 +7538,17 @@ async function load(){
  var rows=[];
  try{
   if(teacher()){
-   var n=await client.from('tic_immersion_notifications').select('id,title,message,created_at,read_at,student_id').order('created_at',{ascending:false}).limit(15);
-   if(!n.error)(n.data||[]).forEach(function(x){rows.push({id:'mission-'+x.id,title:x.title||'Missão concluída',message:x.message||'Um aluno concluiu uma missão.',date:x.created_at,read:!!x.read_at,icon:'🎯'})});
+   var n=await client.from('tic_immersion_notifications').select('id,title,message,created_at,read_at,student_id,session_id').order('created_at',{ascending:false}).limit(30);
+   var notifiedSessions={};
+   if(!n.error)(n.data||[]).forEach(function(x){if(x.session_id)notifiedSessions[x.session_id]=true;rows.push({id:'mission-'+x.id,title:x.title||'Missão concluída',message:x.message||'Um aluno concluiu uma missão.',date:x.created_at,read:!!x.read_at,icon:'🎯'})});
+   /* Recovery path for completed sessions saved before notifications were added. */
+   var ses=await client.from('tic_immersion_sessions').select('id,student_id,activity_id,session_date,completed_at,duration_minutes,status').eq('status','completed').order('completed_at',{ascending:false}).limit(20);
+   if(!ses.error){
+    var sids=[...new Set((ses.data||[]).map(function(x){return x.student_id}).filter(Boolean))],studentNames={},activityIds=[...new Set((ses.data||[]).map(function(x){return x.activity_id}).filter(Boolean))],activityNames={};
+    if(sids.length){var ss=await client.from('tic_students').select('id,display_name,email').in('id',sids);if(!ss.error)(ss.data||[]).forEach(function(x){studentNames[x.id]=x.display_name||x.email||'Aluno'})}
+    if(activityIds.length){var aa=await client.from('tic_immersion_activities').select('id,title').in('id',activityIds);if(!aa.error)(aa.data||[]).forEach(function(x){activityNames[x.id]=x.title})}
+    (ses.data||[]).forEach(function(x){if(notifiedSessions[x.id])return;rows.push({id:'session-'+x.id,title:'Missão concluída · '+(activityNames[x.activity_id]||'Immersion Planner'),message:(studentNames[x.student_id]||'Aluno')+' · '+(x.session_date||'')+' · '+Number(x.duration_minutes||0)+' min',date:x.completed_at||x.session_date,read:false,icon:'🎯'})});
+   }
    var sub=await client.from('tic_submissions').select('id,submitted_at,created_at,status,skill,task_assignment_id,student_id,grade').order('submitted_at',{ascending:false}).limit(15);
    if(!sub.error){
     var ids=[...new Set((sub.data||[]).map(function(x){return x.student_id}).filter(Boolean))],names={};
