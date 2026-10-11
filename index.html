@@ -2075,11 +2075,7 @@ function ticResponsiveSrcdoc(content){
  if(!c)return '';
  const meta='<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">';
  if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}`);
- return '<!doctype html><html><head>'+meta+'</head><body>'+c+'\\n 
-<
-
-
-</body></html>';
+  return '<!doctype html><html><head>'+meta+'</head><body>'+c+'</body></html>';
 }
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
