@@ -2125,70 +2125,6 @@ var oldLoad=window.loadView;if(typeof oldLoad==='function'&&!oldLoad.__tpNotifyW
 </script>
 
 
-<style id="tp-top-activity-v1-css">
-.tp-top-activity{position:relative;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border:1px solid #e4dcf5;border-radius:14px;background:linear-gradient(145deg,#fff,#f5f0ff);color:#6741cf;font-size:19px;cursor:pointer;box-shadow:0 4px 14px #28154510;transition:transform .18s,box-shadow .18s}
-.tp-top-activity:hover{transform:translateY(-2px);box-shadow:0 8px 22px #2815451c}
-.tp-top-activity-badge{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border:2px solid #fff;border-radius:99px;background:#e83e61;color:#fff;font:800 10px/15px Arial;text-align:center}
-.tp-top-activity-badge[hidden]{display:none}
-.tp-activity-panel{position:fixed;z-index:100000;top:76px;right:18px;width:min(420px,calc(100vw - 24px));max-height:min(72vh,620px);overflow:auto;padding:16px;border:1px solid #e8e0f4;border-radius:20px;background:#fff;color:#29243b;box-shadow:0 24px 70px #21153230}
-.tp-activity-panel[hidden]{display:none}.tp-activity-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:3px 2px 13px;border-bottom:1px solid #eee8f7}.tp-activity-head h3{margin:0;font-size:16px}.tp-activity-sub{margin-top:4px;color:#898299;font-size:11px}.tp-activity-row{display:flex;gap:10px;padding:12px 6px;border-bottom:1px solid #f1edf7}.tp-activity-icon{display:grid;place-items:center;flex:none;width:35px;height:35px;border-radius:11px;background:#f0eaff;color:#7047dc}.tp-activity-row b{display:block;margin-bottom:4px;font-size:12px}.tp-activity-row p{margin:0;color:#777187;font-size:11px;line-height:1.5;overflow-wrap:anywhere}.tp-activity-row time{display:block;margin-top:5px;color:#a09aaf;font-size:10px}.tp-activity-empty{padding:25px 10px;text-align:center;color:#898299;font-size:12px}
-@media(max-width:650px){.tp-activity-panel{top:66px;right:8px}.tp-top-activity{width:38px;height:38px}}
-</style>
-<script id="tp-top-activity-v1">
-(function(){
-'use strict';
-var items=[],busy=false;
-function el(id){return document.getElementById(id)}
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function db(){try{return typeof sb!=='undefined'?sb:(window.sb||window.supabaseClient||null)}catch(_){return window.sb||window.supabaseClient||null}}
-function teacher(){try{if(typeof isTeacherRole==='function')return !!isTeacherRole();if(typeof isTeacher==='function')return !!isTeacher();if(typeof profile!=='undefined'&&profile)return ['teacher','admin','gestor','owner'].indexOf(String(profile.role||'').toLowerCase())>=0}catch(_){}return false}
-function getSeen(){try{return JSON.parse(localStorage.getItem('tp-top-activity-seen-v1')||'[]')}catch(_){return []}}
-function setSeen(ids){try{localStorage.setItem('tp-top-activity-seen-v1',JSON.stringify(ids.slice(-250)))}catch(_){}}
-function addUI(){
- var bar=document.querySelector('.top-right');if(!bar||el('tpTopActivity'))return;
- var b=document.createElement('button');b.id='tpTopActivity';b.type='button';b.className='tp-top-activity';b.title='Atividades e tarefas enviadas';b.setAttribute('aria-label','Abrir notificações de atividades');b.innerHTML='🔔<span class="tp-top-activity-badge" id="tpTopActivityBadge" hidden>0</span>';
- var old=bar.querySelector('button[title="Notificações"]');if(old)bar.insertBefore(b,old);else bar.appendChild(b);
- var p=document.createElement('section');p.id='tpTopActivityPanel';p.className='tp-activity-panel';p.hidden=true;p.innerHTML='<div class="tp-activity-head"><div><h3>Central de atividade</h3><div class="tp-activity-sub">Missões concluídas e tarefas enviadas pelos alunos</div></div><button class="btn ghost" id="tpTopActivityRefresh" type="button">Atualizar</button></div><div id="tpTopActivityList" class="tp-activity-empty">Carregando...</div>';document.body.appendChild(p);
- b.addEventListener('click',function(){p.hidden=!p.hidden;if(!p.hidden)load().then(function(){markSeen();load()})});
- el('tpTopActivityRefresh').addEventListener('click',load);
- document.addEventListener('click',function(ev){if(!p.contains(ev.target)&&!b.contains(ev.target))p.hidden=true});
- load();
-}
-async function load(){
- if(busy)return;var client=db(),list=el('tpTopActivityList'),badge=el('tpTopActivityBadge');if(!client||!list)return;busy=true;list.className='tp-activity-empty';list.textContent='Atualizando...';
- var rows=[];
- try{
-  if(teacher()){
-   var n=await client.from('tic_immersion_notifications').select('id,title,message,created_at,read_at,student_id').order('created_at',{ascending:false}).limit(15);
-   if(!n.error)(n.data||[]).forEach(function(x){rows.push({id:'mission-'+x.id,title:x.title||'Missão concluída',message:x.message||'Um aluno concluiu uma missão.',date:x.created_at,read:!!x.read_at,icon:'🎯'})});
-   var sub=await client.from('tic_submissions').select('id,submitted_at,created_at,status,skill,task_assignment_id,student_id,grade').order('submitted_at',{ascending:false}).limit(15);
-   if(!sub.error){
-    var ids=[...new Set((sub.data||[]).map(function(x){return x.student_id}).filter(Boolean))],names={};
-    if(ids.length){var sr=await client.from('tic_students').select('id,display_name').in('id',ids);if(!sr.error)(sr.data||[]).forEach(function(x){names[x.id]=x.display_name||'Aluno'})}
-    (sub.data||[]).forEach(function(x){rows.push({id:'submission-'+x.id,title:'Tarefa enviada pelo aluno',message:[names[x.student_id]||'Aluno',x.skill||'',x.status?'Status: '+x.status:'',x.grade!=null?'Nota: '+x.grade:''].filter(Boolean).join(' · '),date:x.submitted_at||x.created_at,read:false,icon:'📝'})});
-   }
-   var since=new Date(Date.now()-7*86400000).toISOString();
-   var act=await client.from('tic_student_activity_events').select('id,event_type,event_label,view_name,entity_type,created_at,student_id').gte('created_at',since).order('created_at',{ascending:false}).limit(20);
-   if(!act.error)(act.data||[]).forEach(function(x){rows.push({id:'event-'+x.id,title:x.event_label||x.event_type||'Atividade do aluno',message:[x.view_name,x.entity_type].filter(Boolean).join(' · ')||'Atividade registrada na plataforma',date:x.created_at,read:false,icon:'📚'})});
-  }else{
-   var studentId=null;try{if(typeof studentRecord==='function'){var st=await studentRecord();studentId=st&&st.id}}catch(_){}
-   if(studentId){var fb=await client.from('tic_immersion_feedback').select('id,feedback,created_at').eq('student_id',studentId).order('created_at',{ascending:false}).limit(10);if(!fb.error)(fb.data||[]).forEach(function(x){rows.push({id:'feedback-'+x.id,title:'Feedback do professor',message:x.feedback||'Você recebeu um novo feedback.',date:x.created_at,read:false,icon:'💬'}))}
-  }
- }catch(err){console.warn('[Top Activity]',err)}
- var seen=getSeen(),dedupe={};items=rows.filter(function(x){if(!x.id||dedupe[x.id])return false;dedupe[x.id]=1;return true}).sort(function(a,b){return new Date(b.date||0)-new Date(a.date||0)}).slice(0,30);
- var unread=items.filter(function(x){return !x.read&&seen.indexOf(x.id)<0}).length;if(badge){badge.textContent=unread>99?'99+':String(unread);badge.hidden=!unread}
- if(!items.length){list.className='tp-activity-empty';list.textContent='Nenhuma atividade encontrada. As novas tarefas enviadas e missões concluídas aparecerão aqui quando estiverem disponíveis para este perfil.'}
- else{list.className='';list.innerHTML=items.map(function(x){return '<article class="tp-activity-row"><div class="tp-activity-icon">'+esc(x.icon)+'</div><div style="min-width:0;flex:1"><b>'+esc(x.title)+(seen.indexOf(x.id)<0&&!x.read?' <span style="font-size:9px;color:#d92d50">NOVA</span>':'')+'</b><p>'+esc(x.message)+'</p><time>'+esc(x.date?new Date(x.date).toLocaleString('pt-BR'):'')+'</time></div></article>'}).join('')}
- busy=false;
-}
-function markSeen(){var seen=getSeen();setSeen(seen.concat(items.map(function(x){return x.id})));var badge=el('tpTopActivityBadge');if(badge){badge.hidden=true;badge.textContent='0'}}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addUI);else addUI();
-document.addEventListener('visibilitychange',function(){if(!document.hidden)load()});
-setInterval(function(){if(!document.hidden)load()},60000);
-window.tpRefreshTopActivity=load;
-})();
-</script>
-
 </body></html>';
 }
 async function submitInteractiveLesson(lessonId,payload){
@@ -7614,5 +7550,70 @@ async function renderHome(){if(typeof sb==='undefined'||typeof studentRecord!=='
 const original=window.studentDashboard;window.studentDashboard=async function(){if(typeof original==='function')await original.apply(this,arguments);await renderHome()};window.addEventListener('load',()=>{if(typeof session!=='undefined'&&session?.user&&typeof isStudentRole==='function'&&isStudentRole())setTimeout(renderHome,500)});
 })();
 </script>
+<style id="tp-top-activity-v1-css">
+.tp-top-activity{position:relative;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border:1px solid #e4dcf5;border-radius:14px;background:linear-gradient(145deg,#fff,#f5f0ff);color:#6741cf;font-size:19px;cursor:pointer;box-shadow:0 4px 14px #28154510;transition:transform .18s,box-shadow .18s}
+.tp-top-activity:hover{transform:translateY(-2px);box-shadow:0 8px 22px #2815451c}
+.tp-top-activity-badge{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border:2px solid #fff;border-radius:99px;background:#e83e61;color:#fff;font:800 10px/15px Arial;text-align:center}
+.tp-top-activity-badge[hidden]{display:none}
+.tp-activity-panel{position:fixed;z-index:100000;top:76px;right:18px;width:min(420px,calc(100vw - 24px));max-height:min(72vh,620px);overflow:auto;padding:16px;border:1px solid #e8e0f4;border-radius:20px;background:#fff;color:#29243b;box-shadow:0 24px 70px #21153230}
+.tp-activity-panel[hidden]{display:none}.tp-activity-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:3px 2px 13px;border-bottom:1px solid #eee8f7}.tp-activity-head h3{margin:0;font-size:16px}.tp-activity-sub{margin-top:4px;color:#898299;font-size:11px}.tp-activity-row{display:flex;gap:10px;padding:12px 6px;border-bottom:1px solid #f1edf7}.tp-activity-icon{display:grid;place-items:center;flex:none;width:35px;height:35px;border-radius:11px;background:#f0eaff;color:#7047dc}.tp-activity-row b{display:block;margin-bottom:4px;font-size:12px}.tp-activity-row p{margin:0;color:#777187;font-size:11px;line-height:1.5;overflow-wrap:anywhere}.tp-activity-row time{display:block;margin-top:5px;color:#a09aaf;font-size:10px}.tp-activity-empty{padding:25px 10px;text-align:center;color:#898299;font-size:12px}
+@media(max-width:650px){.tp-activity-panel{top:66px;right:8px}.tp-top-activity{width:38px;height:38px}}
+</style>
+<script id="tp-top-activity-v1">
+(function(){
+'use strict';
+var items=[],busy=false;
+function el(id){return document.getElementById(id)}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function db(){try{return typeof sb!=='undefined'?sb:(window.sb||window.supabaseClient||null)}catch(_){return window.sb||window.supabaseClient||null}}
+function teacher(){try{if(typeof isTeacherRole==='function')return !!isTeacherRole();if(typeof isTeacher==='function')return !!isTeacher();if(typeof profile!=='undefined'&&profile)return ['teacher','admin','gestor','owner'].indexOf(String(profile.role||'').toLowerCase())>=0}catch(_){}return false}
+function getSeen(){try{return JSON.parse(localStorage.getItem('tp-top-activity-seen-v1')||'[]')}catch(_){return []}}
+function setSeen(ids){try{localStorage.setItem('tp-top-activity-seen-v1',JSON.stringify(ids.slice(-250)))}catch(_){}}
+function addUI(){
+ var bar=document.querySelector('.top-right');if(!bar||el('tpTopActivity'))return;
+ var b=document.createElement('button');b.id='tpTopActivity';b.type='button';b.className='tp-top-activity';b.title='Atividades e tarefas enviadas';b.setAttribute('aria-label','Abrir notificações de atividades');b.innerHTML='🔔<span class="tp-top-activity-badge" id="tpTopActivityBadge" hidden>0</span>';
+ var old=bar.querySelector('button[title="Notificações"]');if(old)bar.insertBefore(b,old);else bar.appendChild(b);
+ var p=document.createElement('section');p.id='tpTopActivityPanel';p.className='tp-activity-panel';p.hidden=true;p.innerHTML='<div class="tp-activity-head"><div><h3>Central de atividade</h3><div class="tp-activity-sub">Missões concluídas e tarefas enviadas pelos alunos</div></div><button class="btn ghost" id="tpTopActivityRefresh" type="button">Atualizar</button></div><div id="tpTopActivityList" class="tp-activity-empty">Carregando...</div>';document.body.appendChild(p);
+ b.addEventListener('click',function(){p.hidden=!p.hidden;if(!p.hidden)load().then(function(){markSeen();load()})});
+ el('tpTopActivityRefresh').addEventListener('click',load);
+ document.addEventListener('click',function(ev){if(!p.contains(ev.target)&&!b.contains(ev.target))p.hidden=true});
+ load();
+}
+async function load(){
+ if(busy)return;var client=db(),list=el('tpTopActivityList'),badge=el('tpTopActivityBadge');if(!client||!list)return;busy=true;list.className='tp-activity-empty';list.textContent='Atualizando...';
+ var rows=[];
+ try{
+  if(teacher()){
+   var n=await client.from('tic_immersion_notifications').select('id,title,message,created_at,read_at,student_id').order('created_at',{ascending:false}).limit(15);
+   if(!n.error)(n.data||[]).forEach(function(x){rows.push({id:'mission-'+x.id,title:x.title||'Missão concluída',message:x.message||'Um aluno concluiu uma missão.',date:x.created_at,read:!!x.read_at,icon:'🎯'})});
+   var sub=await client.from('tic_submissions').select('id,submitted_at,created_at,status,skill,task_assignment_id,student_id,grade').order('submitted_at',{ascending:false}).limit(15);
+   if(!sub.error){
+    var ids=[...new Set((sub.data||[]).map(function(x){return x.student_id}).filter(Boolean))],names={};
+    if(ids.length){var sr=await client.from('tic_students').select('id,display_name').in('id',ids);if(!sr.error)(sr.data||[]).forEach(function(x){names[x.id]=x.display_name||'Aluno'})}
+    (sub.data||[]).forEach(function(x){rows.push({id:'submission-'+x.id,title:'Tarefa enviada pelo aluno',message:[names[x.student_id]||'Aluno',x.skill||'',x.status?'Status: '+x.status:'',x.grade!=null?'Nota: '+x.grade:''].filter(Boolean).join(' · '),date:x.submitted_at||x.created_at,read:false,icon:'📝'})});
+   }
+   var since=new Date(Date.now()-7*86400000).toISOString();
+   var act=await client.from('tic_student_activity_events').select('id,event_type,event_label,view_name,entity_type,created_at,student_id').gte('created_at',since).order('created_at',{ascending:false}).limit(20);
+   if(!act.error)(act.data||[]).forEach(function(x){rows.push({id:'event-'+x.id,title:x.event_label||x.event_type||'Atividade do aluno',message:[x.view_name,x.entity_type].filter(Boolean).join(' · ')||'Atividade registrada na plataforma',date:x.created_at,read:false,icon:'📚'})});
+  }else{
+   var studentId=null;try{if(typeof studentRecord==='function'){var st=await studentRecord();studentId=st&&st.id}}catch(_){}
+   if(studentId){var fb=await client.from('tic_immersion_feedback').select('id,feedback,created_at').eq('student_id',studentId).order('created_at',{ascending:false}).limit(10);if(!fb.error)(fb.data||[]).forEach(function(x){rows.push({id:'feedback-'+x.id,title:'Feedback do professor',message:x.feedback||'Você recebeu um novo feedback.',date:x.created_at,read:false,icon:'💬'}))}
+  }
+ }catch(err){console.warn('[Top Activity]',err)}
+ var seen=getSeen(),dedupe={};items=rows.filter(function(x){if(!x.id||dedupe[x.id])return false;dedupe[x.id]=1;return true}).sort(function(a,b){return new Date(b.date||0)-new Date(a.date||0)}).slice(0,30);
+ var unread=items.filter(function(x){return !x.read&&seen.indexOf(x.id)<0}).length;if(badge){badge.textContent=unread>99?'99+':String(unread);badge.hidden=!unread}
+ if(!items.length){list.className='tp-activity-empty';list.textContent='Nenhuma atividade encontrada. As novas tarefas enviadas e missões concluídas aparecerão aqui quando estiverem disponíveis para este perfil.'}
+ else{list.className='';list.innerHTML=items.map(function(x){return '<article class="tp-activity-row"><div class="tp-activity-icon">'+esc(x.icon)+'</div><div style="min-width:0;flex:1"><b>'+esc(x.title)+(seen.indexOf(x.id)<0&&!x.read?' <span style="font-size:9px;color:#d92d50">NOVA</span>':'')+'</b><p>'+esc(x.message)+'</p><time>'+esc(x.date?new Date(x.date).toLocaleString('pt-BR'):'')+'</time></div></article>'}).join('')}
+ busy=false;
+}
+function markSeen(){var seen=getSeen();setSeen(seen.concat(items.map(function(x){return x.id})));var badge=el('tpTopActivityBadge');if(badge){badge.hidden=true;badge.textContent='0'}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addUI);else addUI();
+document.addEventListener('visibilitychange',function(){if(!document.hidden)load()});
+setInterval(function(){if(!document.hidden)load()},60000);
+window.tpRefreshTopActivity=load;
+})();
+</script>
+
+
 </body>
 </html>
