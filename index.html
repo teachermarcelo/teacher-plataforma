@@ -7597,7 +7597,7 @@ async function load(){
    if(!act.error)(act.data||[]).forEach(function(x){rows.push({id:'event-'+x.id,title:x.event_label||x.event_type||'Atividade do aluno',message:[x.view_name,x.entity_type].filter(Boolean).join(' · ')||'Atividade registrada na plataforma',date:x.created_at,read:false,icon:'📚'})});
   }else{
    var studentId=null;try{if(typeof studentRecord==='function'){var st=await studentRecord();studentId=st&&st.id}}catch(_){}
-   if(studentId){var fb=await client.from('tic_immersion_feedback').select('id,feedback,created_at').eq('student_id',studentId).order('created_at',{ascending:false}).limit(10);if(!fb.error)(fb.data||[]).forEach(function(x){rows.push({id:'feedback-'+x.id,title:'Feedback do professor',message:x.feedback||'Você recebeu um novo feedback.',date:x.created_at,read:false,icon:'💬'}))}
+   if(studentId){var fb=await client.from('tic_immersion_feedback').select('id,feedback,created_at').eq('student_id',studentId).order('created_at',{ascending:false}).limit(10);if(!fb.error)(fb.data||[]).forEach(function(x){rows.push({id:'feedback-'+x.id,title:'Feedback do professor',message:x.feedback||'Você recebeu um novo feedback.',date:x.created_at,read:false,icon:'💬'})})}
   }
  }catch(err){console.warn('[Top Activity]',err)}
  var seen=getSeen(),dedupe={};items=rows.filter(function(x){if(!x.id||dedupe[x.id])return false;dedupe[x.id]=1;return true}).sort(function(a,b){return new Date(b.date||0)-new Date(a.date||0)}).slice(0,30);
