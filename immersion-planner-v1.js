@@ -161,7 +161,17 @@ async function renderQuickMonitoring(){
  var box=$i('immQuickMonitoring');if(!box)return;
  var r=await sb.from('tic_students').select('id,display_name,email,current_level').eq('teacher_id',session.user.id).eq('status','active').order('display_name');
  if(r.error){box.innerHTML='<p class="imm-small">Não foi possível carregar os alunos: '+e(r.error.message)+'</p>';return;}
- box.innerHTML=(r.data||[]).map(function(st){var ps=state.progress.filter(function(p){return p.student_id===st.id;});var done=ps.filter(function(p){return p.status==='completed';}).length;var work=ps.filter(function(p){return p.status==='in_progress';}).length;var pct=state.activities.length?Math.round(done/state.activities.length*100):0;return '<div class="imm-student-row"><div><b>'+e(st.display_name||st.email||'Aluno')+'</b><div class="imm-small">'+e(st.current_level||'')+' · '+done+' concluídas · '+work+' em andamento</div></div><div class="imm-student-progress"><div class="imm-progress" style="background:#eeeaf5"><i style="width:'+pct+'%;background:#7653d3"></i></div><small class="imm-small">'+pct+'% das atividades</small></div><button class="imm-btn secondary" onclick="ticImmMonitoring(\''+st.id+'\')">Ver detalhes</button></div>';}).join('')||'<div class="imm-empty">Nenhum aluno ativo encontrado.</div>';
+ var week=new Date();week.setDate(week.getDate()-6);var weekKey=localDate(week);
+ var sr=await sb.from('tic_immersion_sessions').select('student_id,session_date,duration_minutes,status').eq('teacher_id',session.user.id).gte('session_date',weekKey).limit(1000);
+ var sessions=sr.error?[]:(sr.data||[]);
+ box.innerHTML=(r.data||[]).map(function(st){
+  var ps=state.progress.filter(function(p){return p.student_id===st.id;});
+  var done=ps.filter(function(p){return p.status==='completed';}).length,work=ps.filter(function(p){return p.status==='in_progress';}).length;
+  var pct=state.activities.length?Math.round(done/state.activities.length*100):0;
+  var ss=sessions.filter(function(x){return x.student_id===st.id&&x.status==='completed';}),days={};ss.forEach(function(x){days[x.session_date]=true;});
+  var minutes=ss.reduce(function(n,x){return n+(Number(x.duration_minutes)||0);},0);
+  return '<div class="imm-student-row"><div><b>'+e(st.display_name||st.email||'Aluno')+'</b><div class="imm-small">'+e(st.current_level||'')+' · '+done+' concluídas · '+work+' em andamento</div><div class="imm-small">Imersão nos últimos 7 dias: '+Object.keys(days).length+' dia(s) · '+minutes+' min</div></div><div class="imm-student-progress"><div class="imm-progress" style="background:#eeeaf5"><i style="width:'+pct+'%;background:#7653d3"></i></div><small class="imm-small">'+pct+'% das atividades</small></div><button class="imm-btn secondary" onclick="ticImmMonitoring(\''+st.id+'\')">Ver detalhes</button></div>';
+ }).join('')||'<div class="imm-empty">Nenhum aluno ativo encontrado.</div>';
 }
 window.ticImmNew=function(day,level){openEditor(null,Number(day)||1,level||'A1');};
 window.ticImmEdit=function(id){var a=state.activities.find(function(x){return x.id===id;});if(a)openEditor(a,a.day_number,a.cefr_level);};
@@ -211,9 +221,23 @@ window.ticImmMonitoring=async function(studentId){
  if(!selected.length)return msg('Aluno não encontrado.','error');
  var p=await sb.from(PROGRESS).select('*').eq('teacher_id',session.user.id);
  if(p.error)return msg('Não foi possível carregar progresso: '+p.error.message,'error');
+ var sr=await sb.from('tic_immersion_sessions').select('*').eq('teacher_id',session.user.id).order('session_date',{ascending:false}).limit(500);
+ var sessions=sr.error?[]:(sr.data||[]);
  var acts=await sb.from(TABLE).select('id,title,day_number').eq('teacher_id',session.user.id).eq('is_archived',false).order('day_number');
  if(acts.error)return msg('Não foi possível carregar atividades: '+acts.error.message,'error');
- var html=selected.map(function(st){var ps=(p.data||[]).filter(function(x){return x.student_id===st.id;});var done=ps.filter(function(x){return x.status==='completed';}).length,work=ps.filter(function(x){return x.status==='in_progress';}).length;var rows=(acts.data||[]).map(function(a){var q=ps.find(function(x){return x.activity_id===a.id;});return '<div class="imm-student-row"><div><b>Day '+monthDayForDay(a.day_number)+' · '+e(a.title)+'</b><div class="imm-small">'+(q?'Atualizado em '+new Date(q.updated_at).toLocaleString('pt-BR'):'Ainda não iniciado')+'</div></div><span class="imm-pill '+(q&&q.status==='completed'?'done':q&&q.status==='in_progress'?'work':'')+'">'+statusLabel(q?q.status:'not_started')+'</span><span class="imm-small">'+(q&&q.completed_at?'Concluído '+new Date(q.completed_at).toLocaleDateString('pt-BR'):'')+'</span></div>';}).join('');return '<section class="imm-panel"><div class="imm-day-heading"><div><h3>'+e(st.display_name||st.email)+'</h3><span class="imm-small">'+e(st.current_level||'')+' · '+done+' concluídas · '+work+' em andamento · '+ps.length+' com registro</span></div></div>'+rows+'</section>';}).join('');
+ var html=selected.map(function(st){
+  var ps=(p.data||[]).filter(function(x){return x.student_id===st.id;});
+  var done=ps.filter(function(x){return x.status==='completed';}).length,work=ps.filter(function(x){return x.status==='in_progress';}).length;
+  var ss=sessions.filter(function(x){return x.student_id===st.id&&x.status==='completed';});
+  var week=new Date();week.setDate(week.getDate()-6);var weekKey=localDate(week);
+  var recent=ss.filter(function(x){return x.session_date>=weekKey;}),days={};recent.forEach(function(x){days[x.session_date]=true;});
+  var minutes=recent.reduce(function(n,x){return n+(Number(x.duration_minutes)||0);},0);
+  var rows=(acts.data||[]).map(function(a){
+   var q=ps.find(function(x){return x.activity_id===a.id;});
+   return '<div class="imm-student-row"><div><b>Day '+monthDayForDay(a.day_number)+' · '+e(a.title)+'</b><div class="imm-small">'+(q?'Atualizado em '+new Date(q.updated_at).toLocaleString('pt-BR'):'Ainda não iniciado')+'</div></div><span class="imm-pill '+(q&&q.status==='completed'?'done':q&&q.status==='in_progress'?'work':'')+'">'+statusLabel(q?q.status:'not_started')+'</span><span class="imm-small">'+(q&&q.completed_at?'Concluído '+new Date(q.completed_at).toLocaleDateString('pt-BR'):'')+'</span></div>';
+  }).join('');
+  return '<section class="imm-panel"><div class="imm-day-heading"><div><h3>'+e(st.display_name||st.email)+'</h3><span class="imm-small">'+e(st.current_level||'')+' · '+done+' concluídas · '+work+' em andamento · '+ps.length+' com registro</span><p class="imm-small">Imersão nos últimos 7 dias: '+Object.keys(days).length+' dia(s) · '+minutes+' minutos registrados</p></div></div>'+rows+'</section>';
+ }).join('');
  openModal('📊 Acompanhamento do Immersion Planner',html);
 };
 async function refresh(){
