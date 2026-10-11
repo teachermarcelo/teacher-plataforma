@@ -2076,56 +2076,7 @@ function ticResponsiveSrcdoc(content){
  const meta='<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">';
  if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}`);
  return '<!doctype html><html><head>'+meta+'</head><body>'+c+'\\n 
-</script>
-<style id="tp-modern-notifications-v1">
-.topbar{background:rgba(255,255,255,.9)!important;box-shadow:0 8px 28px rgba(44,25,79,.055);border-bottom:1px solid rgba(111,76,220,.12)!important}
-.top-right{gap:10px!important}.tp-bell{position:relative;width:42px;height:42px;border:1px solid #e5ddf7;background:linear-gradient(145deg,#fff,#f7f2ff);color:#6540d8;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:19px;cursor:pointer;box-shadow:0 4px 12px #3820660c;transition:transform .18s,box-shadow .18s}.tp-bell:hover{transform:translateY(-2px);box-shadow:0 8px 20px #3820661c}.tp-bell-count{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;border-radius:99px;padding:0 5px;background:#f04462;color:white;font:800 10px/19px Arial;text-align:center;border:2px solid white;box-shadow:0 2px 5px #f0446240}.tp-bell-count[hidden]{display:none}.tp-notice-pop{position:fixed;z-index:99999;top:78px;right:20px;width:min(410px,calc(100vw - 28px));max-height:min(72vh,620px);overflow:auto;background:#fff;border:1px solid #e9e1f5;border-radius:20px;box-shadow:0 24px 70px #21153230;padding:16px;color:#29243b}.tp-notice-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 2px 13px;border-bottom:1px solid #eee8f7}.tp-notice-head h3{margin:0;font-size:16px}.tp-notice-sub{font-size:11px;color:#888199;margin-top:4px}.tp-notice-item{padding:12px 10px;border-bottom:1px solid #f1edf7;display:flex;gap:10px;align-items:flex-start;border-radius:10px}.tp-notice-item:last-child{border-bottom:0}.tp-notice-icon{width:34px;height:34px;border-radius:11px;background:#f0eaff;color:#7047dc;display:grid;place-items:center;flex:none}.tp-notice-item b{display:block;font-size:12px;margin-bottom:4px}.tp-notice-item p{font-size:11px;line-height:1.5;color:#777187;margin:0}.tp-notice-item time{font-size:10px;color:#a09aaf;display:block;margin-top:5px}.tp-notice-empty{padding:26px 12px;text-align:center;color:#898398;font-size:12px}.tp-new-pill{font-size:9px;background:#fff0f2;color:#d92d50;padding:4px 7px;border-radius:99px;font-weight:800}.card,.section,.page-head{animation:tpRise .28s ease both}@keyframes tpRise{from{opacity:.75;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}button{transition:filter .15s,transform .15s}button:active{transform:scale(.985)}@media(max-width:650px){.topbar{padding:0 12px!important}.tp-notice-pop{top:66px;right:10px}.profile-name{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
-</style>
-<script id="tp-modern-notifications-v1">
-(function(){
-'use strict';
-function $(id){return document.getElementById(id)}
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function currentRole(){try{return String((window.profile&&window.profile.role)||(window.currentProfile&&window.currentProfile.role)||'').toLowerCase()}catch(_){return ''}}
-function client(){return window.sb||window.supabaseClient||null}
-function addBell(){
- var bar=document.querySelector('.top-right');if(!bar||$('tpBell'))return;
- var b=document.createElement('button');b.id='tpBell';b.className='tp-bell';b.type='button';b.title='Notificações e atividade recente';b.setAttribute('aria-label','Abrir notificações');b.innerHTML='♧<span class="tp-bell-count" id="tpBellCount" hidden>0</span>';b.addEventListener('click',toggle);var search=bar.querySelector('button');if(search)bar.insertBefore(b,search.nextSibling);else bar.prepend(b);
- var pop=document.createElement('section');pop.id='tpNoticePop';pop.className='tp-notice-pop';pop.hidden=true;pop.innerHTML='<div class="tp-notice-head"><div><h3>Central de atividade</h3><div class="tp-notice-sub">Tarefas, missões e atividade recente dos alunos</div></div><button class="btn ghost" type="button" id="tpNoticeRefresh">Atualizar</button></div><div id="tpNoticeList" class="tp-notice-empty">Carregando notificações...</div>';document.body.appendChild(pop);$('tpNoticeRefresh').addEventListener('click',function(){load(true)});document.addEventListener('click',function(ev){if(!pop.contains(ev.target)&&!b.contains(ev.target))pop.hidden=true});load(false);
-}
-var items=[];
-function toggle(){var p=$('tpNoticePop');if(!p)return;p.hidden=!p.hidden;if(!p.hidden)load(false)}
-function isTeacher(){var r=currentRole();return ['teacher','admin','gestor','owner'].includes(r)||document.body.innerText.toLowerCase().includes('teacher dashboard')}
-async function load(force){
- var list=$('tpNoticeList'),badge=$('tpBellCount'),db=client();if(!list||!db)return;
- list.className='tp-notice-empty';list.textContent='Atualizando atividade...';
- var collected=[];
- try{
-  if(isTeacher()){
-   var n=await db.from('tic_immersion_notifications').select('id,title,message,created_at,read_at,student_id').order('created_at',{ascending:false}).limit(15);
-   if(!n.error)(n.data||[]).forEach(function(x){collected.push({id:'im-'+x.id,title:x.title||'Missão concluída',message:x.message||'Um aluno concluiu uma missão.',created_at:x.created_at,read:!!x.read_at,kind:'🎯'})});
-   var subs=await db.from('tic_submissions').select('id,submitted_at,created_at,status,skill,task_assignment_id,student_id,grade').order('submitted_at',{ascending:false}).limit(12);
-   if(!subs.error)(subs.data||[]).forEach(function(x){collected.push({id:'sub-'+x.id,title:'Tarefa enviada pelo aluno',message:[x.skill,x.status?'Status: '+x.status:'',x.grade!=null?'Nota: '+x.grade:''].filter(Boolean).join(' · ')||'Uma nova entrega foi registrada.',created_at:x.submitted_at||x.created_at,read:false,kind:'📝'})});
-   var since=new Date(Date.now()-7*86400000).toISOString();
-   var a=await db.from('tic_student_activity_events').select('id,event_type,event_label,view_name,entity_type,created_at,student_id').gte('created_at',since).order('created_at',{ascending:false}).limit(20);
-   if(!a.error)(a.data||[]).forEach(function(x){collected.push({id:'ev-'+x.id,title:x.event_label||x.event_type||'Atividade do aluno',message:[x.view_name,x.entity_type].filter(Boolean).join(' · ')||'Atividade registrada na plataforma',created_at:x.created_at,read:false,kind:'📚'})});
-  }else{
-   var f=await db.from('tic_immersion_feedback').select('id,feedback,created_at').order('created_at',{ascending:false}).limit(10);
-   if(!f.error)(f.data||[]).forEach(function(x){collected.push({id:'fb-'+x.id,title:'Feedback do professor',message:x.feedback,created_at:x.created_at,read:false,kind:'💬'})});
-  }
- }catch(err){console.warn('Central de notificações:',err)}
- var seen={};items=collected.sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at)}).filter(function(x){if(seen[x.id])return false;seen[x.id]=1;return true}).slice(0,20);
- var unread=items.filter(function(x){return !x.read}).length;if(badge){badge.textContent=unread>99?'99+':String(unread);badge.hidden=!unread}
- if(!items.length){list.className='tp-notice-empty';list.textContent='Nenhuma atividade recente encontrada. As novas conclusões e eventos aparecerão aqui quando houver registros disponíveis.';return}
- list.className='';list.innerHTML=items.map(function(x){return '<article class="tp-notice-item"><div class="tp-notice-icon">'+esc(x.kind)+'</div><div style="min-width:0;flex:1"><b>'+esc(x.title)+(x.read?'':' <span class="tp-new-pill">NOVA</span>')+'</b><p>'+esc(x.message)+'</p><time>'+esc(new Date(x.created_at).toLocaleString('pt-BR'))+'</time></div></article>'}).join('');
-}
-window.tpRefreshNotifications=function(){load(true)};
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addBell);else addBell();
-var oldLoad=window.loadView;if(typeof oldLoad==='function'&&!oldLoad.__tpNotifyWrapped){var wrapped=function(){var out=oldLoad.apply(this,arguments);setTimeout(function(){addBell();load(false)},500);return out};wrapped.__tpNotifyWrapped=true;window.loadView=wrapped}
-})();
-</script>
-<script>
-
+<
 
 
 </body></html>';
