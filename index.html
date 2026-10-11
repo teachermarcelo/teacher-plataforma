@@ -2103,6 +2103,8 @@ async function load(force){
   if(isTeacher()){
    var n=await db.from('tic_immersion_notifications').select('id,title,message,created_at,read_at,student_id').order('created_at',{ascending:false}).limit(15);
    if(!n.error)(n.data||[]).forEach(function(x){collected.push({id:'im-'+x.id,title:x.title||'Missão concluída',message:x.message||'Um aluno concluiu uma missão.',created_at:x.created_at,read:!!x.read_at,kind:'🎯'})});
+   var subs=await db.from('tic_submissions').select('id,submitted_at,created_at,status,skill,task_assignment_id,student_id,grade').order('submitted_at',{ascending:false}).limit(12);
+   if(!subs.error)(subs.data||[]).forEach(function(x){collected.push({id:'sub-'+x.id,title:'Tarefa enviada pelo aluno',message:[x.skill,x.status?'Status: '+x.status:'',x.grade!=null?'Nota: '+x.grade:''].filter(Boolean).join(' · ')||'Uma nova entrega foi registrada.',created_at:x.submitted_at||x.created_at,read:false,kind:'📝'})});
    var since=new Date(Date.now()-7*86400000).toISOString();
    var a=await db.from('tic_student_activity_events').select('id,event_type,event_label,view_name,entity_type,created_at,student_id').gte('created_at',since).order('created_at',{ascending:false}).limit(20);
    if(!a.error)(a.data||[]).forEach(function(x){collected.push({id:'ev-'+x.id,title:x.event_label||x.event_type||'Atividade do aluno',message:[x.view_name,x.entity_type].filter(Boolean).join(' · ')||'Atividade registrada na plataforma',created_at:x.created_at,read:false,kind:'📚'})});
