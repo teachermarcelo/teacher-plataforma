@@ -114,13 +114,24 @@
     try {
       const payload = { mode, level, language: "pt", text: prompt, prompt, topic, skill: "Integrated skills", duration: "60 minutes", audience: "Teens and adults" };
       const { data, error } = await client.functions.invoke("fluent-ai", { body: payload });
-      if (error) throw error;
-      if (data && data.error) throw new Error(data.error);
+      if (error) {
+        let detail = "";
+        try {
+          const response = error.context;
+          if (response && typeof response.clone === "function") {
+            const parsed = await response.clone().json();
+            detail = parsed && (parsed.error || parsed.message) ? String(parsed.error || parsed.message) : "";
+            if (parsed && parsed.provider_status) detail += " (provedor HTTP " + parsed.provider_status + ")";
+          }
+        } catch (_) {}
+        throw new Error(detail || String(error.message || error));
+      }
+      if (data && data.error) throw new Error(data.error + (data.provider_status ? " (provedor HTTP " + data.provider_status + ")" : ""));
       resultEl.textContent = data.answer || JSON.stringify(data, null, 2);
       statusEl.textContent = "Concluído · " + (data.provider || "IA") + (data.model ? " · " + data.model : "");
     } catch (e) {
       resultEl.textContent = "Não foi possível concluir. " + String(e && e.message || e);
-      statusEl.textContent = "Confira a chave nos Secrets do Supabase e se sua sessão está ativa.";
+      statusEl.textContent = "A mensagem acima deve indicar a causa. Não compartilhe sua chave API.";
     } finally {
       run.disabled = false;
       run.textContent = mode === "lesson" ? "Criar plano" : mode === "correct" ? "Corrigir texto" : mode === "evaluate" ? "Avaliar texto" : "Gerar resposta";
