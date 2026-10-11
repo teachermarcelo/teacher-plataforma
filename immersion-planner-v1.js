@@ -5,7 +5,7 @@ var TABLE='tic_immersion_activities', PROGRESS='tic_immersion_progress';
 var monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
 var CURRENT_DATE=new Date();
 var CURRENT_YEAR=CURRENT_DATE.getFullYear();
-var START_DATE=new Date(Date.UTC(CURRENT_YEAR,0,1));
+var START_DATE=new Date(Date.UTC(2026,9,10)); // official program start: 10/10/2026
 var LEVELS=['A0','A1','A2','B1','B2','C1','C2'];
 var state={activities:[],progress:[],student:null,month:CURRENT_DATE.getMonth()+1,year:CURRENT_YEAR,day:0,selectedDate:'',filter:'all',showAll:false,search:'',level:'all',busy:false,scheduleIndex:{},viewerId:'',daily:{sessions:[],vocabulary:[]}};
 var $i=function(id){return document.getElementById(id);};
