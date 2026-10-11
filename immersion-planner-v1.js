@@ -238,8 +238,12 @@ window.ticImmMonitoring=async function(studentId){
  if(p.error)return msg('Não foi possível carregar progresso: '+p.error.message,'error');
  var sr=await sb.from('tic_immersion_sessions').select('*').eq('teacher_id',session.user.id).order('session_date',{ascending:false}).limit(500);
  var sessions=sr.error?[]:(sr.data||[]);
+ var nr=await sb.from('tic_immersion_notifications').select('id,title,message,created_at,read_at,student_id').eq('teacher_id',session.user.id).order('created_at',{ascending:false}).limit(20);
+ var notifications=nr.error?[]:(nr.data||[]);
  var acts=await sb.from(TABLE).select('id,title,day_number').eq('teacher_id',session.user.id).eq('is_archived',false).order('day_number');
  if(acts.error)return msg('Não foi possível carregar atividades: '+acts.error.message,'error');
+ var unread=notifications.filter(function(n){return !n.read_at;}).length;
+ var nh='<section class="imm-panel"><div class="imm-day-heading"><div><h3>🔔 Notificações das missões</h3><span class="imm-small">'+unread+' nova(s) · últimas 20 conclusões registradas</span></div>'+(unread?'<button class="imm-btn secondary" onclick="ticImmMarkNotificationsRead()">Marcar como lidas</button>':'')+'</div>'+(notifications.length?notifications.map(function(n){var st=selected.find(function(x){return x.id===n.student_id;});return '<div class="imm-student-row"><div><b>'+e(n.title)+'</b><div class="imm-small">'+e(st&&(st.display_name||st.email)||'Aluno')+' · '+e(n.message)+'</div><div class="imm-small">'+new Date(n.created_at).toLocaleString('pt-BR')+'</div></div><span class="imm-pill '+(n.read_at?'':'work')+'">'+(n.read_at?'Lida':'Nova')+'</span></div>';}).join(''):'<p class="imm-small">Nenhuma conclusão registrada ainda. Quando o aluno concluir uma missão, ela aparecerá aqui.</p>')+'</section>';
  var html=selected.map(function(st){
   var ps=(p.data||[]).filter(function(x){return x.student_id===st.id;});
   var done=ps.filter(function(x){return x.status==='completed';}).length,work=ps.filter(function(x){return x.status==='in_progress';}).length;
@@ -253,8 +257,9 @@ window.ticImmMonitoring=async function(studentId){
   }).join('');
   return '<section class="imm-panel"><div class="imm-day-heading"><div><h3>'+e(st.display_name||st.email)+'</h3><span class="imm-small">'+e(st.current_level||'')+' · '+done+' concluídas · '+work+' em andamento · '+ps.length+' com registro</span><p class="imm-small">Imersão nos últimos 7 dias: '+Object.keys(days).length+' dia(s) · '+minutes+' minutos registrados</p></div></div>'+rows+'</section>';
  }).join('');
- openModal('📊 Acompanhamento do Immersion Planner',html);
+ openModal('📊 Acompanhamento do Immersion Planner',nh+html);
 };
+window.ticImmMarkNotificationsRead=async function(){if(!teacherMode())return;var r=await sb.from('tic_immersion_notifications').update({read_at:new Date().toISOString()}).eq('teacher_id',session.user.id).is('read_at',null);if(r.error)return msg('Não foi possível atualizar as notificações: '+r.error.message,'error');msg('Notificações marcadas como lidas.','success');window.ticImmMonitoring();};
 async function refresh(){
  state.busy=true;
  try{await loadActivities();await loadProgress();await loadDailyData();renderWorkspace();}
