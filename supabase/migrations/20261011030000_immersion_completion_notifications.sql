@@ -58,3 +58,16 @@ drop trigger if exists tic_immersion_session_completion_notify on public.tic_imm
 create trigger tic_immersion_session_completion_notify
  after insert or update of status on public.tic_immersion_sessions
  for each row execute function public.tic_immersion_notify_completion();
+
+insert into public.tic_immersion_notifications
+ (session_id, student_id, teacher_id, notification_type, title, message)
+select ss.id, ss.student_id, ss.teacher_id, 'mission_completed',
+ 'Missão diária concluída',
+ coalesce(st.display_name,st.email,'Aluno') || ' concluiu ' || coalesce(a.title,'a missão diária') ||
+ ' em ' || to_char(ss.session_date,'DD/MM/YYYY') ||
+ '. Tempo registrado: ' || coalesce(ss.duration_minutes,0)::text || ' minuto(s).'
+from public.tic_immersion_sessions ss
+left join public.tic_students st on st.id=ss.student_id
+left join public.tic_immersion_activities a on a.id=ss.activity_id
+where ss.status='completed'
+on conflict (session_id, notification_type) do nothing;
