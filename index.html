@@ -2149,7 +2149,7 @@ function addUI(){
  var b=document.createElement('button');b.id='tpTopActivity';b.type='button';b.className='tp-top-activity';b.title='Atividades e tarefas enviadas';b.setAttribute('aria-label','Abrir notificações de atividades');b.innerHTML='🔔<span class="tp-top-activity-badge" id="tpTopActivityBadge" hidden>0</span>';
  var old=bar.querySelector('button[title="Notificações"]');if(old)bar.insertBefore(b,old);else bar.appendChild(b);
  var p=document.createElement('section');p.id='tpTopActivityPanel';p.className='tp-activity-panel';p.hidden=true;p.innerHTML='<div class="tp-activity-head"><div><h3>Central de atividade</h3><div class="tp-activity-sub">Missões concluídas e tarefas enviadas pelos alunos</div></div><button class="btn ghost" id="tpTopActivityRefresh" type="button">Atualizar</button></div><div id="tpTopActivityList" class="tp-activity-empty">Carregando...</div>';document.body.appendChild(p);
- b.addEventListener('click',function(){p.hidden=!p.hidden;if(!p.hidden)load()});
+ b.addEventListener('click',function(){p.hidden=!p.hidden;if(!p.hidden)load().then(function(){markSeen();load()})});
  el('tpTopActivityRefresh').addEventListener('click',load);
  document.addEventListener('click',function(ev){if(!p.contains(ev.target)&&!b.contains(ev.target))p.hidden=true});
  load();
@@ -2184,6 +2184,7 @@ async function load(){
 function markSeen(){var seen=getSeen();setSeen(seen.concat(items.map(function(x){return x.id})));var badge=el('tpTopActivityBadge');if(badge){badge.hidden=true;badge.textContent='0'}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addUI);else addUI();
 document.addEventListener('visibilitychange',function(){if(!document.hidden)load()});
+setInterval(function(){if(!document.hidden)load()},60000);
 window.tpRefreshTopActivity=load;
 })();
 </script>
