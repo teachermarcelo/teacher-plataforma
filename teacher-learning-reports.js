@@ -174,8 +174,8 @@ function reportHtml(d){
   '<h2>4. Tarefas atribuídas</h2><table><thead><tr><th>Atribuída</th><th>Tarefa</th><th>Habilidade</th><th>Status</th><th>Prazo</th><th>Concluída em</th></tr></thead><tbody>'+assignmentHtml+'</tbody></table>'+
   '<h2>5. Entregas e tentativas de tarefas</h2><table><thead><tr><th>Data</th><th>Tarefa</th><th>Habilidade</th><th>Tentativa</th><th>Nota</th><th>Feedback</th></tr></thead><tbody>'+taskHtml+'</tbody></table>'+
   '<h2>6. O que melhorar e próximas ações</h2>'+improvementHtml+
-  '<h2>7. Histórico de sessões</h2>'<table><thead><tr><th>Início</th><th>Última atividade</th><th>Duração registrada</th></tr></thead><tbody>'+sessionHtml+'</tbody></table>'+
-  '<h2>8. Linha do tempo de ações</h2>'<table><thead><tr><th>Data/hora</th><th>Ação registrada</th><th>Aba</th><th>Tipo</th></tr></thead><tbody>'+eventHtml+'</tbody></table>'+
+  '<h2>7. Histórico de sessões</h2><table><thead><tr><th>Início</th><th>Última atividade</th><th>Duração registrada</th></tr></thead><tbody>'+sessionHtml+'</tbody></table>'+
+  '<h2>8. Linha do tempo de ações</h2><table><thead><tr><th>Data/hora</th><th>Ação registrada</th><th>Aba</th><th>Tipo</th></tr></thead><tbody>'+eventHtml+'</tbody></table>'+
   '<footer>Gerado a partir dos registros disponíveis na Teacher Plataforma. Os indicadores descrevem apenas atividades e resultados registrados; dados ausentes não são interpretados como desempenho zero.</footer></div>';
 }
 let lastReport=null,lastKey='';
