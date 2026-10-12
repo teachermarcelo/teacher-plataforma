@@ -8,7 +8,7 @@ const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;
 const role=()=>String((typeof profile!=='undefined'&&profile&&profile.role)||window.profile&&window.profile.role||$('userRole')&&$('userRole').textContent||'').toLowerCase();
 const isStudent=()=>role().indexOf('student')>=0;
 const isTeacher=()=>role().indexOf('teacher')>=0||role().indexOf('admin')>=0;
-const viewName=()=>typeof currentView!=='undefined'?String(currentView||'student'):viewName();
+const viewName=()=>typeof currentView!=='undefined'?String(currentView||'student'):String(window.currentView||'student');
 const fmtDate=v=>{if(!v)return '—';const d=new Date(v);return isNaN(d.getTime())?'—':d.toLocaleString('pt-BR')};
 const fmtDay=v=>{if(!v)return '—';const d=new Date(v);return isNaN(d.getTime())?'—':d.toLocaleDateString('pt-BR')};
 const duration=seconds=>{const n=Math.max(0,Number(seconds)||0);const h=Math.floor(n/3600),m=Math.floor((n%3600)/60);return h?h+'h '+m+'min':m+' min'};
