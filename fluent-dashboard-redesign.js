@@ -157,36 +157,29 @@ async function render(){
 }
 function init(){
  style();
- // Hook the existing navigation itself: the app may call the lexical loadView/studentDashboard
- // bindings rather than the window properties, so we also listen for the actual student-nav click.
+ // Clear the redesigned home only when another tab is selected. The student home itself
+ // is rendered before the legacy dashboard, preventing a flash of the old layout.
  document.addEventListener('click',ev=>{
   const b=ev.target.closest('#teacherNav [data-view]');
   if(!b)return;
-  if(b.dataset.view==='student'){
-   document.body.classList.remove('fi2-home');
-   // Render after the original Supabase-backed dashboard finishes; retry once for slower connections.
-   setTimeout(()=>render().catch(e=>console.warn('[Fluent dashboard preview]',e)),1000);
-   setTimeout(()=>render().catch(e=>console.warn('[Fluent dashboard preview]',e)),2200);
-  }else{
-   document.body.classList.remove('fi2-home');
-  }
+  if(b.dataset.view!=='student')document.body.classList.remove('fi2-home');
  },true);
  const original=window.studentDashboard;
  if(typeof original==='function'&&!original.__fi2Wrapped){
   const wrapped=async function(){
    document.body.classList.remove('fi2-home');
+   const root=$('#content');
+   if(root)root.innerHTML='<div class="fi2-loading" role="status" style="padding:24px;color:#c3d5e8">Carregando seu painel de aprendizagem…</div>';
+   try{
+    await render();
+    if(document.body.classList.contains('fi2-home'))return;
+   }catch(e){console.warn('[Fluent dashboard]',e)}
    await original.apply(this,arguments);
-   try{await render()}catch(e){console.warn('[Fluent dashboard preview]',e)}
+   try{await render()}catch(e){console.warn('[Fluent dashboard fallback]',e)}
   };
   wrapped.__fi2Wrapped=true;
   window.studentDashboard=wrapped;
  }
- // If the student dashboard is already open when scripts finish loading, render it once.
- setTimeout(()=>{
-  const view=String(window.currentView||'');
-  const role=String(document.querySelector('#userRole')?.textContent||'').toLowerCase();
-  if(view==='student'||role==='student')render().catch(e=>console.warn('[Fluent dashboard preview]',e));
- },700);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
