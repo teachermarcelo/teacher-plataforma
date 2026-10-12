@@ -178,6 +178,76 @@ function addStyle(){
  body.fi-premium .topbar{position:relative!important;top:auto!important}
  @media(max-width:700px){body.fi-premium .main{margin-left:0!important}body.fi-premium .main>.container{padding:18px 12px 38px!important}body.fi-premium .topbar{padding:0 12px!important}}
 
+
+ /* Deep contrast fixes for lesson curriculum rows and inline-styled cards. */
+ body.fi-premium:not(.fi-light) #content .curriculum-panel,
+ body.fi-premium:not(.fi-light) #content .curriculum-lesson,
+ body.fi-premium:not(.fi-light) #content .module-block,
+ body.fi-premium:not(.fi-light) #content .module-title,
+ body.fi-premium:not(.fi-light) #content .course-top,
+ body.fi-premium:not(.fi-light) #content .course-empty,
+ body.fi-premium:not(.fi-light) #content .lesson-copy,
+ body.fi-premium:not(.fi-light) #content .lesson-number,
+ body.fi-premium:not(.fi-light) #content .module-lessons,
+ body.fi-premium:not(.fi-light) #content .notice,
+ body.fi-premium:not(.fi-light) #content .resource-row,
+ body.fi-premium:not(.fi-light) #content .resource-card{
+   background:#10263b!important;background-color:#10263b!important;color:#f4f7ff!important;border-color:#2b4966!important
+ }
+ body.fi-premium:not(.fi-light) #content .curriculum-panel *,
+ body.fi-premium:not(.fi-light) #content .curriculum-lesson *,
+ body.fi-premium:not(.fi-light) #content .module-block *,
+ body.fi-premium:not(.fi-light) #content .module-title *,
+ body.fi-premium:not(.fi-light) #content .course-top *,
+ body.fi-premium:not(.fi-light) #content .course-empty *,
+ body.fi-premium:not(.fi-light) #content .lesson-copy *,
+ body.fi-premium:not(.fi-light) #content .module-lessons *,
+ body.fi-premium:not(.fi-light) #content .notice *,
+ body.fi-premium:not(.fi-light) #content .resource-row *,
+ body.fi-premium:not(.fi-light) #content .resource-card *{color:#f2f7ff!important}
+ body.fi-premium:not(.fi-light) #content .curriculum-lesson small,
+ body.fi-premium:not(.fi-light) #content .lesson-copy small,
+ body.fi-premium:not(.fi-light) #content .module-title small,
+ body.fi-premium:not(.fi-light) #content .course-top p,
+ body.fi-premium:not(.fi-light) #content .notice{color:#c3d2e4!important}
+ body.fi-premium:not(.fi-light) #content .curriculum-lesson .lesson-number{background:#273d63!important;color:#d8caff!important;border:1px solid #4c4383!important}
+ body.fi-premium:not(.fi-light) #content .curriculum-lesson button,
+ body.fi-premium:not(.fi-light) #content .curriculum-lesson .btn{background:#6845d8!important;color:#fff!important;border-color:#8b6af1!important}
+ body.fi-premium.fi-light #content .curriculum-panel,
+ body.fi-premium.fi-light #content .curriculum-lesson,
+ body.fi-premium.fi-light #content .module-block,
+ body.fi-premium.fi-light #content .module-title,
+ body.fi-premium.fi-light #content .course-top,
+ body.fi-premium.fi-light #content .course-empty,
+ body.fi-premium.fi-light #content .lesson-copy,
+ body.fi-premium.fi-light #content .lesson-number,
+ body.fi-premium.fi-light #content .module-lessons,
+ body.fi-premium.fi-light #content .notice,
+ body.fi-premium.fi-light #content .resource-row,
+ body.fi-premium.fi-light #content .resource-card{background:#fff!important;background-color:#fff!important;color:#17233a!important;border-color:#dce4ef!important}
+ body.fi-premium.fi-light #content .curriculum-panel *,
+ body.fi-premium.fi-light #content .curriculum-lesson *,
+ body.fi-premium.fi-light #content .module-block *,
+ body.fi-premium.fi-light #content .module-title *,
+ body.fi-premium.fi-light #content .course-top *,
+ body.fi-premium.fi-light #content .course-empty *,
+ body.fi-premium.fi-light #content .lesson-copy *,
+ body.fi-premium.fi-light #content .module-lessons *,
+ body.fi-premium.fi-light #content .notice *,
+ body.fi-premium.fi-light #content .resource-row *,
+ body.fi-premium.fi-light #content .resource-card *{color:#17233a!important}
+ body.fi-premium.fi-light #content .curriculum-lesson small,
+ body.fi-premium.fi-light #content .lesson-copy small,
+ body.fi-premium.fi-light #content .module-title small,
+ body.fi-premium.fi-light #content .course-top p{color:#596b81!important}
+ body.fi-premium.fi-light #content .curriculum-lesson .lesson-number{background:#eee8ff!important;color:#5634b6!important}
+ body.fi-premium.fi-light #content .curriculum-lesson button,
+ body.fi-premium.fi-light #content .curriculum-lesson .btn{background:#6845d8!important;color:#fff!important;border-color:#6845d8!important}
+ /* Remove floating controls that cover content; keep Teacher IA available in the top bar. */
+ #ticTaskFab,#tpInstallAppBtn{display:none!important;visibility:hidden!important;pointer-events:none!important}
+ #teacherIAFab{position:static!important;inset:auto!important;margin:0 0 0 8px!important;padding:9px 12px!important;font-size:12px!important;box-shadow:none!important;white-space:nowrap!important;flex:none!important}
+ @media(max-width:700px){#teacherIAFab{padding:8px!important;font-size:11px!important}}
+
  `;
  document.head.appendChild(st);
 }
@@ -217,6 +287,8 @@ function init(){
  if(/student/i.test(role))document.body.classList.add('fi-student-mode');
  let saved='dark';try{saved=localStorage.getItem('fiDashboardTheme')||'dark'}catch(_){}
  applyTheme(saved);installThemeToggle();
+ const ia=document.getElementById('teacherIAFab'),top=document.querySelector('.top-right');
+ if(ia&&top&&!top.contains(ia))top.appendChild(ia);
 }
 const originalStudentDashboard=window.studentDashboard;
 if(typeof originalStudentDashboard==='function'){
