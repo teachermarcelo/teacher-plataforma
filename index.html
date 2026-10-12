@@ -475,15 +475,24 @@ $('registerForm').onsubmit=async e=>{
  showLogin();msg(data.session?'Cadastro criado e você já pode entrar.':'Cadastro criado. Confirme o e-mail se a confirmação estiver ativa e depois entre.');
 };
 (async()=>{
+ let bootedUserId=null;
+ let taskQueryHandled=false;
  $('email').value='';
  startDiag();
  const {data,error}=await sb.auth.getSession();
  if(error)diag('Leitura da sessão',false,error.message);else diag('Leitura da sessão',true,data.session?'sessão existente':'nenhuma sessão ativa');
- if(data.session){session=data.session;await boot();}
+ if(data.session){session=data.session;await boot();bootedUserId=data.session.user.id;}
  sb.auth.onAuthStateChange(async(event,s)=>{
   session=s;
   if(event==='PASSWORD_RECOVERY'){ showRecovery(); msg('Link de recuperação validado. Crie sua nova senha.'); return; }
-  if(s){await boot(); if(profile?.role==='student'){const taskId=new URLSearchParams(location.search).get('task');if(taskId)setTimeout(()=>openStudentTask(taskId),250);}}
+  if(!s){if(event==='SIGNED_OUT')bootedUserId=null;return;}
+  // Evita reiniciar o dashboard em TOKEN_REFRESHED/INITIAL_SESSION.
+  // O Supabase emite esses eventos com o mesmo usuário; boot() voltava à Home.
+  if(bootedUserId!==s.user.id){await boot();bootedUserId=s.user.id;}
+  if(!taskQueryHandled&&profile?.role==='student'){
+   const taskId=new URLSearchParams(location.search).get('task');
+   if(taskId){taskQueryHandled=true;setTimeout(()=>openStudentTask(taskId),250);}
+  }
  });
 })();
 async function boot(){
