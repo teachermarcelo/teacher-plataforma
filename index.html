@@ -517,6 +517,7 @@ async function boot(){
   <button data-view="studentTasks">✅ <span>My Tasks</span></button>
   <button data-view="studentProgress">📊 <span>My Progress</span></button>
   <button data-view="studentLessons">📚 <span>My Lessons</span></button>
+   <button data-view="games">🎮 <span>Games</span></button>
   <button data-view="learningHub">📚 <span>Learning Hub</span></button>
   <button data-view="immersionPlanner">🌎 <span>Immersion Planner</span></button>
   <button data-view="studentCalendar">📅 <span>Calendar</span></button>
@@ -559,10 +560,12 @@ async function loadView(v){
  studentTasks:['My Tasks','Atividades atribuídas pelo Teacher.',''],
  studentProgress:['My Progress','Seu desenvolvimento.',''],
  studentLessons:['My Lessons','Aulas disponíveis para você.',''],
+ games:['Games','Escolha um jogo, assunto e nível CEFR.',''],
  studentCalendar:['Calendar','Suas próximas aulas.',''],
  studentMessages:['Messages','Converse com seu Teacher.','']
  };
  const x=map[v]||map.overview;setPage(x[0],x[1],x[2]);
+  if(v==='games'&&typeof window.ticGamesOpen==='function')return window.ticGamesOpen();
  if(v==='overview')return overview();
  if(v==='students')return studentsPage();
  if(v==='classes')return classesPage();
