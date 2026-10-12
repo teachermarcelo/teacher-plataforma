@@ -21,6 +21,34 @@ function dateBounds(){
 function logStudentEvent(type,label,view,entityType,entityId,metadata){
  try{if(typeof window.ticLogStudentEventV58==='function')window.ticLogStudentEventV58(type,label,view||viewName(),entityType||null,entityId||null,metadata||{});}catch(e){console.warn('[student tracking]',e)}
 }
+function wrapStudentAction(name,eventType,label,entityType){
+ const base=window[name];
+ if(typeof base!=='function'||base.__ticStudentActionWrapped)return;
+ const wrapped=async function(){
+  const args=Array.prototype.slice.call(arguments);
+  if(isStudent()&&typeof session!=='undefined'&&session&&session.user){
+   logStudentEvent(eventType,label,viewName(),entityType,args[0]||null,{action:name});
+  }
+  return base.apply(this,args);
+ };
+ wrapped.__ticStudentActionWrapped=true;window[name]=wrapped;
+}
+function installActionTracking(){
+ wrapStudentAction('openStudentCourse','course_open','Abriu o curso','course');
+ wrapStudentAction('viewStudentLessonInteractive','lesson_open','Abriu a aula','lesson');
+ wrapStudentAction('openStudentTask','task_open','Abriu a tarefa','task');
+ wrapStudentAction('openStudentTaskViewer','task_open','Abriu o visualizador da tarefa','task_assignment');
+ const planner=window.ticImmersionPlannerOpen;
+ if(typeof planner==='function'&&!planner.__ticStudentActionWrapped){
+  const wrapped=async function(){
+   const level=(()=>{try{return sessionStorage.getItem('ticImmRequestedLevel')||''}catch(_){return ''}})();
+   const search=(()=>{try{return sessionStorage.getItem('ticImmRequestedSearch')||''}catch(_){return ''}})();
+   if(isStudent()&&typeof session!=='undefined'&&session&&session.user)logStudentEvent('planner_open','Abriu o Immersion Planner',viewName(),'immersion_activity',null,{level:level,search:search});
+   return planner.apply(this,arguments);
+  };
+  wrapped.__ticStudentActionWrapped=true;window.ticImmersionPlannerOpen=wrapped;
+ }
+}
 function trackStudentClicks(){
  if(window.__ticStudentClickTrackingInstalled)return;
  window.__ticStudentClickTrackingInstalled=true;
@@ -179,11 +207,11 @@ if(typeof originalReports==='function'&&!originalReports.__ticLearningReportsWra
  const wrapped=async function(){await originalReports.apply(this,arguments);installStyle();appendReportPanel()};
  wrapped.__ticLearningReportsWrapped=true;window.reportsPage=wrapped;
 }
-trackStudentClicks();wrapStudentNavigation();
+trackStudentClicks();wrapStudentNavigation();installActionTracking();
 document.addEventListener('click',function(ev){
  const b=ev.target&&ev.target.closest&&ev.target.closest('#teacherNav [data-view]');
  if(b&&b.dataset.view==='reports')setTimeout(()=>{installStyle();appendReportPanel()},0);
 },true);
-document.addEventListener('DOMContentLoaded',function(){trackStudentClicks();wrapStudentNavigation()});
+document.addEventListener('DOMContentLoaded',function(){trackStudentClicks();wrapStudentNavigation();installActionTracking()});
 window.ticRefreshLearningReportPanel=appendReportPanel;
 })();
