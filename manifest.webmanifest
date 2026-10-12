@@ -1,0 +1,24 @@
+{
+  "id": "./",
+  "name": "Teacher Plataforma",
+  "short_name": "Teacher",
+  "description": "Teacher Plataforma — aulas, calendário anual e Immersion Planner.",
+  "lang": "pt-BR",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8f7fc",
+  "theme_color": "#6d4aff",
+  "categories": [
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "./icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
