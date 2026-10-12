@@ -66,6 +66,10 @@ function openImmersionFilter(level,search){
  if(typeof window.loadView==='function')return window.loadView('immersionPlanner');
 }
 window.fiOpenImmersionLevel=function(level){return openImmersionFilter(level,'');};
+window.fiOpenCourseLevel=function(level){
+ try{sessionStorage.setItem('fiRequestedCourseLevel',String(level||'').trim().toUpperCase());}catch(_){}
+ if(typeof window.loadView==='function')return window.loadView('studentCourses');
+};
 window.fiOpenImmersionActivity=function(id,title,level){
  return openImmersionFilter(level||'',title||'');
 };
@@ -106,7 +110,7 @@ async function render(){
  root.innerHTML=home(d);
  const old=$('#fiThemeToggle'),btn=$('#fi2Theme');if(btn){btn.textContent=document.body.classList.contains('fi-light')?'☾':'☼';btn.addEventListener('click',()=>{if(old)old.click();else{document.body.classList.toggle('fi-light');try{localStorage.setItem('fiDashboardTheme',document.body.classList.contains('fi-light')?'light':'dark')}catch(_){}}btn.textContent=document.body.classList.contains('fi-light')?'☾':'☼'})}
  const search=$('#fi2Search');if(search)search.addEventListener('input',()=>{const q=search.value.trim().toLowerCase();document.querySelectorAll('.fi2-searchable').forEach(el=>el.style.display=!q||el.dataset.search.toLowerCase().includes(q)?'':'none')});
- document.querySelectorAll('[data-fi2-level]').forEach(b=>b.addEventListener('click',()=>openImmersionFilter(b.dataset.fi2Level,'')));
+ document.querySelectorAll('[data-fi2-level]').forEach(b=>b.addEventListener('click',()=>window.fiOpenCourseLevel?window.fiOpenCourseLevel(b.dataset.fi2Level):window.loadView('studentCourses')));
  document.querySelectorAll('.fi2-course').forEach(card=>{
   card.addEventListener('click',ev=>{
    ev.preventDefault();ev.stopImmediatePropagation();
