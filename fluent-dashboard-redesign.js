@@ -42,18 +42,29 @@ function style(){
 }
 const go=v=>{if(typeof window.loadView==='function')window.loadView(v)};
 async function data(){
- let s=null,activities=[],rows=[];
+ let s=null,activities=[],rows=[],taskAssignments=[],tasks=[];
  try{if(typeof window.studentRecord==='function')s=await window.studentRecord()}catch(_){}
  try{if(s&&typeof sb!=='undefined'){
  const r=await Promise.all([
- sb.from('tic_immersion_activities').select('id,title,description,day_number,cefr_level,skill,estimated_minutes,cover_image_url,is_published,is_archived,sort_order').eq('teacher_id',s.teacher_id).eq('is_published',true).eq('is_archived',false).order('day_number').order('sort_order'),
- sb.from('tic_immersion_progress').select('activity_id,status,student_id').eq('student_id',s.id)
+  sb.from('tic_immersion_activities').select('id,title,description,day_number,cefr_level,skill,estimated_minutes,cover_image_url,is_published,is_archived,sort_order').eq('teacher_id',s.teacher_id).eq('is_published',true).eq('is_archived',false).order('day_number').order('sort_order'),
+  sb.from('tic_immersion_progress').select('activity_id,status,student_id').eq('student_id',s.id),
+  sb.from('tic_task_assignments').select('id,assignment_id,status,active,assigned_at,completed_at').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false}).limit(12)
  ]);
- if(!r[0].error)activities=r[0].data||[];if(!r[1].error)rows=r[1].data||[];
- }}catch(_){}
+  if(!r[0].error)activities=r[0].data||[];
+  if(!r[1].error)rows=r[1].data||[];
+  if(!r[2].error)taskAssignments=r[2].data||[];
+  const ids=[...new Set(taskAssignments.map(x=>x.assignment_id).filter(Boolean))];
+  if(ids.length){
+   const tr=await sb.from('tic_assignments').select('id,title,due_at,points,assignment_type,cefr_level,skill,task_level,active').in('id',ids);
+   if(!tr.error){
+    const map=new Map((tr.data||[]).map(x=>[x.id,x]));
+    tasks=taskAssignments.map(x=>({...x,assignment:map.get(x.assignment_id)})).filter(x=>x.assignment&&x.assignment.active!==false);
+   }
+  }
+ }}catch(err){console.warn('[Fluent dashboard data]',err)}
  const done={};rows.filter(x=>x.status==='completed').forEach(x=>done[x.activity_id]=true);
  activities.sort((a,b)=>levels.findIndex(x=>x[0]===a.cefr_level)-levels.findIndex(x=>x[0]===b.cefr_level)||(a.day_number||0)-(b.day_number||0)||(a.sort_order||0)-(b.sort_order||0));
- return {s,activities,done};
+ return {s,activities,done,tasks};
 }
 function openImmersionFilter(level,search){
  try{
