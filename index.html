@@ -1604,7 +1604,10 @@ async function studentCoursesPage(){
   sb.from('tic_progress').select('level,skill,progress').eq('student_id',s.id)
  ]);
  if(ce||me||le)return $('content').innerHTML=`<div class="card attention"><b>Erro no currículo.</b><p>${esc((ce||me||le).message)}</p></div>`;
- const courseCards=(cs||[]).map(c=>{
+ let requestedCourseLevel='';
+ try{requestedCourseLevel=(sessionStorage.getItem('fiRequestedCourseLevel')||'').trim().toUpperCase();sessionStorage.removeItem('fiRequestedCourseLevel')}catch(_){}
+ const visibleCourses=(cs||[]).filter(c=>!requestedCourseLevel||String(c.level||'').trim().toUpperCase()===requestedCourseLevel);
+ const courseCards=visibleCourses.map(c=>{
   const lessons=(ls||[]).filter(l=>l.course_id===c.id).sort((a,b)=>(a.position||0)-(b.position||0));
   const mods=(ms||[]).filter(m=>m.course_id===c.id).sort((a,b)=>(a.position||0)-(b.position||0));
   const levelProgress=Number((p||[]).find(x=>x.level===c.level&&x.skill==='overall')?.progress||0);
@@ -1615,8 +1618,8 @@ async function studentCoursesPage(){
    <div class="student-course-metrics"><span><b>${mods.length}</b> módulos</span><span><b>${lessons.length}</b> lessons</span><span><b>${done}</b> concluídas</span></div>
   </article>`;
  }).join('');
- setPage('My Courses','Seus cursos, módulos e currículo.');
- $('content').innerHTML=`<div class="notice success">🎓 Você está matriculado em <b>${ids.length} curso(s)</b>. O acesso ao currículo permanece disponível enquanto sua matrícula estiver ativa.</div><div class="student-course-list-grid section">${courseCards}</div>`;
+ setPage('My Courses',requestedCourseLevel?'Cursos do nível '+requestedCourseLevel:'Seus cursos, módulos e currículo.');
+ $('content').innerHTML=`<div class="notice success">🎓 Você está matriculado em <b>${ids.length} curso(s)</b>. O acesso ao currículo permanece disponível enquanto sua matrícula estiver ativa.</div>${requestedCourseLevel&&!visibleCourses.length?`<div class="card empty"><h2>Nenhum curso ativo do nível ${esc(requestedCourseLevel)}</h2><p>Você ainda não está matriculado em um curso desse nível. Seus outros cursos e seus dados continuam preservados.</p><button class="btn primary" onclick="loadView('studentCourses')">Ver todos os cursos</button></div>`:`<div class="student-course-list-grid section">${courseCards}</div>`}`;
 }
 async function openStudentCourse(courseId){
  const s=await studentRecord();if(!s)return;
@@ -7652,7 +7655,7 @@ td,th{padding-top:12px;padding-bottom:12px}
 <script src="./games.js?v=2" defer></script>
 <script src="./teacher-games.js?v=2" defer></script>
 <script src="./dashboard-theme.js?v=4" defer></script>
-<script src="./fluent-dashboard-redesign.js?v=4" defer></script>
+<script src="./fluent-dashboard-redesign.js?v=5" defer></script>
 <script src="./pwa.js?v=1" defer></script>
 </body>
 </html>
