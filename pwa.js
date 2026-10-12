@@ -30,12 +30,26 @@
   window.addEventListener('beforeinstallprompt',function(ev){ev.preventDefault();deferredPrompt=ev;btn.hidden=false;});
   window.addEventListener('appinstalled',function(){btn.hidden=true;deferredPrompt=null;});
  }
+ function addUpdateButton(){
+  if(document.getElementById('tpUpdateAppBtn'))return;
+  var btn=document.createElement('button');
+  btn.id='tpUpdateAppBtn';btn.type='button';btn.setAttribute('aria-label','Verificar atualizações da Teacher Plataforma');
+  btn.title='Verificar e carregar a versão mais recente';
+  btn.innerHTML='<span aria-hidden="true">↻</span><span>Atualizar</span>';
+  btn.style.cssText='position:fixed;right:18px;bottom:18px;z-index:99989;display:flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid #38516d;border-radius:999px;background:#10243a;color:#f4f7ff;font:700 12px system-ui,sans-serif;box-shadow:0 6px 18px #0003;cursor:pointer';
+  btn.addEventListener('click',async function(){
+   btn.disabled=true;btn.innerHTML='<span aria-hidden="true">↻</span><span>Atualizando…</span>';
+   try{if('serviceWorker' in navigator){var reg=await navigator.serviceWorker.getRegistration('./');if(reg)await reg.update();}}catch(err){console.warn('PWA update check:',err)}
+   setTimeout(function(){window.location.reload()},500);
+  });
+  document.body.appendChild(btn);
+ }
  function registerSW(){
   if(!('serviceWorker' in navigator)||!/^https?:$/.test(location.protocol))return;
   window.addEventListener('load',function(){
    navigator.serviceWorker.register('./service-worker.js',{scope:'./'}).catch(function(err){console.warn('PWA: não foi possível registrar o service worker.',err);});
   },{once:true});
  }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addInstallButton,{once:true});else addInstallButton();
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){addInstallButton();addUpdateButton()},{once:true});else{addInstallButton();addUpdateButton()}
  registerSW();
 })();
