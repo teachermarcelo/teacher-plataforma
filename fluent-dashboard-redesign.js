@@ -107,6 +107,22 @@ async function render(){
  const old=$('#fiThemeToggle'),btn=$('#fi2Theme');if(btn){btn.textContent=document.body.classList.contains('fi-light')?'☾':'☼';btn.addEventListener('click',()=>{if(old)old.click();else{document.body.classList.toggle('fi-light');try{localStorage.setItem('fiDashboardTheme',document.body.classList.contains('fi-light')?'light':'dark')}catch(_){}}btn.textContent=document.body.classList.contains('fi-light')?'☾':'☼'})}
  const search=$('#fi2Search');if(search)search.addEventListener('input',()=>{const q=search.value.trim().toLowerCase();document.querySelectorAll('.fi2-searchable').forEach(el=>el.style.display=!q||el.dataset.search.toLowerCase().includes(q)?'':'none')});
  document.querySelectorAll('[data-fi2-level]').forEach(b=>b.addEventListener('click',()=>openImmersionFilter(b.dataset.fi2Level,'')));
+ document.querySelectorAll('.fi2-course').forEach(card=>{
+  card.addEventListener('click',ev=>{
+   ev.preventDefault();ev.stopImmediatePropagation();
+   const title=card.querySelector('.fi2-course-body>b')?.textContent||'';
+   const level=card.querySelector('.fi2-pill')?.textContent||'';
+   openImmersionFilter(level,title);
+  },true);
+  card.addEventListener('keydown',ev=>{
+   if(ev.key==='Enter'||ev.key===' '){
+    ev.preventDefault();
+    const title=card.querySelector('.fi2-course-body>b')?.textContent||'';
+    const level=card.querySelector('.fi2-pill')?.textContent||'';
+    openImmersionFilter(level,title);
+   }
+  });
+ });
  document.querySelectorAll('[data-fi2-game]').forEach(b=>b.addEventListener('click',()=>go('games')));
  document.querySelectorAll('[data-fi2-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.fi2View)));
  document.querySelectorAll('[data-fi2-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.fi2Go)));
