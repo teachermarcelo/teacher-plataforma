@@ -76,6 +76,7 @@ async function data(){
  return {s,activities,done,tasks};
 }
 function openImmersionFilter(level,search){
+ document.body.classList.remove('fi2-home');
  try{
   if(level)sessionStorage.setItem('ticImmRequestedLevel',String(level).toUpperCase());
   else sessionStorage.removeItem('ticImmRequestedLevel');
@@ -157,6 +158,11 @@ async function render(){
 }
 function init(){
  style();
+ const baseLoad=window.loadView;
+ if(typeof baseLoad==='function'&&!baseLoad.__fi2RouteWrapped){
+  const route=async function(v){if(v!=='student')document.body.classList.remove('fi2-home');return baseLoad.apply(this,arguments)};
+  route.__fi2RouteWrapped=true;window.loadView=route;
+ }
  // Clear the redesigned home only when another tab is selected. The student home itself
  // is rendered before the legacy dashboard, preventing a flash of the old layout.
  document.addEventListener('click',ev=>{
