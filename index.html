@@ -1602,7 +1602,7 @@ async function studentCoursesPage(){
  if(!ids.length){
   setPage('My Courses',requestedCourseLevel?'Cursos do nível '+requestedCourseLevel:'Seus cursos, módulos e currículo.');
   $('content').innerHTML=requestedCourseLevel
-   ? '<div class="card empty"><h2>Nenhum curso ativo do nível '+esc(requestedCourseLevel)+'</h2><p>Você ainda não está matriculado em um curso deste nível. Peça ao Teacher para matricular você.</p><button class="btn primary" onclick="loadView(\\'studentCourses\\')">Ver todos os cursos</button></div>'
+   ? '<div class="card empty"><h2>Nenhum curso ativo do nível '+esc(requestedCourseLevel)+'</h2><p>Você ainda não está matriculado em um curso deste nível. Peça ao Teacher para matricular você.</p><button class="btn primary" onclick="loadView('studentCourses')">Ver todos os cursos</button></div>'
    : '<div class="card empty">Você ainda não está matriculado em nenhum curso. Peça ao Teacher para matricular você.</div>';
   return;
  }
