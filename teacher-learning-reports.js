@@ -5,9 +5,10 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-const role=()=>String(window.profile&&window.profile.role||$('userRole')&&$('userRole').textContent||'').toLowerCase();
+const role=()=>String((typeof profile!=='undefined'&&profile&&profile.role)||window.profile&&window.profile.role||$('userRole')&&$('userRole').textContent||'').toLowerCase();
 const isStudent=()=>role().indexOf('student')>=0;
 const isTeacher=()=>role().indexOf('teacher')>=0||role().indexOf('admin')>=0;
+const viewName=()=>typeof currentView!=='undefined'?String(currentView||'student'):viewName();
 const fmtDate=v=>{if(!v)return '—';const d=new Date(v);return isNaN(d.getTime())?'—':d.toLocaleString('pt-BR')};
 const fmtDay=v=>{if(!v)return '—';const d=new Date(v);return isNaN(d.getTime())?'—':d.toLocaleDateString('pt-BR')};
 const duration=seconds=>{const n=Math.max(0,Number(seconds)||0);const h=Math.floor(n/3600),m=Math.floor((n%3600)/60);return h?h+'h '+m+'min':m+' min'};
@@ -18,7 +19,7 @@ function dateBounds(){
  return {from:new Date(from+'T00:00:00').toISOString(),to:new Date(to+'T23:59:59.999').toISOString(),fromDate:from,toDate:to};
 }
 function logStudentEvent(type,label,view,entityType,entityId,metadata){
- try{if(typeof window.ticLogStudentEventV58==='function')window.ticLogStudentEventV58(type,label,view||String(window.currentView||'student'),entityType||null,entityId||null,metadata||{});}catch(e){console.warn('[student tracking]',e)}
+ try{if(typeof window.ticLogStudentEventV58==='function')window.ticLogStudentEventV58(type,label,view||viewName(),entityType||null,entityId||null,metadata||{});}catch(e){console.warn('[student tracking]',e)}
 }
 function trackStudentClicks(){
  if(window.__ticStudentClickTrackingInstalled)return;
@@ -31,10 +32,10 @@ function trackStudentClicks(){
   if(!label||/^(☼|☾|×|fechar|close)$/i.test(label))return;
   const entityType=el.dataset.entityType||el.dataset.activityId&&'immersion_activity'||el.dataset.lessonId&&'lesson'||el.dataset.taskId&&'task'||el.dataset.courseId&&'course'||(el.matches('[data-fi2-level]')?'cefr_level':'interaction');
   const entityId=el.dataset.entityId||el.dataset.activityId||el.dataset.lessonId||el.dataset.taskId||el.dataset.courseId||el.dataset.fi2Level||null;
-  const metadata={tag:el.tagName.toLowerCase(),view:String(window.currentView||'student'),target:label};
+  const metadata={tag:el.tagName.toLowerCase(),view:viewName(),target:label};
   if(el.dataset.view)metadata.destination=el.dataset.view;
   if(el.dataset.fi2Level)metadata.cefr_level=el.dataset.fi2Level;
-  setTimeout(()=>logStudentEvent('interaction',label,String(window.currentView||'student'),entityType,entityId,metadata),0);
+  setTimeout(()=>logStudentEvent('interaction',label,viewName(),entityType,entityId,metadata),0);
  },true);
 }
 function wrapStudentNavigation(){
@@ -77,7 +78,7 @@ function appendReportPanel(){
  loadReportStudents();
 }
 async function loadReportStudents(){
- const select=$('ticReportStudent');if(!select||!window.sb||!(typeof session!=='undefined'&&session&&session.user))return;
+ const select=$('ticReportStudent');if(!select||typeof sb==='undefined'||!(typeof session!=='undefined'&&session&&session.user))return;
  const {data,error}=await sb.from('tic_students').select('id,display_name,email,current_level,target_level').eq('teacher_id',session.user.id).order('display_name');
  if(error){select.innerHTML='<option value="">Erro ao carregar alunos</option>';setStatus('Não foi possível carregar os alunos: '+error.message,true);return}
  const rows=data||[];
