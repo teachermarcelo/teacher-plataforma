@@ -148,7 +148,7 @@
   };
 
   function addFloating(){if(document.getElementById('ticTaskFab'))return;const fab=document.createElement('div');fab.id='ticTaskFab';fab.innerHTML=`<button class="tic-fab-main" title="Ações rápidas">＋</button><div class="tic-fab-menu"><button onclick="openAssignmentForm();ticCloseFab()">✨ Nova Task</button><button onclick="loadView('assignments');ticCloseFab()">📋 Tasks</button><button onclick="loadView('studentTasks');ticCloseFab()">🎓 My Tasks</button></div>`;document.body.appendChild(fab);fab.querySelector('.tic-fab-main').onclick=()=>fab.classList.toggle('open');window.ticCloseFab=()=>fab.classList.remove('open')}
-  addFloating();
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',addFloating,{once:true})}else{addFloating()}
 })();
 
 </script>
