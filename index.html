@@ -3801,6 +3801,8 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   }
 
   async function startActivityV41(){
+    /* V58 is the single source of session timing; V41 remains available for legacy aggregation only. */
+    if(typeof window.ticStartStudentActivityV58==='function') return;
     if(activityStartingV41 || activityRowV41 || !session?.user?.id) return;
     activityStartingV41=true;
     try{
