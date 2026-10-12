@@ -24,7 +24,7 @@ function trackStudentClicks(){
  if(window.__ticStudentClickTrackingInstalled)return;
  window.__ticStudentClickTrackingInstalled=true;
  document.addEventListener('click',function(ev){
-  if(!isStudent()||!window.session||!window.session.user)return;
+  if(!isStudent()||!(typeof session!=='undefined'&&session&&session.user))return;
   const el=ev.target&&ev.target.closest&&ev.target.closest('#content button, #content a, #content [role="button"], #content [data-fi2-level], #content [data-fi2-activity]');
   if(!el||el.id==='fi2Theme'||el.id==='tpInstallAppBtn'||el.id==='tpUpdateAppBtn')return;
   const label=String(el.getAttribute('aria-label')||el.getAttribute('title')||el.innerText||el.textContent||'').replace(/\s+/g,' ').trim().slice(0,120);
@@ -43,7 +43,7 @@ function wrapStudentNavigation(){
  const wrapped=async function(v){
   const before=String(v||'');
   const result=await base.apply(this,arguments);
-  if(isStudent()&&window.session&&window.session.user&&before){
+  if(isStudent()&&typeof session!=='undefined'&&session&&session.user&&before){
    const views=['student','studentCourses','studentClass','studentTasks','studentProgress','studentLessons','studentCalendar','studentMessages','immersionPlanner','learningHub','games','listeningPractice','speakingPractice','vocabulary','grammar'];
    if(views.indexOf(before)>=0)logStudentEvent('view','Abriu a aba: '+before,before,'view',before,{destination:before});
   }
@@ -77,7 +77,7 @@ function appendReportPanel(){
  loadReportStudents();
 }
 async function loadReportStudents(){
- const select=$('ticReportStudent');if(!select||!window.sb||!window.session||!window.session.user)return;
+ const select=$('ticReportStudent');if(!select||!window.sb||!(typeof session!=='undefined'&&session&&session.user))return;
  const {data,error}=await sb.from('tic_students').select('id,display_name,email,current_level,target_level').eq('teacher_id',session.user.id).order('display_name');
  if(error){select.innerHTML='<option value="">Erro ao carregar alunos</option>';setStatus('Não foi possível carregar os alunos: '+error.message,true);return}
  const rows=data||[];
