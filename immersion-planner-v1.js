@@ -300,6 +300,14 @@ window.ticImmersionPlannerOpen=async function(){
  if(typeof setPage==='function')setPage('Immersion Planner','Seu plano anual de imersão em inglês.','');
  document.querySelectorAll('#teacherNav [data-view]').forEach(function(b){b.classList.toggle('active',b.dataset.view==='immersionPlanner');});requestAnimationFrame(function(){var c=document.querySelector('.main>.container');if(c)c.scrollTo({top:0,left:0,behavior:'auto'});window.scrollTo({top:0,left:0,behavior:'auto'});});
  var root=$i('content');if(root)root.innerHTML='<div class="imm-empty">Carregando seu planner anual...</div>';
+ try{
+  var requestedLevel=sessionStorage.getItem('ticImmRequestedLevel')||'';
+  var requestedSearch=sessionStorage.getItem('ticImmRequestedSearch')||'';
+  if(requestedLevel){state.level=requestedLevel;state.showAll=true;state.day=0;}
+  if(requestedSearch){state.search=requestedSearch;state.showAll=true;state.day=0;}
+  sessionStorage.removeItem('ticImmRequestedLevel');
+  sessionStorage.removeItem('ticImmRequestedSearch');
+ }catch(_){}
  styles();await refresh();
 };
 var ticImmPreviousLoadView=window.loadView;window.loadView=function(v){if(v==='immersionPlanner')return window.ticImmersionPlannerOpen();if(typeof ticImmPreviousLoadView==='function')return ticImmPreviousLoadView.apply(this,arguments);};
