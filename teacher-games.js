@@ -7,9 +7,14 @@ function teacherAllowed(){return typeof profile!=='undefined'&&!!profile&&(profi
 function ensureGamesStyle(){if($('tgTeacherStyle'))return;const s=document.createElement('style');s.id='tgTeacherStyle';s.textContent='.tg-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.tg-stat{border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px}.tg-stat b{display:block;font-size:22px}.tg-stat small{font-size:10px;color:var(--muted)}@media(max-width:760px){.tg-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}';document.head.appendChild(s)}
 function ensureGamesNav(){
  const nav=$('teacherNav');if(!nav||!teacherAllowed())return;
- if(!nav.querySelector('[data-view="teacherGames"]')){
-  const b=document.createElement('button');b.dataset.view='teacherGames';b.innerHTML='🎮 <span>Games Analytics</span>';
+ if(!nav.querySelector('[data-view="teacherGamesLibrary"]')){
+  const b=document.createElement('button');b.dataset.view='teacherGamesLibrary';b.innerHTML='🎮 <span>Games</span>';
   const ref=nav.querySelector('[data-view="studentActivity"]')||nav.querySelector('[data-view="students"]');
+  if(ref)ref.insertAdjacentElement('afterend',b);else nav.appendChild(b);
+ }
+ if(!nav.querySelector('[data-view="teacherGames"]')){
+  const b=document.createElement('button');b.dataset.view='teacherGames';b.innerHTML='📊 <span>Games Analytics</span>';
+  const ref=nav.querySelector('[data-view="teacherGamesLibrary"]');
   if(ref)ref.insertAdjacentElement('afterend',b);else nav.appendChild(b);
  }
  nav.querySelectorAll('[data-view="teacherGames"]').forEach(b=>{if(!b.dataset.tgBound){b.dataset.tgBound='1';b.addEventListener('click',()=>window.loadView('teacherGames'))}});
@@ -36,5 +41,5 @@ async function teacherGamesPage(){
 }
 window.teacherGamesPageTG=teacherGamesPage;
 const baseLoadView=window.loadView;
-window.loadView=async function(v){if(v==='teacherGames'){if(typeof toggleMobile==='function')toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));return teacherGamesPage()}return baseLoadView.apply(this,arguments)};
+window.loadView=async function(v){if(v==='teacherGamesLibrary'){if(typeof toggleMobile==='function')toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));if(typeof window.ticGamesOpen==='function')return window.ticGamesOpen();setPage('Games','Biblioteca de jogos');return}if(v==='teacherGames'){if(typeof toggleMobile==='function')toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));return teacherGamesPage()}return baseLoadView.apply(this,arguments)};
 })();
