@@ -67,6 +67,49 @@ function addStyle(){
  body.fi-premium.fi-light .fi-note{background:#fff;border-color:#e0e5f0;color:#53627a}
  body.fi-premium .fi-theme-toggle{border:1px solid #49617e;border-radius:999px;background:#10243a;color:#fff;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
  body.fi-premium.fi-light .fi-theme-toggle{background:#f0edff;border-color:#d8cdfc;color:#5630b7}
+ 
+ /* Accessibility + page flow refinement for the student Lessons view. */
+ body.fi-premium:not(.fi-light) .main>.container>.page-head{
+   position:static!important;top:auto!important;z-index:auto!important;
+   background:transparent!important;background-color:transparent!important;
+   backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+   color:#f4f7ff!important;border-radius:0!important;
+   box-shadow:none!important;margin:0 0 18px!important;
+ }
+ body.fi-premium:not(.fi-light) .main>.container>.page-head h1,
+ body.fi-premium:not(.fi-light) .main>.container>.page-head h2{color:#f7faff!important}
+ body.fi-premium:not(.fi-light) .main>.container>.page-head p{color:#b7c7dc!important}
+ body.fi-premium:not(.fi-light) .main>.container .card,
+ body.fi-premium:not(.fi-light) .main>.container article.card,
+ body.fi-premium:not(.fi-light) .main>.container .empty{
+   background-color:#0d1d30!important;border-color:#2a4059!important;color:#f2f6ff!important
+ }
+ body.fi-premium:not(.fi-light) .main>.container button.row,
+ body.fi-premium:not(.fi-light) .main>.container .row[style*="background:#fff"],
+ body.fi-premium:not(.fi-light) .main>.container .row[style*="background: #fff"]{
+   background:#12263c!important;border-color:#304761!important;color:#f2f6ff!important
+ }
+ body.fi-premium:not(.fi-light) .main>.container .row b,
+ body.fi-premium:not(.fi-light) .main>.container .card h1,
+ body.fi-premium:not(.fi-light) .main>.container .card h2,
+ body.fi-premium:not(.fi-light) .main>.container .card h3,
+ body.fi-premium:not(.fi-light) .main>.container .row strong{color:#f7faff!important}
+ body.fi-premium:not(.fi-light) .main>.container .card p,
+ body.fi-premium:not(.fi-light) .main>.container .card small,
+ body.fi-premium:not(.fi-light) .main>.container .row small,
+ body.fi-premium:not(.fi-light) .main>.container .card label{color:#c0cfe2!important}
+ body.fi-premium:not(.fi-light) .main>.container .notice.success{
+   background:#10372f!important;border-color:#1e806c!important;color:#d7fff3!important
+ }
+ body.fi-premium:not(.fi-light) .main>.container .badge.gray{
+   background:#253b55!important;color:#edf4ff!important
+ }
+ body.fi-premium.fi-light .main>.container>.page-head{
+   position:static!important;top:auto!important;background:transparent!important;
+   backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important
+ }
+ body.fi-premium.fi-light .main>.container>.page-head h1{color:#17233a!important}
+ body.fi-premium.fi-light .main>.container>.page-head p{color:#64748b!important}
  `;
  document.head.appendChild(st);
 }
