@@ -47,6 +47,7 @@
       <button type="button" data-mode="lesson">Plano de aula</button>
       <button type="button" data-mode="correct">Corrigir texto</button>
       <button type="button" data-mode="evaluate">Avaliar escrita</button>
+      <button type="button" data-mode="diagnose">Diagnóstico API</button>
     </nav>
     <div id="teacherIAFields">
       <select id="teacherIALevel" aria-label="Nível CEFR">
@@ -76,8 +77,11 @@
       ? "Objetivo, gramática ou instruções extras (opcional)…"
       : mode === "correct" || mode === "evaluate"
       ? "Cole aqui o texto do aluno…"
+      : mode === "diagnose"
+      ? "Clique em Gerar resposta para verificar quais Secrets estão disponíveis. Nenhum valor secreto será exibido."
       : "Ex.: Crie uma atividade de speaking B1 sobre viagens.";
-    $("teacherIARun").textContent = mode === "lesson" ? "Criar plano" : mode === "correct" ? "Corrigir texto" : mode === "evaluate" ? "Avaliar texto" : "Gerar resposta";
+    promptEl.style.display = mode === "diagnose" ? "none" : "block";
+    $("teacherIARun").textContent = mode === "lesson" ? "Criar plano" : mode === "correct" ? "Corrigir texto" : mode === "evaluate" ? "Avaliar texto" : mode === "diagnose" ? "Verificar conexão" : "Gerar resposta";
     resultEl.textContent = mode === "lesson" ? "Informe o tema para criar um plano de aula completo." : "Escreva seu pedido e clique em gerar resposta.";
   }
 
@@ -91,12 +95,13 @@
     const prompt = promptEl.value.trim();
     const level = $("teacherIALevel").value;
     const topic = topicEl.value.trim();
-    if (mode === "lesson" && !topic) {
+    if (mode === "diagnose") { /* No prompt required for safe configuration diagnostics. */ }
+    else if (mode === "lesson" && !topic) {
       resultEl.textContent = "Digite o tema da aula no campo acima.";
       topicEl.focus();
       return;
     }
-    if (mode !== "lesson" && !prompt) {
+    if (mode !== "lesson" && mode !== "diagnose" && !prompt) {
       resultEl.textContent = mode === "chat" ? "Digite uma pergunta ou tarefa para a Teacher IA." : "Cole o texto que deseja analisar.";
       promptEl.focus();
       return;
@@ -134,7 +139,7 @@
       statusEl.textContent = "A mensagem acima deve indicar a causa. Não compartilhe sua chave API.";
     } finally {
       run.disabled = false;
-      run.textContent = mode === "lesson" ? "Criar plano" : mode === "correct" ? "Corrigir texto" : mode === "evaluate" ? "Avaliar texto" : "Gerar resposta";
+      run.textContent = mode === "lesson" ? "Criar plano" : mode === "correct" ? "Corrigir texto" : mode === "evaluate" ? "Avaliar texto" : mode === "diagnose" ? "Verificar conexão" : "Gerar resposta";
     }
   });
 
