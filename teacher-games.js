@@ -3,7 +3,8 @@
 const $=id=>document.getElementById(id);
 const escTG=x=>typeof esc==='function'?esc(x??''):String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const fmtTG=x=>x?new Date(x).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';
-function teacherAllowed(){return !!(window.profile&&(profile.role==='teacher'||profile.role==='admin'))}
+function teacherAllowed(){return typeof profile!=='undefined'&&!!profile&&(profile.role==='teacher'||profile.role==='admin')}
+function ensureGamesStyle(){if($('tgTeacherStyle'))return;const s=document.createElement('style');s.id='tgTeacherStyle';s.textContent='.tg-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.tg-stat{border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px}.tg-stat b{display:block;font-size:22px}.tg-stat small{font-size:10px;color:var(--muted)}@media(max-width:760px){.tg-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}';document.head.appendChild(s)}
 function ensureGamesNav(){
  const nav=$('teacherNav');if(!nav||!teacherAllowed())return;
  if(!nav.querySelector('[data-view="teacherGames"]')){
@@ -16,6 +17,7 @@ function ensureGamesNav(){
 setTimeout(ensureGamesNav,500);setTimeout(ensureGamesNav,1500);setTimeout(ensureGamesNav,3500);
 if($('teacherNav')&&'MutationObserver'in window)new MutationObserver(ensureGamesNav).observe($('teacherNav'),{childList:true,subtree:true});
 async function teacherGamesPage(){
+ ensureGamesStyle();
  if(!teacherAllowed()){if(typeof toast==='function')toast('Apenas Teacher pode acessar os resultados dos Games.','error');return}
  setPage('Games Analytics','Acompanhe jogos iniciados, respostas, pontuações e conclusões dos alunos.','<button class="btn secondary" onclick="window.teacherGamesPageTG()">↻ Atualizar</button>');
  const root=$('content');root.innerHTML='<div class="card"><div class="empty">Carregando resultados dos jogos...</div></div>';
