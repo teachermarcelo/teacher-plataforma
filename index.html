@@ -5740,9 +5740,12 @@ async function flush58(force=false){
 }
 
 async function event58(type,label='',view='',entityType='',entityId='',metadata={}){
-  if(!act58.student||!session?.user?.id)return;
+  if(!session?.user?.id||!window.sb)return;
+  let student=act58.student;
+  if(!student){student=await getStudent58();if(student)act58.student=student;}
+  if(!student){console.warn('[V58 activity event] aluno não vinculado; evento não gravado:',type);return;}
   const {error}=await sb.from('tic_student_activity_events').insert({
-    student_id:act58.student.id,
+    student_id:student.id,
     auth_user_id:session.user.id,
     event_type:type,
     event_label:label||null,
