@@ -55,9 +55,24 @@ async function data(){
  activities.sort((a,b)=>levels.findIndex(x=>x[0]===a.cefr_level)-levels.findIndex(x=>x[0]===b.cefr_level)||(a.day_number||0)-(b.day_number||0)||(a.sort_order||0)-(b.sort_order||0));
  return {s,activities,done};
 }
+function openImmersionFilter(level,search){
+ try{
+  if(level)sessionStorage.setItem('ticImmRequestedLevel',String(level).toUpperCase());
+  else sessionStorage.removeItem('ticImmRequestedLevel');
+  if(search)sessionStorage.setItem('ticImmRequestedSearch',String(search));
+  else sessionStorage.removeItem('ticImmRequestedSearch');
+ }catch(_){}
+ if(typeof window.ticImmersionPlannerOpen==='function')return window.ticImmersionPlannerOpen();
+ if(typeof window.loadView==='function')return window.loadView('immersionPlanner');
+}
+window.fiOpenImmersionLevel=function(level){return openImmersionFilter(level,'');};
+window.fiOpenImmersionActivity=function(id,title,level){
+ return openImmersionFilter(level||'',title||'');
+};
 function course(a,d,i){
  const complete=!!d[a.id],cover=a.cover_image_url&&/^https?:/i.test(a.cover_image_url)?a.cover_image_url:photos.skills[i%4];
- return '<article class="fi2-course fi2-searchable" data-search="'+esc((a.title||'')+' '+(a.cefr_level||'')+' '+(a.skill||''))+'" onclick="window.loadView(\'immersionPlanner\')"><div class="fi2-course-img" style="background-image:url(\''+esc(cover)+'\')"><span class="fi2-pill" style="position:absolute;top:7px;left:7px;z-index:2">'+esc(a.cefr_level||'A1')+'</span></div><div class="fi2-course-body"><b>'+esc(a.title||'English practice')+'</b><small>Lesson · '+esc(a.skill||'English')+'</small><div class="fi2-course-foot"><div class="fi2-bar"><i style="width:'+(complete?100:15)+'%"></i></div><small>'+(complete?'100%':'Continue')+'</small><button class="fi2-circle" aria-label="Open lesson" onclick="event.stopPropagation();window.loadView(\'immersionPlanner\')">▶</button></div></div></article>';
+ const title=String(a.title||'English practice'),lev=String(a.cefr_level||'A1');
+ return '<article class="fi2-course fi2-searchable" role="button" tabindex="0" data-search="'+esc(title+' '+lev+' '+(a.skill||''))+'" onclick="window.fiOpenImmersionActivity(\\''+esc(a.id)+'\\',\\''+esc(title).replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'")+'\\',\\''+esc(lev)+'\\')"><div class="fi2-course-img" style="background-image:url(\\''+esc(cover)+'\\')"><span class="fi2-pill" style="position:absolute;top:7px;left:7px;z-index:2">'+esc(lev)+'</span></div><div class="fi2-course-body"><b>'+esc(title)+'</b><small>Lesson · '+esc(a.skill||'English')+'</small><div class="fi2-course-foot"><div class="fi2-bar"><i style="width:'+(complete?100:15)+'%"></i></div><small>'+(complete?'100%':'Continue')+'</small><button class="fi2-circle" aria-label="Open lesson" onclick="event.stopPropagation();window.fiOpenImmersionActivity(\\''+esc(a.id)+'\\',\\''+esc(title).replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'")+'\\',\\''+esc(lev)+'\\')">▶</button></div></div></article>';
 }
 function home(d){
  const s=d.s||{},a=d.activities||[],done=d.done||{},finished=a.filter(x=>done[x.id]).length,percent=a.length?Math.round(finished/a.length*100):0;
@@ -91,7 +106,7 @@ async function render(){
  root.innerHTML=home(d);
  const old=$('#fiThemeToggle'),btn=$('#fi2Theme');if(btn){btn.textContent=document.body.classList.contains('fi-light')?'☾':'☼';btn.addEventListener('click',()=>{if(old)old.click();else{document.body.classList.toggle('fi-light');try{localStorage.setItem('fiDashboardTheme',document.body.classList.contains('fi-light')?'light':'dark')}catch(_){}}btn.textContent=document.body.classList.contains('fi-light')?'☾':'☼'})}
  const search=$('#fi2Search');if(search)search.addEventListener('input',()=>{const q=search.value.trim().toLowerCase();document.querySelectorAll('.fi2-searchable').forEach(el=>el.style.display=!q||el.dataset.search.toLowerCase().includes(q)?'':'none')});
- document.querySelectorAll('[data-fi2-level]').forEach(b=>b.addEventListener('click',()=>{try{sessionStorage.setItem('fiRequestedLevel',b.dataset.fi2Level)}catch(_){}go('studentLessons')}));
+ document.querySelectorAll('[data-fi2-level]').forEach(b=>b.addEventListener('click',()=>openImmersionFilter(b.dataset.fi2Level,'')));
  document.querySelectorAll('[data-fi2-game]').forEach(b=>b.addEventListener('click',()=>go('games')));
  document.querySelectorAll('[data-fi2-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.fi2View)));
  document.querySelectorAll('[data-fi2-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.fi2Go)));
