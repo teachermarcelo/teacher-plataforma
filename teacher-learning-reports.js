@@ -161,17 +161,29 @@ async function fetchReportData(){
   immersionActivities=ar.data||[];
  }
  const activityMap=new Map(immersionActivities.map(x=>[x.id,x]));
+ const periodDays=Math.max(1,Math.round((new Date(bounds.toDate+'T00:00:00').getTime()-new Date(bounds.fromDate+'T00:00:00').getTime())/86400000)+1);
+ const prevEndDate=new Date(bounds.fromDate+'T00:00:00');prevEndDate.setDate(prevEndDate.getDate()-1);
+ const prevStartDate=new Date(prevEndDate);prevStartDate.setDate(prevStartDate.getDate()-(periodDays-1));
+ const previousBounds={fromDate:dateValue(prevStartDate),toDate:dateValue(prevEndDate),from:prevStartDate.toISOString(),to:new Date(prevEndDate.getFullYear(),prevEndDate.getMonth(),prevEndDate.getDate(),23,59,59,999).toISOString()};
+ const previousRequests=await Promise.all([
+  sb.from('tic_student_activity_events').select('id,created_at').eq('student_id',studentId).gte('created_at',previousBounds.from).lte('created_at',previousBounds.to).limit(3000),
+  sb.from('tic_lesson_responses').select('id,score,created_at').eq('student_id',studentId).gte('created_at',previousBounds.from).lte('created_at',previousBounds.to).limit(2000),
+  sb.from('tic_submissions').select('id,grade,submitted_at').eq('student_id',studentId).gte('submitted_at',previousBounds.from).lte('submitted_at',previousBounds.to).limit(3000),
+  sb.from('tic_immersion_progress').select('activity_id,status,updated_at').eq('student_id',studentId).gte('updated_at',previousBounds.from).lte('updated_at',previousBounds.to).limit(2000)
+ ]);
+ const previousErrors=previousRequests.map((r,i)=>r.error?['eventos anteriores','respostas anteriores','entregas anteriores','missões anteriores'][i]+': '+r.error.message:null).filter(Boolean);
+ const previous={bounds:previousBounds,events:previousRequests[0].data||[],responses:previousRequests[1].data||[],submissions:previousRequests[2].data||[],missions:previousRequests[3].data||[],errors:previousErrors};
  let feedback=[],feedbackError=null;
  if(submissionIds.length){
   const fr=await sb.from('tic_feedback').select('submission_id,grade,comment,improvement_skill,improvement_link,created_at').in('submission_id',submissionIds).order('created_at',{ascending:false});
   feedback=fr.data||[];feedbackError=fr.error;
   if(feedbackError)errors.push('feedback de tarefas: '+feedbackError.message);
  }
- return {student,bounds,progress:vals[0],sessions:vals[1],events:vals[2],responses:vals[3],assignments:vals[4],submissions:vals[5],feedback,missionRows,missionSessions,activityMap,errors};
+ return {student,bounds,progress:vals[0],sessions:vals[1],events:vals[2],responses:vals[3],assignments:vals[4],submissions:vals[5],feedback,missionRows,missionSessions,activityMap,previous,errors:errors.concat(previous.errors)};
 }
 function scoreNum(v){if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
 function reportHtml(d){
- const {student,bounds,progress,sessions,events,responses,assignments,submissions,feedback,missionRows,missionSessions,activityMap,errors}=d;
+ const {student,bounds,progress,sessions,events,responses,assignments,submissions,feedback,missionRows,missionSessions,activityMap,previous,errors}=d;
  const assignmentMap=new Map(assignments.map(a=>[a.id,a]));
  const taskRows=submissions.map(sub=>{const a=assignmentMap.get(sub.task_assignment_id),fb=feedback.find(x=>x.submission_id===sub.id);return {sub,a,fb,score:scoreNum(sub.grade!==undefined&&sub.grade!==null?sub.grade:fb&&fb.grade)}});
  const scored=[...responses.map(r=>({score:scoreNum(r.score),skill:r.tic_lessons&&r.tic_lessons.skill||r.improvement_skill||'Não identificada',topic:r.tic_lessons&&r.tic_lessons.title||'Lesson',source:'Lesson',date:r.created_at})),...taskRows.map(x=>({score:x.score,skill:x.a&&x.a.tic_assignments&&x.a.tic_assignments.skill||x.fb&&x.fb.improvement_skill||'Não identificada',topic:x.a&&x.a.tic_assignments&&x.a.tic_assignments.title||'Task',source:'Task',date:x.sub.submitted_at}))].filter(x=>x.score!==null);
@@ -192,6 +204,11 @@ function reportHtml(d){
  const sessionHtml=sessions.map(s=>'<tr><td>'+esc(fmtDate(s.started_at))+'</td><td>'+esc(fmtDate(s.last_seen_at))+'</td><td>'+esc(duration(s.duration_seconds))+'</td></tr>').join('')||'<tr><td colspan="3">Nenhuma sessão registrada no período.</td></tr>';
  const totalSeconds=sessions.reduce((n,s)=>n+(Number(s.duration_seconds)||0),0);
  const completedMissions=missionRows.filter(x=>x.status==='completed').length;
+ const previousCompletedMissions=(previous.missions||[]).filter(x=>x.status==='completed').length;
+ const previousActivityCount=(previous.events||[]).length;
+ const previousResponseCount=(previous.responses||[]).length+(previous.submissions||[]).length;
+ const deltaText=(now,before)=>{const n=Number(now)-Number(before);return (n>0?'+':'')+n};
+ const comparisonHtml='<div class="tic-report-comparison"><div><small>Interações registradas</small><b>'+events.length+'</b><span>Período anterior: '+previousActivityCount+' ('+deltaText(events.length,previousActivityCount)+')</span></div><div><small>Respostas e entregas</small><b>'+(responses.length+submissions.length)+'</b><span>Período anterior: '+previousResponseCount+' ('+deltaText(responses.length+submissions.length,previousResponseCount)+')</span></div><div><small>Missões concluídas</small><b>'+completedMissions+'</b><span>Período anterior: '+previousCompletedMissions+' ('+deltaText(completedMissions,previousCompletedMissions)+')</span></div></div>';
  const missionHtml=missionRows.map(r=>{const a=activityMap.get(r.activity_id)||{};return '<tr><td>'+esc(fmtDate(r.updated_at||r.completed_at||r.started_at))+'</td><td>'+esc(a.title||'Missão')+'</td><td>'+esc(a.cefr_level||'—')+'</td><td>'+esc(a.skill||'—')+'</td><td>'+esc(r.status||'—')+'</td><td>'+esc(r.student_note||'—')+'</td></tr>'}).join('')||'<tr><td colspan="6">Nenhuma atualização de missão registrada no período.</td></tr>';
  const immersionSessionHtml=missionSessions.map(r=>{const a=activityMap.get(r.activity_id)||{};return '<tr><td>'+esc(fmtDay(r.session_date))+'</td><td>'+esc(a.title||'Sessão de imersão')+'</td><td>'+esc(r.status||'—')+'</td><td>'+esc(duration((Number(r.duration_minutes)||0)*60))+'</td><td>'+esc(r.completed_at?fmtDate(r.completed_at):'—')+'</td></tr>'}).join('')||'<tr><td colspan="5">Nenhuma sessão de imersão registrada no período.</td></tr>';
  const statusWarnings=errors.length?'<div class="tic-report-warning"><b>Observações sobre os dados</b><ul>'+errors.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ul>Algumas seções podem estar incompletas porque o Supabase não retornou todos os registros.</div>':'';
@@ -204,11 +221,12 @@ function reportHtml(d){
   '<h2>3. Respostas de lessons</h2><table><thead><tr><th>Data</th><th>Assunto/aula</th><th>Habilidade</th><th>Tentativa</th><th>Nota</th><th>Status</th></tr></thead><tbody>'+responseHtml+'</tbody></table>'+
   '<h2>4. Tarefas atribuídas</h2><table><thead><tr><th>Atribuída</th><th>Tarefa</th><th>Habilidade</th><th>Status</th><th>Prazo</th><th>Concluída em</th></tr></thead><tbody>'+assignmentHtml+'</tbody></table>'+
   '<h2>5. Entregas e tentativas de tarefas</h2><table><thead><tr><th>Data</th><th>Tarefa</th><th>Habilidade</th><th>Tentativa</th><th>Nota</th><th>Feedback</th></tr></thead><tbody>'+taskHtml+'</tbody></table>'+
-  '<h2>6. O que melhorar e próximas ações</h2>'+improvementHtml+
-  '<h2>7. Progresso das missões de imersão</h2><table><thead><tr><th>Atualização</th><th>Missão</th><th>Nível CEFR</th><th>Habilidade</th><th>Status</th><th>Nota do aluno</th></tr></thead><tbody>'+missionHtml+'</tbody></table>'+
-  '<h2>8. Sessões de imersão</h2><table><thead><tr><th>Dia</th><th>Missão</th><th>Status</th><th>Duração registrada</th><th>Conclusão</th></tr></thead><tbody>'+immersionSessionHtml+'</tbody></table>'+
-  '<h2>9. Histórico de sessões de acesso</h2><table><thead><tr><th>Início</th><th>Última atividade</th><th>Duração registrada</th></tr></thead><tbody>'+sessionHtml+'</tbody></table>'+
-  '<h2>10. Linha do tempo de ações</h2><table><thead><tr><th>Data/hora</th><th>Ação registrada</th><th>Aba</th><th>Tipo</th></tr></thead><tbody>'+eventHtml+'</tbody></table>'+
+  '<h2>6. Comparação com o período anterior ('+esc(fmtDay(previous.bounds.fromDate))+' a '+esc(fmtDay(previous.bounds.toDate))+')</h2>'+comparisonHtml+
+  '<h2>7. O que melhorar e próximas ações</h2>'+improvementHtml+
+  '<h2>8. Progresso das missões de imersão</h2><table><thead><tr><th>Atualização</th><th>Missão</th><th>Nível CEFR</th><th>Habilidade</th><th>Status</th><th>Nota do aluno</th></tr></thead><tbody>'+missionHtml+'</tbody></table>'+
+  '<h2>9. Sessões de imersão</h2><table><thead><tr><th>Dia</th><th>Missão</th><th>Status</th><th>Duração registrada</th><th>Conclusão</th></tr></thead><tbody>'+immersionSessionHtml+'</tbody></table>'+
+  '<h2>10. Histórico de sessões de acesso</h2><table><thead><tr><th>Início</th><th>Última atividade</th><th>Duração registrada</th></tr></thead><tbody>'+sessionHtml+'</tbody></table>'+
+  '<h2>11. Linha do tempo de ações</h2><table><thead><tr><th>Data/hora</th><th>Ação registrada</th><th>Aba</th><th>Tipo</th></tr></thead><tbody>'+eventHtml+'</tbody></table>'+
   '<footer>Gerado a partir dos registros disponíveis na Teacher Plataforma. Os indicadores descrevem apenas atividades e resultados registrados; dados ausentes não são interpretados como desempenho zero.</footer></div>';
 }
 let lastReport=null,lastKey='';
@@ -229,7 +247,7 @@ async function generateReport(pdf){
  }catch(err){if(printWindow)printWindow.close();setStatus(err&&err.message||'Erro ao gerar relatório.',true)}
 }
 function printCss(){
- return 'body{font:12px Arial,sans-serif;color:#17233a;margin:24px}.tic-report-document{max-width:1000px;margin:auto}.tic-report-brand{font-size:10px;letter-spacing:1.4px;color:#5a39b5;font-weight:800}h1{font-size:26px;margin:8px 0}h2{font-size:16px;margin:24px 0 8px;border-bottom:1px solid #d7deea;padding-bottom:6px}header{border-bottom:2px solid #6d45d8;padding-bottom:12px;margin-bottom:16px}header p,footer{color:#5b6b80}.tic-report-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0}.tic-report-metrics>div{border:1px solid #d7deea;border-radius:8px;padding:10px}.tic-report-metrics small,.tic-report-metrics b{display:block}.tic-report-metrics small{color:#617187}.tic-report-metrics b{font-size:18px;margin-top:4px}table{width:100%;border-collapse:collapse;margin:8px 0 16px;break-inside:auto}th,td{border:1px solid #dce3ed;padding:6px;text-align:left;vertical-align:top}th{background:#edf1f7}tr{break-inside:avoid}.tic-report-recommendation{border:1px solid #d7deea;border-left:4px solid #7147db;border-radius:8px;padding:10px;margin:8px 0}.tic-report-recommendation p{margin:5px 0}.tic-report-warning{background:#fff6db;border:1px solid #eed28c;padding:10px;border-radius:8px}.tic-report-warning ul{margin:5px 0}footer{font-size:10px;margin-top:24px;border-top:1px solid #d7deea;padding-top:10px}@media print{body{margin:10mm}.tic-report-document{max-width:none}button{display:none!important}@page{size:A4 landscape;margin:12mm}}';
+ return 'body{font:12px Arial,sans-serif;color:#17233a;margin:24px}.tic-report-document{max-width:1000px;margin:auto}.tic-report-brand{font-size:10px;letter-spacing:1.4px;color:#5a39b5;font-weight:800}h1{font-size:26px;margin:8px 0}h2{font-size:16px;margin:24px 0 8px;border-bottom:1px solid #d7deea;padding-bottom:6px}header{border-bottom:2px solid #6d45d8;padding-bottom:12px;margin-bottom:16px}header p,footer{color:#5b6b80}.tic-report-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0}.tic-report-comparison{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.tic-report-comparison>div{border:1px solid #d7deea;border-radius:8px;padding:10px}.tic-report-comparison small,.tic-report-comparison b,.tic-report-comparison span{display:block}.tic-report-comparison small{color:#617187!important}.tic-report-comparison b{font-size:20px;color:#17233a!important;margin:5px 0}.tic-report-comparison span{font-size:11px;color:#596b81!important}.tic-report-metrics>div{border:1px solid #d7deea;border-radius:8px;padding:10px}.tic-report-metrics small,.tic-report-metrics b{display:block}.tic-report-metrics small{color:#617187}.tic-report-metrics b{font-size:18px;margin-top:4px}table{width:100%;border-collapse:collapse;margin:8px 0 16px;break-inside:auto}th,td{border:1px solid #dce3ed;padding:6px;text-align:left;vertical-align:top}th{background:#edf1f7}tr{break-inside:avoid}.tic-report-recommendation{border:1px solid #d7deea;border-left:4px solid #7147db;border-radius:8px;padding:10px;margin:8px 0}.tic-report-recommendation p{margin:5px 0}.tic-report-warning{background:#fff6db;border:1px solid #eed28c;padding:10px;border-radius:8px}.tic-report-warning ul{margin:5px 0}footer{font-size:10px;margin-top:24px;border-top:1px solid #d7deea;padding-top:10px}@media print{body{margin:10mm}.tic-report-document{max-width:none}button{display:none!important}@page{size:A4 landscape;margin:12mm}}';
 }
 function installStyle(){
  if($('ticLearningReportsStyle'))return;
