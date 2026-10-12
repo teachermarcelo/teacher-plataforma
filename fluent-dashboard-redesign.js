@@ -91,9 +91,11 @@ window.fiOpenCourseLevel=function(level){
  try{sessionStorage.setItem('fiRequestedCourseLevel',String(level||'').trim().toUpperCase());}catch(_){}
  if(typeof window.loadView==='function')return window.loadView('studentCourses');
 };
-window.fiOpenImmersionActivity=function(id,title,level){
+function openImmersionActivity(id,title,level){
+ try{if(id)sessionStorage.setItem('ticImmRequestedActivityId',String(id));else sessionStorage.removeItem('ticImmRequestedActivityId')}catch(_){}
  return openImmersionFilter(level||'',title||'');
-};
+}
+window.fiOpenImmersionActivity=function(id,title,level){return openImmersionActivity(id,title,level)};
 function course(a,d,i){
  const complete=!!d[a.id],cover=a.cover_image_url&&/^https?:/i.test(a.cover_image_url)?a.cover_image_url:photos.skills[i%4];
  const title=String(a.title||'English practice'),lev=String(a.cefr_level||'A1');
