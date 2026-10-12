@@ -90,9 +90,35 @@ async function render(){
  document.querySelectorAll('[data-fi2-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.fi2Go)));
 }
 function init(){
- style();const original=window.studentDashboard;
- if(typeof original==='function'&&!original.__fi2Wrapped){const wrapped=async function(){document.body.classList.remove('fi2-home');await original.apply(this,arguments);try{await render()}catch(e){console.warn('[Fluent dashboard preview]',e)}};wrapped.__fi2Wrapped=true;window.studentDashboard=wrapped}
- document.addEventListener('click',ev=>{const b=ev.target.closest('#teacherNav [data-view]');if(b&&b.dataset.view!=='student')document.body.classList.remove('fi2-home')});
+ style();
+ // Hook the existing navigation itself: the app may call the lexical loadView/studentDashboard
+ // bindings rather than the window properties, so we also listen for the actual student-nav click.
+ document.addEventListener('click',ev=>{
+  const b=ev.target.closest('#teacherNav [data-view]');
+  if(!b)return;
+  if(b.dataset.view==='student'){
+   document.body.classList.remove('fi2-home');
+   setTimeout(()=>render().catch(e=>console.warn('[Fluent dashboard preview]',e)),350);
+  }else{
+   document.body.classList.remove('fi2-home');
+  }
+ },true);
+ const original=window.studentDashboard;
+ if(typeof original==='function'&&!original.__fi2Wrapped){
+  const wrapped=async function(){
+   document.body.classList.remove('fi2-home');
+   await original.apply(this,arguments);
+   try{await render()}catch(e){console.warn('[Fluent dashboard preview]',e)}
+  };
+  wrapped.__fi2Wrapped=true;
+  window.studentDashboard=wrapped;
+ }
+ // If the student dashboard is already open when scripts finish loading, render it once.
+ setTimeout(()=>{
+  const view=String(window.currentView||'');
+  const role=String(document.querySelector('#userRole')?.textContent||'').toLowerCase();
+  if(view==='student'||role==='student')render().catch(e=>console.warn('[Fluent dashboard preview]',e));
+ },700);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
