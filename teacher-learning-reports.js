@@ -66,6 +66,23 @@ function trackStudentClicks(){
   setTimeout(()=>logStudentEvent('interaction',label,viewName(),entityType,entityId,metadata),0);
  },true);
 }
+function wrapSemanticStudentActions(){
+ const wrap=(name,eventType,label,entityType)=> {
+  const base=window[name];
+  if(typeof base!=='function'||base.__ticSemanticTrackingWrapped)return;
+  const wrapped=function(id){
+   if(isStudent()&&typeof session!=='undefined'&&session&&session.user){
+    const entityId=(typeof id==='string'||typeof id==='number')?String(id):null;
+    logStudentEvent(eventType,label,String(window.currentView||'student'),entityType||'learning_action',entityId,{source:'student_ui'});
+   }
+   return base.apply(this,arguments);
+  };
+  wrapped.__ticSemanticTrackingWrapped=true;
+  window[name]=wrapped;
+ };
+ wrap('openStudentTask','task_opened','Abriu uma tarefa atribuída','task_assignment');
+ wrap('ticImmOpenViewer','immersion_lesson_opened','Abriu uma aula do Immersion Planner','immersion_activity');
+}
 function wrapStudentNavigation(){
  const base=window.loadView;
  if(typeof base!=='function'||base.__ticLearningTrackingWrapped)return;
@@ -225,7 +242,7 @@ if(typeof originalReports==='function'&&!originalReports.__ticLearningReportsWra
  const wrapped=async function(){await originalReports.apply(this,arguments);installStyle();appendReportPanel()};
  wrapped.__ticLearningReportsWrapped=true;window.reportsPage=wrapped;
 }
-trackStudentClicks();wrapStudentNavigation();installActionTracking();
+trackStudentClicks();wrapStudentNavigation();wrapSemanticStudentActions();installActionTracking();
 document.addEventListener('click',function(ev){
  const b=ev.target&&ev.target.closest&&ev.target.closest('#teacherNav [data-view]');
  if(b&&b.dataset.view==='reports')setTimeout(()=>{installStyle();appendReportPanel()},0);
