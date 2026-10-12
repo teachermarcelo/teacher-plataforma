@@ -19,8 +19,8 @@ function ensureGamesNav(){
  }
  nav.querySelectorAll('[data-view="teacherGames"]').forEach(b=>{if(!b.dataset.tgBound){b.dataset.tgBound='1';b.addEventListener('click',()=>window.loadView('teacherGames'))}});
 }
-setTimeout(ensureGamesNav,500);setTimeout(ensureGamesNav,1500);setTimeout(ensureGamesNav,3500);
-if($('teacherNav')&&'MutationObserver'in window)new MutationObserver(ensureGamesNav).observe($('teacherNav'),{childList:true,subtree:true});
+let tgNavAttempts=0;const tgNavTimer=setInterval(()=>{ensureGamesNav();tgNavAttempts++;if(tgNavAttempts>=60)clearInterval(tgNavTimer)},1000);
+if('MutationObserver'in window)new MutationObserver(ensureGamesNav).observe(document.documentElement,{childList:true,subtree:true});
 async function teacherGamesPage(){
  ensureGamesStyle();
  if(!teacherAllowed()){if(typeof toast==='function')toast('Apenas Teacher pode acessar os resultados dos Games.','error');return}
@@ -32,6 +32,9 @@ async function teacherGamesPage(){
  if(ids.length){const er=await sb.from('tic_student_activity_events').select('id,student_id,event_type,event_label,view_name,entity_type,entity_id,metadata,created_at').in('student_id',ids).like('event_type','game_%').order('created_at',{ascending:false}).limit(3000);events=er.data||[];err=er.error?.message||''}
  const byId=Object.fromEntries(students.map(s=>[s.id,s]));
  const completed=events.filter(e=>e.event_type==='game_completed'),starts=events.filter(e=>e.event_type==='game_started'),answers=events.filter(e=>e.event_type==='game_answered'||e.event_type==='game_word_answered'),unique=new Set(events.map(e=>e.student_id)).size;
+ const correct=answers.filter(e=>e.metadata?.correct===true).length,wrong=answers.filter(e=>e.metadata?.correct===false).length,attempts=answers.length,accuracy=attempts?Math.round(correct/attempts*100):0;
+ const topicStats={};answers.forEach(e=>{const t=e.metadata?.topic||'Assunto não identificado';topicStats[t]??={attempts:0,correct:0};topicStats[t].attempts++;if(e.metadata?.correct===true)topicStats[t].correct++});
+ const weakTopics=Object.entries(topicStats).filter(([,v])=>v.attempts>=2).sort((a,b)=>(a[1].correct/a[1].attempts)-(b[1].correct/b[1].attempts)).slice(0,4);
  const gameName=e=>e.metadata?.game_name||e.metadata?.game_id||e.entity_id||'Game';
  const topic=e=>e.metadata?.topic||'—',level=e=>e.metadata?.level||'—';
  const pct=e=>e.metadata?.percent!=null?Number(e.metadata.percent)+'%':e.metadata?.correct===true?'Correta':e.metadata?.correct===false?'Incorreta':'—';
