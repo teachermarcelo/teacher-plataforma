@@ -98,7 +98,9 @@ function init(){
   if(!b)return;
   if(b.dataset.view==='student'){
    document.body.classList.remove('fi2-home');
-   setTimeout(()=>render().catch(e=>console.warn('[Fluent dashboard preview]',e)),350);
+   // Render after the original Supabase-backed dashboard finishes; retry once for slower connections.
+   setTimeout(()=>render().catch(e=>console.warn('[Fluent dashboard preview]',e)),1000);
+   setTimeout(()=>render().catch(e=>console.warn('[Fluent dashboard preview]',e)),2200);
   }else{
    document.body.classList.remove('fi2-home');
   }
