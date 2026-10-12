@@ -481,14 +481,14 @@ $('registerForm').onsubmit=async e=>{
  startDiag();
  const {data,error}=await sb.auth.getSession();
  if(error)diag('Leitura da sessão',false,error.message);else diag('Leitura da sessão',true,data.session?'sessão existente':'nenhuma sessão ativa');
- if(data.session){session=data.session;await boot();bootedUserId=data.session.user.id;}
+ if(data.session){session=data.session;bootedUserId=data.session.user.id;await boot();}
  sb.auth.onAuthStateChange(async(event,s)=>{
   session=s;
   if(event==='PASSWORD_RECOVERY'){ showRecovery(); msg('Link de recuperação validado. Crie sua nova senha.'); return; }
   if(!s){if(event==='SIGNED_OUT')bootedUserId=null;return;}
   // Evita reiniciar o dashboard em TOKEN_REFRESHED/INITIAL_SESSION.
   // O Supabase emite esses eventos com o mesmo usuário; boot() voltava à Home.
-  if(bootedUserId!==s.user.id){await boot();bootedUserId=s.user.id;}
+  if(bootedUserId!==s.user.id){bootedUserId=s.user.id;await boot();}
   if(!taskQueryHandled&&profile?.role==='student'){
    const taskId=new URLSearchParams(location.search).get('task');
    if(taskId){taskQueryHandled=true;setTimeout(()=>openStudentTask(taskId),250);}
