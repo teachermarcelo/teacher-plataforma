@@ -5,7 +5,7 @@ const escFI=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':
 function addStyle(){
  if($('#fiPremiumDashboardStyle'))return;
  const st=document.createElement('style');st.id='fiPremiumDashboardStyle';
- st.textContent=String.raw\`
+ st.textContent=String.raw`
  :root{--fi-bg:#071321;--fi-panel:#0d1d30;--fi-panel2:#11263d;--fi-line:#21364e;--fi-text:#f4f7ff;--fi-muted:#a8b8cc;--fi-pink:#ff2878;--fi-purple:#8554ff;--fi-blue:#20b7ff;--fi-green:#28d6a2}
  body.fi-premium{background:var(--fi-bg)!important;color:var(--fi-text)!important}
  body.fi-premium .sidebar{background:#081525!important;border-right:1px solid var(--fi-line)!important}
@@ -51,7 +51,7 @@ function addStyle(){
  body.fi-premium .grid.stats .card:nth-child(4n+1){border-top:3px solid #28bfff!important}body.fi-premium .grid.stats .card:nth-child(4n+2){border-top:3px solid #8d61ff!important}body.fi-premium .grid.stats .card:nth-child(4n+3){border-top:3px solid #26d7a1!important}body.fi-premium .grid.stats .card:nth-child(4n){border-top:3px solid #ff4c91!important}
  @media(max-width:1050px){body.fi-premium .fi-level-row{grid-template-columns:repeat(4,minmax(0,1fr))}body.fi-premium .fi-student-hero{grid-template-columns:1fr 130px}}
  @media(max-width:700px){body.fi-premium .fi-student-hero{grid-template-columns:1fr;padding:20px}body.fi-premium .fi-hero-art{display:none}body.fi-premium .fi-level-row{grid-template-columns:repeat(2,minmax(0,1fr))}body.fi-premium .fi-shortcut-row{grid-template-columns:repeat(2,minmax(0,1fr))}body.fi-premium .fi-level-card{min-height:92px}}
- \`;
+ `;
  document.head.appendChild(st);
 }
 function addStudentHome(){
