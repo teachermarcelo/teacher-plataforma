@@ -1,0 +1,89 @@
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const escFI=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function addStyle(){
+ if($('#fiPremiumDashboardStyle'))return;
+ const st=document.createElement('style');st.id='fiPremiumDashboardStyle';
+ st.textContent=String.raw`
+ :root{--fi-bg:#071321;--fi-panel:#0d1d30;--fi-panel2:#11263d;--fi-line:#21364e;--fi-text:#f4f7ff;--fi-muted:#a8b8cc;--fi-pink:#ff2878;--fi-purple:#8554ff;--fi-blue:#20b7ff;--fi-green:#28d6a2}
+ body.fi-premium{background:var(--fi-bg)!important;color:var(--fi-text)!important}
+ body.fi-premium .sidebar{background:#081525!important;border-right:1px solid var(--fi-line)!important}
+ body.fi-premium .brand{color:#fff!important}body.fi-premium .brand span{color:#a879ff}
+ body.fi-premium .user,body.fi-premium .topbar{background:#0a1929!important;border-color:var(--fi-line)!important;color:var(--fi-text)!important}
+ body.fi-premium .nav button{color:#bdc9d9!important;border-radius:11px!important;margin:2px 0}
+ body.fi-premium .nav button.active,body.fi-premium .nav button:hover{background:linear-gradient(100deg,#5534d8,#8b4be9)!important;color:white!important}
+ body.fi-premium .nav-label,body.fi-premium .crumb,body.fi-premium .page-head p{color:#91a5bc!important}
+ body.fi-premium .main,body.fi-premium .container{background:var(--fi-bg)!important}
+ body.fi-premium .page-head h1{color:#f8faff!important;font-size:clamp(25px,3vw,34px)!important;letter-spacing:-.8px}
+ body.fi-premium .card,body.fi-premium .stat,body.fi-premium .quick,body.fi-premium .modal-card,body.fi-premium .table-wrap,body.fi-premium .empty{background:var(--fi-panel)!important;border-color:var(--fi-line)!important;color:var(--fi-text)!important;box-shadow:0 10px 28px #0002}
+ body.fi-premium .card h2,body.fi-premium .card h3,body.fi-premium .card b,body.fi-premium .row b,body.fi-premium .stat-value{color:#f7f9ff}
+ body.fi-premium .card p,body.fi-premium .card small,body.fi-premium .stat-note,body.fi-premium .row small{color:var(--fi-muted)!important}
+ body.fi-premium .hero,body.fi-premium .student-banner{background:linear-gradient(110deg,#152c4b 0%,#38256d 52%,#842b77 100%)!important;border:1px solid #3d477b!important;border-radius:20px!important;color:#fff!important;box-shadow:0 18px 40px #0003}
+ body.fi-premium .hero h2,body.fi-premium .student-banner h2{font-size:clamp(26px,3vw,38px)!important;color:#fff!important;letter-spacing:-1px}
+ body.fi-premium .progress{background:#24354b!important;border-radius:99px!important;overflow:hidden}
+ body.fi-premium .progress i{background:linear-gradient(90deg,#18c8ff,#8159ff,#ff3e93)!important;border-radius:99px!important}
+ body.fi-premium .btn.primary,body.fi-premium .btn:not(.secondary):not(.ghost){background:linear-gradient(100deg,#ff2878,#c32fff)!important;border:0!important;color:#fff!important}
+ body.fi-premium .btn.secondary,body.fi-premium .btn.ghost{background:#142a42!important;border:1px solid #314967!important;color:#e7efff!important}
+ body.fi-premium input,body.fi-premium select,body.fi-premium textarea{background:#0b1b2c!important;border-color:#2b4058!important;color:#f4f7ff!important}
+ body.fi-premium .row,body.fi-premium .section-head{border-color:var(--fi-line)!important}
+ body.fi-premium .badge{background:#283b59!important;color:#e9e9ff!important}
+ body.fi-premium .fi-student-hero{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:18px;align-items:center;position:relative;overflow:hidden;margin-bottom:18px;padding:26px;border-radius:22px;background:radial-gradient(circle at 80% 20%,#304f91 0,transparent 35%),linear-gradient(115deg,#102642,#211c4b 58%,#482153);border:1px solid #35466c;min-height:190px}
+ body.fi-premium .fi-kicker{font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:#62d9ff;font-weight:900}
+ body.fi-premium .fi-student-hero h2{font-size:clamp(25px,3vw,39px);line-height:1.1;letter-spacing:-1px;margin:10px 0;color:white}
+ body.fi-premium .fi-student-hero p{color:#c4d4ea;max-width:600px;margin:0 0 14px}
+ body.fi-premium .fi-hero-art{font-size:100px;text-align:center;filter:drop-shadow(0 12px 22px #0005)}
+ body.fi-premium .fi-action{border:0;border-radius:11px;padding:11px 16px;background:linear-gradient(100deg,#ff2878,#a947ff);color:white;font-weight:800}
+ body.fi-premium .fi-home-section{margin:20px 0}
+ body.fi-premium .fi-section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 10px}
+ body.fi-premium .fi-section-head h3{margin:0;color:#f6f8ff;font-size:17px}
+ body.fi-premium .fi-level-row,body.fi-premium .fi-shortcut-row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
+ body.fi-premium .fi-level-card{min-height:112px;border:1px solid #31486a;border-radius:13px;padding:13px;color:white;text-align:left;background:linear-gradient(145deg,#172d49,#101e32);cursor:pointer;transition:transform .18s,border-color .18s;overflow:hidden}
+ body.fi-premium .fi-level-card:nth-child(3n+1){background:linear-gradient(145deg,#173b58,#15223d)}body.fi-premium .fi-level-card:nth-child(3n+2){background:linear-gradient(145deg,#32255f,#17233e)}body.fi-premium .fi-level-card:nth-child(3n){background:linear-gradient(145deg,#4b2454,#19223d)}
+ body.fi-premium .fi-level-card:hover,body.fi-premium .fi-shortcut:hover{transform:translateY(-3px);border-color:#9b78ff}
+ body.fi-premium .fi-level-card b{display:block;font-size:26px;color:white}body.fi-premium .fi-level-card span{display:block;font-size:11px;color:#c1cde0}
+ body.fi-premium .fi-shortcut-row{grid-template-columns:repeat(4,minmax(0,1fr))}
+ body.fi-premium .fi-shortcut{display:flex;align-items:center;gap:11px;padding:15px;border:1px solid var(--fi-line);border-radius:13px;background:var(--fi-panel);color:white;text-align:left;cursor:pointer;min-width:0}
+ body.fi-premium .fi-shortcut i{font-style:normal;font-size:24px}body.fi-premium .fi-shortcut b{display:block;font-size:13px}body.fi-premium .fi-shortcut small{display:block;color:var(--fi-muted);font-size:11px}
+ body.fi-premium .fi-note{padding:15px;border:1px solid #29435d;border-radius:14px;background:#0c2032;color:#aebed1;font-size:12px}
+ body.fi-premium .fi-existing-dashboard{margin-top:18px}
+ body.fi-premium .quick-grid .quick{border-top:3px solid #8458ff!important}
+ body.fi-premium .grid.stats .card:nth-child(4n+1){border-top:3px solid #28bfff!important}body.fi-premium .grid.stats .card:nth-child(4n+2){border-top:3px solid #8d61ff!important}body.fi-premium .grid.stats .card:nth-child(4n+3){border-top:3px solid #26d7a1!important}body.fi-premium .grid.stats .card:nth-child(4n){border-top:3px solid #ff4c91!important}
+ @media(max-width:1050px){body.fi-premium .fi-level-row{grid-template-columns:repeat(4,minmax(0,1fr))}body.fi-premium .fi-student-hero{grid-template-columns:1fr 130px}}
+ @media(max-width:700px){body.fi-premium .fi-student-hero{grid-template-columns:1fr;padding:20px}body.fi-premium .fi-hero-art{display:none}body.fi-premium .fi-level-row{grid-template-columns:repeat(2,minmax(0,1fr))}body.fi-premium .fi-shortcut-row{grid-template-columns:repeat(2,minmax(0,1fr))}body.fi-premium .fi-level-card{min-height:92px}}
+ `;
+ document.head.appendChild(st);
+}
+function addStudentHome(){
+ const root=$('#content');if(!root||$('#fiStudentHome'))return;
+ const banner=document.createElement('section');banner.id='fiStudentHome';banner.className='fi-student-hero';
+ const first=(window.profile?.full_name||$('#userName')?.textContent||'Student').trim().split(/\s+/)[0];
+ banner.innerHTML='<div><div class="fi-kicker">FLUENT IMMERSION · YOUR LEARNING SPACE</div><h2>Seu próximo nível começa aqui, '+escFI(first)+'!</h2><p>Continue suas aulas, pratique suas habilidades e acompanhe sua evolução em um só lugar.</p><button class="fi-action" onclick="loadView(\'immersionPlanner\')">▶ Continuar aprendendo</button> <button class="btn secondary" onclick="loadView(\'games\')">🎮 Praticar com Games</button></div><div class="fi-hero-art" aria-hidden="true">🌎🎧</div>';
+ root.insertBefore(banner,root.firstChild);
+ const levels=[['A0','Starter'],['A1','Elementary'],['A2','Pre-intermediate'],['B1','Intermediate'],['B2','Upper-intermediate'],['C1','Advanced'],['C2','Proficiency']];
+ const levelSection=document.createElement('section');levelSection.className='fi-home-section';
+ levelSection.innerHTML='<div class="fi-section-head"><h3>Explore por nível CEFR</h3><span style="font-size:11px;color:#69cfff">A0–C2</span></div><div class="fi-level-row">'+levels.map(x=>'<button class="fi-level-card" data-fi-level="'+x[0]+'"><b>'+x[0]+'</b><span>'+x[1]+'</span><span style="margin-top:12px">Explorar aulas →</span></button>').join('')+'</div>';
+ banner.insertAdjacentElement('afterend',levelSection);
+ levelSection.querySelectorAll('[data-fi-level]').forEach(b=>b.addEventListener('click',()=>{try{sessionStorage.setItem('fiRequestedLevel',b.dataset.fiLevel)}catch(_){}window.loadView('studentLessons')}));
+ const shortcuts=document.createElement('section');shortcuts.className='fi-home-section';
+ shortcuts.innerHTML='<div class="fi-section-head"><h3>Pratique suas habilidades</h3><span style="font-size:11px;color:#69cfff">Aprenda fazendo</span></div><div class="fi-shortcut-row"><button class="fi-shortcut" onclick="loadView(\'learningHub\')"><i>🎧</i><span><b>Listening Studio</b><small>Treine compreensão oral</small></span></button><button class="fi-shortcut" onclick="loadView(\'games\')"><i>🎮</i><span><b>Games & Challenges</b><small>Aprenda jogando</small></span></button><button class="fi-shortcut" onclick="loadView(\'studentTasks\')"><i>✅</i><span><b>Minhas missões</b><small>Veja tarefas atribuídas</small></span></button><button class="fi-shortcut" onclick="loadView(\'studentProgress\')"><i>📈</i><span><b>Meu progresso</b><small>Acompanhe sua evolução</small></span></button></div>';
+ levelSection.insertAdjacentElement('afterend',shortcuts);
+ const old=root.querySelector('.student-banner');if(old)old.classList.add('fi-existing-dashboard');
+ const grids=root.querySelectorAll('.grid,.card');grids.forEach(el=>{if(el!==banner&&el!==levelSection&&el!==shortcuts)el.classList.add('fi-existing-dashboard')});
+}
+function init(){
+ addStyle();
+ const role=window.profile?.role||$('#userRole')?.textContent||'';
+ document.body.classList.add('fi-premium');
+ document.body.classList.toggle('fi-teacher-mode',/teacher|admin/i.test(role));
+ if(/student/i.test(role))document.body.classList.add('fi-student-mode');
+}
+const originalStudentDashboard=window.studentDashboard;
+if(typeof originalStudentDashboard==='function'){
+ window.studentDashboard=async function(){init();await originalStudentDashboard.apply(this,arguments);if(/student/i.test(window.profile?.role||$('#userRole')?.textContent||''))addStudentHome();};
+}
+document.addEventListener('DOMContentLoaded',init);
+const observer=new MutationObserver(()=>{if(!document.body.classList.contains('fi-premium'))init()});
+if(document.body)observer.observe(document.body,{attributes:true,attributeFilter:['class']});
+window.fiPremiumRefresh=init;
+})();
