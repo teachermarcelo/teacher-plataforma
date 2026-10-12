@@ -152,6 +152,14 @@ async function fetchReportData(){
  const errors=requests.map((r,i)=>r.error?labels[i]+': '+r.error.message:null).filter(Boolean);
  const vals=requests.map(r=>r.data||[]);
  const submissionIds=vals[5].map(x=>x.id).filter(Boolean);
+ const knownAssignmentIds=new Set(vals[4].map(x=>x.id));
+ const missingAssignmentIds=[...new Set(vals[5].map(x=>x.task_assignment_id).filter(id=>id&&!knownAssignmentIds.has(id)))];
+ let submissionAssignments=vals[4].slice();
+ if(missingAssignmentIds.length){
+  const missing=await sb.from('tic_task_assignments').select('id,assignment_id,status,active,assigned_at,completed_at,tic_assignments(title,cefr_level,skill,task_level,points,due_at)').eq('student_id',studentId).in('id',missingAssignmentIds);
+  if(missing.error)errors.push('vínculo de entregas: '+missing.error.message);
+  else submissionAssignments=submissionAssignments.concat(missing.data||[]);
+ }
  const missionRows=vals[6],missionSessions=vals[7];
  const activityIds=[...new Set([...missionRows.map(x=>x.activity_id),...missionSessions.map(x=>x.activity_id)].filter(Boolean))];
  let immersionActivities=[];
@@ -179,12 +187,12 @@ async function fetchReportData(){
   feedback=fr.data||[];feedbackError=fr.error;
   if(feedbackError)errors.push('feedback de tarefas: '+feedbackError.message);
  }
- return {student,bounds,progress:vals[0],sessions:vals[1],events:vals[2],responses:vals[3],assignments:vals[4],submissions:vals[5],feedback,missionRows,missionSessions,activityMap,previous,errors:errors.concat(previous.errors)};
+ return {student,bounds,progress:vals[0],sessions:vals[1],events:vals[2],responses:vals[3],assignments:vals[4],submissionAssignments,submissions:vals[5],feedback,missionRows,missionSessions,activityMap,previous,errors:errors.concat(previous.errors)};
 }
 function scoreNum(v){if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
 function reportHtml(d){
- const {student,bounds,progress,sessions,events,responses,assignments,submissions,feedback,missionRows,missionSessions,activityMap,previous,errors}=d;
- const assignmentMap=new Map(assignments.map(a=>[a.id,a]));
+ const {student,bounds,progress,sessions,events,responses,assignments,submissionAssignments,submissions,feedback,missionRows,missionSessions,activityMap,previous,errors}=d;
+ const assignmentMap=new Map((submissionAssignments||assignments).map(a=>[a.id,a]));
  const taskRows=submissions.map(sub=>{const a=assignmentMap.get(sub.task_assignment_id),fb=feedback.find(x=>x.submission_id===sub.id);return {sub,a,fb,score:scoreNum(sub.grade!==undefined&&sub.grade!==null?sub.grade:fb&&fb.grade)}});
  const scored=[...responses.map(r=>({score:scoreNum(r.score),skill:r.tic_lessons&&r.tic_lessons.skill||r.improvement_skill||'Não identificada',topic:r.tic_lessons&&r.tic_lessons.title||'Lesson',source:'Lesson',date:r.created_at})),...taskRows.map(x=>({score:x.score,skill:x.a&&x.a.tic_assignments&&x.a.tic_assignments.skill||x.fb&&x.fb.improvement_skill||'Não identificada',topic:x.a&&x.a.tic_assignments&&x.a.tic_assignments.title||'Task',source:'Task',date:x.sub.submitted_at}))].filter(x=>x.score!==null);
  const average=scored.length?Math.round(scored.reduce((n,x)=>n+x.score,0)/scored.length):null;
