@@ -127,23 +127,34 @@ async function fetchReportData(){
   sb.from('tic_student_activity_events').select('event_type,event_label,view_name,entity_type,entity_id,metadata,created_at').eq('student_id',studentId).gte('created_at',from).lte('created_at',to).order('created_at',{ascending:false}).limit(3000),
   sb.from('tic_lesson_responses').select('id,lesson_id,attempt,status,score,response_text,response_data,teacher_comment,improvement_skill,improvement_link,created_at,reviewed_at,tic_lessons(title,skill)').eq('student_id',studentId).gte('created_at',from).lte('created_at',to).order('created_at',{ascending:false}).limit(2000),
   sb.from('tic_task_assignments').select('id,assignment_id,status,active,assigned_at,completed_at,tic_assignments(title,cefr_level,skill,task_level,points,due_at)').eq('student_id',studentId).gte('assigned_at',from).lte('assigned_at',to).order('assigned_at',{ascending:false}).limit(2000),
-  sb.from('tic_submissions').select('id,task_assignment_id,attempt,grade,submitted_at,answer_text,response_data').eq('student_id',studentId).gte('submitted_at',from).lte('submitted_at',to).order('submitted_at',{ascending:false}).limit(3000)
+  sb.from('tic_submissions').select('id,task_assignment_id,attempt,grade,submitted_at,answer_text,response_data').eq('student_id',studentId).gte('submitted_at',from).lte('submitted_at',to).order('submitted_at',{ascending:false}).limit(3000),
+  sb.from('tic_immersion_progress').select('activity_id,status,started_at,completed_at,updated_at,student_note').eq('student_id',studentId).gte('updated_at',from).lte('updated_at',to).order('updated_at',{ascending:false}).limit(2000),
+  sb.from('tic_immersion_sessions').select('session_date,activity_id,status,started_at,completed_at,duration_minutes,steps,reflection,updated_at').eq('student_id',studentId).gte('session_date',bounds.fromDate).lte('session_date',bounds.toDate).order('session_date',{ascending:false}).limit(2000)
  ]);
- const labels=['progresso','sessões','eventos','respostas de aulas','tarefas atribuídas','entregas'];
+ const labels=['progresso','sessões','eventos','respostas de aulas','tarefas atribuídas','entregas','progresso das missões','sessões de imersão'];
  const errors=requests.map((r,i)=>r.error?labels[i]+': '+r.error.message:null).filter(Boolean);
  const vals=requests.map(r=>r.data||[]);
  const submissionIds=vals[5].map(x=>x.id).filter(Boolean);
+ const missionRows=vals[6],missionSessions=vals[7];
+ const activityIds=[...new Set([...missionRows.map(x=>x.activity_id),...missionSessions.map(x=>x.activity_id)].filter(Boolean))];
+ let immersionActivities=[];
+ if(activityIds.length){
+  const ar=await sb.from('tic_immersion_activities').select('id,title,cefr_level,skill,day_number').in('id',activityIds);
+  if(ar.error)errors.push('títulos das missões: '+ar.error.message);
+  immersionActivities=ar.data||[];
+ }
+ const activityMap=new Map(immersionActivities.map(x=>[x.id,x]));
  let feedback=[],feedbackError=null;
  if(submissionIds.length){
   const fr=await sb.from('tic_feedback').select('submission_id,grade,comment,improvement_skill,improvement_link,created_at').in('submission_id',submissionIds).order('created_at',{ascending:false});
   feedback=fr.data||[];feedbackError=fr.error;
   if(feedbackError)errors.push('feedback de tarefas: '+feedbackError.message);
  }
- return {student,bounds,progress:vals[0],sessions:vals[1],events:vals[2],responses:vals[3],assignments:vals[4],submissions:vals[5],feedback,errors};
+ return {student,bounds,progress:vals[0],sessions:vals[1],events:vals[2],responses:vals[3],assignments:vals[4],submissions:vals[5],feedback,missionRows,missionSessions,activityMap,errors};
 }
 function scoreNum(v){if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
 function reportHtml(d){
- const {student,bounds,progress,sessions,events,responses,assignments,submissions,feedback,errors}=d;
+ const {student,bounds,progress,sessions,events,responses,assignments,submissions,feedback,missionRows,missionSessions,activityMap,errors}=d;
  const assignmentMap=new Map(assignments.map(a=>[a.id,a]));
  const taskRows=submissions.map(sub=>{const a=assignmentMap.get(sub.task_assignment_id),fb=feedback.find(x=>x.submission_id===sub.id);return {sub,a,fb,score:scoreNum(sub.grade!==undefined&&sub.grade!==null?sub.grade:fb&&fb.grade)}});
  const scored=[...responses.map(r=>({score:scoreNum(r.score),skill:r.tic_lessons&&r.tic_lessons.skill||r.improvement_skill||'Não identificada',topic:r.tic_lessons&&r.tic_lessons.title||'Lesson',source:'Lesson',date:r.created_at})),...taskRows.map(x=>({score:x.score,skill:x.a&&x.a.tic_assignments&&x.a.tic_assignments.skill||x.fb&&x.fb.improvement_skill||'Não identificada',topic:x.a&&x.a.tic_assignments&&x.a.tic_assignments.title||'Task',source:'Task',date:x.sub.submitted_at}))].filter(x=>x.score!==null);
@@ -162,7 +173,7 @@ function reportHtml(d){
  const assignmentHtml=assignments.map(a=>'<tr><td>'+esc(fmtDate(a.assigned_at))+'</td><td>'+esc(a.tic_assignments&&a.tic_assignments.title||'Task')+'</td><td>'+esc(a.tic_assignments&&a.tic_assignments.skill||a.tic_assignments&&a.tic_assignments.cefr_level||'—')+'</td><td>'+esc(a.status||'—')+'</td><td>'+esc(fmtDay(a.tic_assignments&&a.tic_assignments.due_at))+'</td><td>'+esc(a.completed_at?fmtDate(a.completed_at):'—')+'</td></tr>').join('')||'<tr><td colspan="6">Nenhuma tarefa atribuída no período.</td></tr>';
  const taskHtml=taskRows.map(x=>'<tr><td>'+esc(fmtDate(x.sub.submitted_at))+'</td><td>'+esc(x.a&&x.a.tic_assignments&&x.a.tic_assignments.title||'Task')+'</td><td>'+esc(x.a&&x.a.tic_assignments&&x.a.tic_assignments.skill||'—')+'</td><td>'+esc(x.sub.attempt||1)+'</td><td>'+(x.score===null?'Sem nota':esc(x.score)+'%')+'</td><td>'+esc(x.fb&&x.fb.comment||'—')+'</td></tr>').join('')||'<tr><td colspan="6">Nenhuma entrega de task registrada no período.</td></tr>';
  const sessionHtml=sessions.map(s=>'<tr><td>'+esc(fmtDate(s.started_at))+'</td><td>'+esc(fmtDate(s.last_seen_at))+'</td><td>'+esc(duration(s.duration_seconds))+'</td></tr>').join('')||'<tr><td colspan="3">Nenhuma sessão registrada no período.</td></tr>';
- const totalSeconds=sessions.reduce((n,s)=>n+(Number(s.duration_seconds)||0),0);
+ const totalSeconds=sessions.reduce((n,s)=>n+(Number(s.duration_seconds)||0),0);\n const completedMissions=missionRows.filter(x=>x.status==='completed').length;\n const missionHtml=missionRows.map(r=>{const a=activityMap.get(r.activity_id)||{};return '<tr><td>'+esc(fmtDate(r.updated_at||r.completed_at||r.started_at))+'</td><td>'+esc(a.title||'Missão')+'</td><td>'+esc(a.cefr_level||'—')+'</td><td>'+esc(a.skill||'—')+'</td><td>'+esc(r.status||'—')+'</td><td>'+esc(r.student_note||'—')+'</td></tr>'}).join('')||'<tr><td colspan="6">Nenhuma atualização de missão registrada no período.</td></tr>';\n const immersionSessionHtml=missionSessions.map(r=>{const a=activityMap.get(r.activity_id)||{};return '<tr><td>'+esc(fmtDay(r.session_date))+'</td><td>'+esc(a.title||'Sessão de imersão')+'</td><td>'+esc(r.status||'—')+'</td><td>'+esc(duration((Number(r.duration_minutes)||0)*60))+'</td><td>'+esc(r.completed_at?fmtDate(r.completed_at):'—')+'</td></tr>'}).join('')||'<tr><td colspan="5">Nenhuma sessão de imersão registrada no período.</td></tr>';
  const statusWarnings=errors.length?'<div class="tic-report-warning"><b>Observações sobre os dados</b><ul>'+errors.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ul>Algumas seções podem estar incompletas porque o Supabase não retornou todos os registros.</div>':'';
  return '<div class="tic-report-document">'+
   '<header><div class="tic-report-brand">FLUENT IMMERSION · RELATÓRIO PEDAGÓGICO</div><h1>'+esc(student.display_name||'Aluno')+'</h1><p>'+esc(student.email||'')+' · Nível atual: '+esc(student.current_level||'—')+' · Objetivo: '+esc(student.target_level||'—')+'</p><p>Período: '+esc(fmtDay(bounds.fromDate))+' até '+esc(fmtDay(bounds.toDate))+'</p></header>'+
@@ -174,8 +185,8 @@ function reportHtml(d){
   '<h2>4. Tarefas atribuídas</h2><table><thead><tr><th>Atribuída</th><th>Tarefa</th><th>Habilidade</th><th>Status</th><th>Prazo</th><th>Concluída em</th></tr></thead><tbody>'+assignmentHtml+'</tbody></table>'+
   '<h2>5. Entregas e tentativas de tarefas</h2><table><thead><tr><th>Data</th><th>Tarefa</th><th>Habilidade</th><th>Tentativa</th><th>Nota</th><th>Feedback</th></tr></thead><tbody>'+taskHtml+'</tbody></table>'+
   '<h2>6. O que melhorar e próximas ações</h2>'+improvementHtml+
-  '<h2>7. Histórico de sessões</h2><table><thead><tr><th>Início</th><th>Última atividade</th><th>Duração registrada</th></tr></thead><tbody>'+sessionHtml+'</tbody></table>'+
-  '<h2>8. Linha do tempo de ações</h2><table><thead><tr><th>Data/hora</th><th>Ação registrada</th><th>Aba</th><th>Tipo</th></tr></thead><tbody>'+eventHtml+'</tbody></table>'+
+  '<h2>8. Histórico de sessões de acesso</h2><table><thead><tr><th>Início</th><th>Última atividade</th><th>Duração registrada</th></tr></thead><tbody>'+sessionHtml+'</tbody></table>'+
+  '<h2>9. Linha do tempo de ações</h2><table><thead><tr><th>Data/hora</th><th>Ação registrada</th><th>Aba</th><th>Tipo</th></tr></thead><tbody>'+eventHtml+'</tbody></table>'+
   '<footer>Gerado a partir dos registros disponíveis na Teacher Plataforma. Os indicadores descrevem apenas atividades e resultados registrados; dados ausentes não são interpretados como desempenho zero.</footer></div>';
 }
 let lastReport=null,lastKey='';
