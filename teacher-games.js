@@ -1,0 +1,40 @@
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const escTG=x=>typeof esc==='function'?esc(x??''):String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const fmtTG=x=>x?new Date(x).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';
+function teacherAllowed(){return typeof profile!=='undefined'&&!!profile&&(profile.role==='teacher'||profile.role==='admin')}
+function ensureGamesStyle(){if($('tgTeacherStyle'))return;const s=document.createElement('style');s.id='tgTeacherStyle';s.textContent='.tg-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.tg-stat{border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px}.tg-stat b{display:block;font-size:22px}.tg-stat small{font-size:10px;color:var(--muted)}@media(max-width:760px){.tg-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}';document.head.appendChild(s)}
+function ensureGamesNav(){
+ const nav=$('teacherNav');if(!nav||!teacherAllowed())return;
+ if(!nav.querySelector('[data-view="teacherGames"]')){
+  const b=document.createElement('button');b.dataset.view='teacherGames';b.innerHTML='🎮 <span>Games Analytics</span>';
+  const ref=nav.querySelector('[data-view="studentActivity"]')||nav.querySelector('[data-view="students"]');
+  if(ref)ref.insertAdjacentElement('afterend',b);else nav.appendChild(b);
+ }
+ nav.querySelectorAll('[data-view="teacherGames"]').forEach(b=>{if(!b.dataset.tgBound){b.dataset.tgBound='1';b.addEventListener('click',()=>window.loadView('teacherGames'))}});
+}
+setTimeout(ensureGamesNav,500);setTimeout(ensureGamesNav,1500);setTimeout(ensureGamesNav,3500);
+if($('teacherNav')&&'MutationObserver'in window)new MutationObserver(ensureGamesNav).observe($('teacherNav'),{childList:true,subtree:true});
+async function teacherGamesPage(){
+ ensureGamesStyle();
+ if(!teacherAllowed()){if(typeof toast==='function')toast('Apenas Teacher pode acessar os resultados dos Games.','error');return}
+ setPage('Games Analytics','Acompanhe jogos iniciados, respostas, pontuações e conclusões dos alunos.','<button class="btn secondary" onclick="window.teacherGamesPageTG()">↻ Atualizar</button>');
+ const root=$('content');root.innerHTML='<div class="card"><div class="empty">Carregando resultados dos jogos...</div></div>';
+ const sr=await sb.from('tic_students').select('id,display_name,email,current_level,status').eq('teacher_id',session.user.id).order('display_name');
+ if(sr.error){root.innerHTML='<div class="card"><b>Não foi possível carregar os alunos.</b><p>'+escTG(sr.error.message)+'</p></div>';return}
+ const students=sr.data||[],ids=students.map(s=>s.id);let events=[],err='';
+ if(ids.length){const er=await sb.from('tic_student_activity_events').select('id,student_id,event_type,event_label,view_name,entity_type,entity_id,metadata,created_at').in('student_id',ids).like('event_type','game_%').order('created_at',{ascending:false}).limit(3000);events=er.data||[];err=er.error?.message||''}
+ const byId=Object.fromEntries(students.map(s=>[s.id,s]));
+ const completed=events.filter(e=>e.event_type==='game_completed'),starts=events.filter(e=>e.event_type==='game_started'),answers=events.filter(e=>e.event_type==='game_answered'||e.event_type==='game_word_answered'),unique=new Set(events.map(e=>e.student_id)).size;
+ const gameName=e=>e.metadata?.game_name||e.metadata?.game_id||e.entity_id||'Game';
+ const topic=e=>e.metadata?.topic||'—',level=e=>e.metadata?.level||'—';
+ const pct=e=>e.metadata?.percent!=null?Number(e.metadata.percent)+'%':e.metadata?.correct===true?'Correta':e.metadata?.correct===false?'Incorreta':'—';
+ root.innerHTML='<div class="tg" style="display:grid;gap:16px"><div class="tg-stats"><div class="tg-stat"><b>'+students.length+'</b><small>Alunos cadastrados</small></div><div class="tg-stat"><b>'+starts.length+'</b><small>Jogos iniciados</small></div><div class="tg-stat"><b>'+completed.length+'</b><small>Jogos concluídos</small></div><div class="tg-stat"><b>'+unique+'</b><small>Alunos que jogaram</small></div></div>'+(err?'<div class="card"><b>Não foi possível consultar os eventos de Games.</b><p>'+escTG(err)+'</p><small>Confira as políticas de acesso de tic_student_activity_events. Nenhum dado foi alterado.</small></div>':'')+'<div class="card" style="display:grid;gap:12px"><div class="section-head"><h3>🎮 Atividade dos alunos</h3><span>'+events.length+' eventos</span></div><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="tgTeacherSearch" class="input" placeholder="Buscar aluno, jogo ou assunto..." style="flex:1;min-width:200px"><select id="tgTeacherFilter" class="input" style="max-width:220px"><option value="">Todos os eventos</option><option value="game_started">Jogos iniciados</option><option value="game_answered">Respostas</option><option value="game_completed">Jogos concluídos</option><option value="game_match_found">Pares encontrados</option><option value="game_word_answered">Palavras respondidas</option></select><button class="btn secondary" onclick="loadView(\'studentActivity\')">Abrir Student Activity</button></div><div id="tgTeacherEvents" style="display:grid;gap:8px"></div></div><div class="card"><div class="section-head"><h3>📊 Conclusões recentes</h3><span>'+completed.length+'</span></div>'+(completed.length?completed.slice(0,20).map(e=>'<div class="row"><div><b>'+escTG(byId[e.student_id]?.display_name||'Aluno')+' · '+escTG(gameName(e))+'</b><small>'+escTG(topic(e))+' · '+escTG(level(e))+' · '+fmtTG(e.created_at)+'</small></div><b>'+escTG(pct(e))+'</b></div>').join(''):'<div class="empty">Ainda não há conclusões de jogos registradas. Quando os alunos jogarem online, os resultados aparecerão aqui.</div>')+'</div></div>';
+ function renderEvents(){const q=($('tgTeacherSearch')?.value||'').toLowerCase().trim(),f=$('tgTeacherFilter')?.value||'';const rows=events.filter(e=>{const s=byId[e.student_id]||{};const hay=[s.display_name,s.email,gameName(e),topic(e),level(e),e.event_label,e.event_type].join(' ').toLowerCase();return(!q||hay.includes(q))&&(!f||e.event_type===f)});$('tgTeacherEvents').innerHTML=rows.slice(0,250).map(e=>{const s=byId[e.student_id]||{};return '<div style="border:1px solid var(--line);border-radius:12px;padding:11px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div style="min-width:0"><b>'+escTG(s.display_name||'Aluno')+' · '+escTG(e.event_label||e.event_type)+'</b><small style="display:block;color:var(--muted);margin-top:4px">'+fmtTG(e.created_at)+' · '+escTG(gameName(e))+' · '+escTG(topic(e))+' · '+escTG(level(e))+'</small></div><span class="badge">'+escTG(pct(e))+'</span></div>'}).join('')||'<div class="empty">Nenhum evento corresponde à busca.</div>'}
+ $('tgTeacherSearch').addEventListener('input',renderEvents);$('tgTeacherFilter').addEventListener('change',renderEvents);renderEvents();
+}
+window.teacherGamesPageTG=teacherGamesPage;
+const baseLoadView=window.loadView;
+window.loadView=async function(v){if(v==='teacherGames'){if(typeof toggleMobile==='function')toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));return teacherGamesPage()}return baseLoadView.apply(this,arguments)};
+})();
