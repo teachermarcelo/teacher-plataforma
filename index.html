@@ -1594,10 +1594,18 @@ studentDashboard=studentDashboardV3;
 async function studentCoursesPage(){
  const s=await studentRecord();
  if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um aluno.</div>';return}
+ let requestedCourseLevel='';
+ try{requestedCourseLevel=(sessionStorage.getItem('fiRequestedCourseLevel')||'').trim().toUpperCase();sessionStorage.removeItem('fiRequestedCourseLevel')}catch(_){}
  const {data:enroll,error:ee}=await sb.from('tic_course_students').select('course_id,status,enrolled_at').eq('student_id',s.id).eq('status','active').order('enrolled_at',{ascending:false});
  if(ee)return $('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar seus cursos.</b><p>${esc(ee.message)}</p></div>`;
  const ids=(enroll||[]).map(x=>x.course_id).filter(Boolean);
- if(!ids.length){setPage('My Courses','Seus cursos, módulos e currículo.');$('content').innerHTML='<div class="card empty">Você ainda não está matriculado em nenhum curso. Peça ao Teacher para matricular você.</div>';return}
+ if(!ids.length){
+  setPage('My Courses',requestedCourseLevel?'Cursos do nível '+requestedCourseLevel:'Seus cursos, módulos e currículo.');
+  $('content').innerHTML=requestedCourseLevel
+   ? '<div class="card empty"><h2>Nenhum curso ativo do nível '+esc(requestedCourseLevel)+'</h2><p>Você ainda não está matriculado em um curso deste nível. Peça ao Teacher para matricular você.</p><button class="btn primary" onclick="loadView(\\'studentCourses\\')">Ver todos os cursos</button></div>'
+   : '<div class="card empty">Você ainda não está matriculado em nenhum curso. Peça ao Teacher para matricular você.</div>';
+  return;
+ }
  const [{data:cs,error:ce},{data:ms,error:me},{data:ls,error:le},{data:p}]=await Promise.all([
   sb.from('tic_courses').select('*').in('id',ids).eq('active',true),
   sb.from('tic_modules').select('*').in('course_id',ids).order('position'),
@@ -1605,8 +1613,7 @@ async function studentCoursesPage(){
   sb.from('tic_progress').select('level,skill,progress').eq('student_id',s.id)
  ]);
  if(ce||me||le)return $('content').innerHTML=`<div class="card attention"><b>Erro no currículo.</b><p>${esc((ce||me||le).message)}</p></div>`;
- let requestedCourseLevel='';
- try{requestedCourseLevel=(sessionStorage.getItem('fiRequestedCourseLevel')||'').trim().toUpperCase();sessionStorage.removeItem('fiRequestedCourseLevel')}catch(_){}
+
  const visibleCourses=(cs||[]).filter(c=>!requestedCourseLevel||String(c.level||'').trim().toUpperCase()===requestedCourseLevel);
  const courseCards=visibleCourses.map(c=>{
   const lessons=(ls||[]).filter(l=>l.course_id===c.id).sort((a,b)=>(a.position||0)-(b.position||0));
