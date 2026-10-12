@@ -110,6 +110,74 @@ function addStyle(){
  }
  body.fi-premium.fi-light .main>.container>.page-head h1{color:#17233a!important}
  body.fi-premium.fi-light .main>.container>.page-head p{color:#64748b!important}
+
+ /* Consistent, accessible styling for ALL student and teacher tabs. */
+ html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important}
+ body.fi-premium,body.fi-premium .app,body.fi-premium .main,body.fi-premium .main>.container{height:auto!important;max-height:none!important;overflow:visible!important}
+ body.fi-premium .main>.container>.page-head{position:static!important;top:auto!important;z-index:auto!important;background:transparent!important;background-color:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important;border:0!important;border-radius:0!important;padding:0!important;margin:0 0 20px!important}
+ body.fi-premium .main>.container>.page-head h1{font-size:clamp(27px,3vw,36px)!important;font-weight:850!important;letter-spacing:-.8px!important}
+ body.fi-premium:not(.fi-light) .main>.container>.page-head h1{color:#f7faff!important}
+ body.fi-premium:not(.fi-light) .main>.container>.page-head p{color:#b9c9dc!important}
+ body.fi-premium:not(.fi-light) #content .card,
+ body.fi-premium:not(.fi-light) #content .stat,
+ body.fi-premium:not(.fi-light) #content .quick,
+ body.fi-premium:not(.fi-light) #content .row,
+ body.fi-premium:not(.fi-light) #content .table-wrap,
+ body.fi-premium:not(.fi-light) #content .empty,
+ body.fi-premium:not(.fi-light) #content .section-head,
+ body.fi-premium:not(.fi-light) #content .attention{background-color:#0d2034!important;border-color:#29445f!important;color:#f4f7ff!important;box-shadow:0 10px 28px #0002}
+ body.fi-premium:not(.fi-light) #content .card *,
+ body.fi-premium:not(.fi-light) #content .quick *,
+ body.fi-premium:not(.fi-light) #content .row *,
+ body.fi-premium:not(.fi-light) #content .section-head *,
+ body.fi-premium:not(.fi-light) #content .empty *{color:#f0f6ff!important}
+ body.fi-premium:not(.fi-light) #content .card p,
+ body.fi-premium:not(.fi-light) #content .card small,
+ body.fi-premium:not(.fi-light) #content .quick small,
+ body.fi-premium:not(.fi-light) #content .row small,
+ body.fi-premium:not(.fi-light) #content .stat-label,
+ body.fi-premium:not(.fi-light) #content .stat-note{color:#b9c9dc!important}
+ body.fi-premium:not(.fi-light) #content .progress{background:#2b4057!important}
+ body.fi-premium:not(.fi-light) #content .hero{background:linear-gradient(115deg,#102944 0%,#1b3c65 52%,#43245f 100%)!important;border:1px solid #36577b!important;color:#fff!important}
+ body.fi-premium:not(.fi-light) #content .hero *{color:#f7faff!important}
+ body.fi-premium:not(.fi-light) #content .quick{border-top:3px solid #8554ff!important;border-radius:15px!important;transition:transform .18s,border-color .18s}
+ body.fi-premium:not(.fi-light) #content .quick:hover{transform:translateY(-2px);border-color:#20b7ff!important}
+ body.fi-premium:not(.fi-light) #content .table th{color:#a8bdd3!important;border-color:#29445f!important}
+ body.fi-premium:not(.fi-light) #content .table td{color:#edf4ff!important;border-color:#29445f!important}
+ body.fi-premium:not(.fi-light) #content input,
+ body.fi-premium:not(.fi-light) #content select,
+ body.fi-premium:not(.fi-light) #content textarea{background:#081a2b!important;color:#f4f7ff!important;border-color:#38516b!important}
+ body.fi-premium.fi-light .main>.container>.page-head h1{color:#17233a!important}
+ body.fi-premium.fi-light .main>.container>.page-head p{color:#64748b!important}
+ body.fi-premium.fi-light #content .card,
+ body.fi-premium.fi-light #content .stat,
+ body.fi-premium.fi-light #content .quick,
+ body.fi-premium.fi-light #content .row,
+ body.fi-premium.fi-light #content .table-wrap,
+ body.fi-premium.fi-light #content .empty,
+ body.fi-premium.fi-light #content .section-head,
+ body.fi-premium.fi-light #content .attention{background-color:#fff!important;border-color:#dce4ef!important;color:#17233a!important;box-shadow:0 8px 24px #23395b0b}
+ body.fi-premium.fi-light #content .card *,
+ body.fi-premium.fi-light #content .quick *,
+ body.fi-premium.fi-light #content .row *,
+ body.fi-premium.fi-light #content .section-head *,
+ body.fi-premium.fi-light #content .empty *{color:#17233a!important}
+ body.fi-premium.fi-light #content .card p,
+ body.fi-premium.fi-light #content .card small,
+ body.fi-premium.fi-light #content .quick small,
+ body.fi-premium.fi-light #content .row small,
+ body.fi-premium.fi-light #content .stat-label,
+ body.fi-premium.fi-light #content .stat-note{color:#586a80!important}
+ body.fi-premium.fi-light #content .hero{background:linear-gradient(115deg,#4d2bad 0%,#6840d0 55%,#8b3f9e 100%)!important;border:1px solid #7556d5!important;color:#fff!important}
+ body.fi-premium.fi-light #content .hero *{color:#fff!important}
+ body.fi-premium.fi-light #content .table th{color:#64748b!important}
+ body.fi-premium.fi-light #content .table td{color:#24334a!important}
+ body.fi-premium.fi-light #content input,
+ body.fi-premium.fi-light #content select,
+ body.fi-premium.fi-light #content textarea{background:#fff!important;color:#17233a!important;border-color:#d3ddeb!important}
+ body.fi-premium .topbar{position:relative!important;top:auto!important}
+ @media(max-width:700px){body.fi-premium .main{margin-left:0!important}body.fi-premium .main>.container{padding:18px 12px 38px!important}body.fi-premium .topbar{padding:0 12px!important}}
+
  `;
  document.head.appendChild(st);
 }
