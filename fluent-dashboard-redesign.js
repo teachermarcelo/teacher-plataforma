@@ -132,23 +132,23 @@ async function render(){
  const old=$('#fiThemeToggle'),btn=$('#fi2Theme');if(btn){btn.textContent=document.body.classList.contains('fi-light')?'☾':'☼';btn.addEventListener('click',()=>{if(old)old.click();else{document.body.classList.toggle('fi-light');try{localStorage.setItem('fiDashboardTheme',document.body.classList.contains('fi-light')?'light':'dark')}catch(_){}}btn.textContent=document.body.classList.contains('fi-light')?'☾':'☼'})}
  const search=$('#fi2Search');if(search)search.addEventListener('input',()=>{const q=search.value.trim().toLowerCase();document.querySelectorAll('.fi2-searchable').forEach(el=>el.style.display=!q||el.dataset.search.toLowerCase().includes(q)?'':'none')});
  const menu=$('#fi2MenuToggle');if(menu)menu.addEventListener('click',()=>{if(typeof window.toggleMobile==='function')window.toggleMobile(true);else{const side=$('#sidebar'),overlay=$('#mobileOverlay');if(side)side.classList.add('open');if(overlay)overlay.classList.add('open')}});
- document.querySelectorAll('[data-fi2-activity-open]').forEach(el=>el.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();openImmersionFilter(el.dataset.activityLevel||'',el.dataset.activityTitle||'')}));
+ document.querySelectorAll('[data-fi2-activity-open]').forEach(el=>el.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();openImmersionActivity(el.dataset.activityId||'',el.dataset.activityTitle||'',el.dataset.activityLevel||'')}));
  document.querySelectorAll('[data-fi2-task]').forEach(el=>el.addEventListener('click',()=>{if(typeof window.openStudentTask==='function')window.openStudentTask(el.dataset.fi2Task);else if(typeof window.openStudentTaskViewer==='function')window.openStudentTaskViewer(el.dataset.fi2Task)}));
 
  document.querySelectorAll('[data-fi2-level]').forEach(b=>b.addEventListener('click',()=>window.fiOpenCourseLevel?window.fiOpenCourseLevel(b.dataset.fi2Level):window.loadView('studentCourses')));
  document.querySelectorAll('.fi2-course').forEach(card=>{
   card.addEventListener('click',ev=>{
    ev.preventDefault();ev.stopImmediatePropagation();
-   const title=card.querySelector('.fi2-course-body>b')?.textContent||'';
-   const level=card.querySelector('.fi2-pill')?.textContent||'';
-   openImmersionFilter(level,title);
+   const title=card.dataset.activityTitle||card.querySelector('.fi2-course-body>b')?.textContent||'';
+   const level=card.dataset.activityLevel||card.querySelector('.fi2-pill')?.textContent||'';
+   openImmersionActivity(card.dataset.activityId||'',title,level);
   },true);
   card.addEventListener('keydown',ev=>{
    if(ev.key==='Enter'||ev.key===' '){
     ev.preventDefault();
-    const title=card.querySelector('.fi2-course-body>b')?.textContent||'';
-    const level=card.querySelector('.fi2-pill')?.textContent||'';
-    openImmersionFilter(level,title);
+    const title=card.dataset.activityTitle||card.querySelector('.fi2-course-body>b')?.textContent||'';
+    const level=card.dataset.activityLevel||card.querySelector('.fi2-pill')?.textContent||'';
+    openImmersionActivity(card.dataset.activityId||'',title,level);
    }
   });
  });
