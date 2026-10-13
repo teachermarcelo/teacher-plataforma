@@ -4,7 +4,7 @@
  'use strict';
  if(window.__fiActivityTrackerV1)return;
  window.__fiActivityTrackerV1=true;
- const state={userId:null,student:null,ready:false,queue:Promise.resolve(),last:new Map(),lastView:null};
+ const state={userId:null,student:null,ready:false,resolved:false,queue:Promise.resolve(),last:new Map(),lastView:null};
  const client=()=>window.sb||window.supabaseClient||null;
  const clean=(v,n=180)=>String(v||'').replace(/\s+/g,' ').trim().slice(0,n);
  const getLabel=el=>clean(el?.getAttribute?.('aria-label')||el?.getAttribute?.('title')||el?.innerText||el?.textContent||el?.value||el?.dataset?.action||el?.id||el?.name||'Ação',180);
@@ -13,10 +13,10 @@
    const sb=client();if(!sb?.auth)return null;
    const {data,error}=await sb.auth.getSession();if(error||!data?.session?.user?.id)return null;
    const user=data.session.user;
-   if(state.userId===user.id&&state.student)return state.student;
+   if(state.userId===user.id&&state.resolved)return state.student;
    const {data:student,error:se}=await sb.from('tic_students').select('id,auth_user_id,teacher_id,display_name').eq('auth_user_id',user.id).maybeSingle();
-   if(se||!student){state.userId=user.id;state.student=null;state.ready=false;return null;}
-   state.userId=user.id;state.student=student;state.ready=true;return student;
+   if(se||!student){state.userId=user.id;state.student=null;state.ready=false;state.resolved=true;return null;}
+   state.userId=user.id;state.student=student;state.ready=true;state.resolved=true;return student;
  }
  function log(type,label,view,entityType,entityId,metadata){
    const key=[type,entityType||'',entityId||'',clean(label,80)].join('|'),now=Date.now();
@@ -103,8 +103,8 @@
  setTimeout(hookRouter,800);setTimeout(hookRouter,2500);
  const sb=client();
  if(sb?.auth)sb.auth.onAuthStateChange((event,session)=>{
-   if(!session?.user){state.userId=null;state.student=null;state.ready=false;return;}
-   state.userId=null;state.student=null;resolveStudent().then(st=>{if(st)log('login','Sessão do aluno ativa',viewName(),'session',null,{source:event||'auth'});});
+   if(!session?.user){state.userId=null;state.student=null;state.ready=false;state.resolved=false;return;}
+   state.userId=null;state.student=null;state.resolved=false;resolveStudent().then(st=>{if(st)log('login','Sessão do aluno ativa',viewName(),'session',null,{source:event||'auth'});});
  });
  setTimeout(()=>resolveStudent().then(st=>{if(st)log('tracker_ready','Rastreamento de atividades ativado',viewName(),'system',null,{version:1});}),1800);
 })();
