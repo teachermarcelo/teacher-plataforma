@@ -5944,19 +5944,19 @@ window.renderStudentActivityV58=function(){
 window.openStudentEventDetailsV58=function(eventId){
   const r=(window.__v58ActivityEvents||[]).find(x=>String(x.id)===String(eventId));if(!r)return;
   const metadata=r.metadata&&typeof r.metadata==='object'?r.metadata:{};
-  openModal('🧭 Detalhes da atividade',\`
+  openModal('🧭 Detalhes da atividade',`
     <div class="form">
-      <div class="notice success"><b>\${e58(r.event_label||r.event_type||'Ação do aluno')}</b><br>\${d58(r.created_at)}</div>
+      <div class="notice success"><b>${e58(r.event_label||r.event_type||'Ação do aluno')}</b><br>${d58(r.created_at)}</div>
       <div class="card">
-       <div class="row"><b>Tipo de evento</b><span>\${e58(r.event_type||'—')}</span></div>
-       <div class="row"><b>Aba</b><span>\${e58(r.view_name||'—')}</span></div>
-       <div class="row"><b>Tipo de registro</b><span>\${e58(r.entity_type||'—')}</span></div>
-       <div class="row"><b>ID do registro</b><span style="overflow-wrap:anywhere">\${e58(r.entity_id||'—')}</span></div>
+       <div class="row"><b>Tipo de evento</b><span>${e58(r.event_type||'—')}</span></div>
+       <div class="row"><b>Aba</b><span>${e58(r.view_name||'—')}</span></div>
+       <div class="row"><b>Tipo de registro</b><span>${e58(r.entity_type||'—')}</span></div>
+       <div class="row"><b>ID do registro</b><span style="overflow-wrap:anywhere">${e58(r.entity_id||'—')}</span></div>
        <h3>Metadados registrados</h3>
-       <pre style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto;padding:12px;border-radius:8px">\${e58(JSON.stringify(metadata,null,2))}</pre>
+       <pre style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto;padding:12px;border-radius:8px">${e58(JSON.stringify(metadata,null,2))}</pre>
       </div>
       <p class="muted">Um clique não significa que a aula foi concluída. A conclusão só aparece quando existe um registro de conclusão.</p>
-    </div>\`);
+    </div>`);
 };
 
 window.openStudentActivityDetailsV58=function(studentId){
@@ -5970,7 +5970,7 @@ window.openStudentActivityDetailsV58=function(studentId){
         ${(sessions||[]).slice(0,30).map(r=>`<div class="row"><div><b>${d58(r.started_at)}</b><small>Última atividade: ${d58(r.last_seen_at)}</small></div><b>${dur58(r.duration_seconds)}</b></div>`).join('')||'<div class="empty">Nenhuma sessão.</div>'}
       </div>
       <div class="card"><div class="section-head"><h3>🧭 Ações registradas</h3><span>${events.length}</span></div>
-        ${(events||[]).slice(0,50).map(r=>\`<button type="button" class="row" style="width:100%;text-align:left;cursor:pointer" onclick="openStudentEventDetailsV58('\${e58(r.id)}')"><span><b>\${e58(r.event_label||r.event_type||'Ação')}</b><small>\${d58(r.created_at)} · \${e58(r.view_name||'')}</small></span><small>\${e58(r.entity_type||'')} · Ver detalhes ↗</small></button>\`).join('')||'<div class="empty">Nenhuma ação registrada ainda.</div>'}
+        ${(events||[]).slice(0,50).map(r=>`<button type="button" class="row" style="width:100%;text-align:left;cursor:pointer" onclick="openStudentEventDetailsV58('${e58(r.id)}')"><span><b>${e58(r.event_label||r.event_type||'Ação')}</b><small>${d58(r.created_at)} · ${e58(r.view_name||'')}</small></span><small>${e58(r.entity_type||'')} · Ver detalhes ↗</small></button>`).join('')||'<div class="empty">Nenhuma ação registrada ainda.</div>'}
       </div>
     </div>`);
 };
