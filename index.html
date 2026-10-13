@@ -4899,7 +4899,8 @@ window.loadView=async function(v){
 
 /* Clean Student My Class: every tab owns one content category. */
 window.studentClassPage=async function(){
- const __classReq=window.__fiStudentClassReq=(window.__fiStudentClassReq||0)+1;const __classRoute=currentView;
+ const __classReq=window.__fiStudentClassReq=(window.__fiStudentClassReq||0)+1;
+   window.__fiStudentTasksReq=(window.__fiStudentTasksReq||0)+1;window.__fiStudentDashReq=(window.__fiStudentDashReq||0)+1;const __classRoute=currentView;
  const s=await studentRecord();if(__classReq!==window.__fiStudentClassReq||currentView!==__classRoute)return;
  if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno pelo Teacher.</div>';return}
  const {data:members,error:me}=await sb.from('tic_class_students').select('class_id,status').eq('student_id',s.id).eq('status','active');if(__classReq!==window.__fiStudentClassReq||currentView!==__classRoute)return;
