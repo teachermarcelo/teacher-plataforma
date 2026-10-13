@@ -65,11 +65,12 @@ async function saveVideoActivity(e){
  if(editingId){const {error}=await sb.from('tic_assignments').update({title,instructions,due_at:due,resource_items:resource,active:true}).eq('id',editingId).eq('teacher_id',session.user.id);writeError=error}
  else{const {data:a,error}=await sb.from('tic_assignments').insert({teacher_id:session.user.id,title,instructions,assignment_type:'video_lab',priority:'normal',due_at:due,points:100,resource_items:resource,active:true,allow_multiple_attempts:true}).select('id').single();writeError=error;assignmentId=a?.id}
  if(writeError||!assignmentId){$('ivCreateMsg').textContent='Não foi possível salvar: '+(writeError?.message||'atividade não encontrada');reset();return}
- if(editingId)await sb.from('tic_task_assignments').update({active:false}).eq('assignment_id',assignmentId);
- const rows=ids.map(student_id=>({assignment_id:assignmentId,student_id,status:'pending',active:true}));
- const {error:linkError}=await sb.from('tic_task_assignments').insert(rows);
- if(linkError){$('ivCreateMsg').textContent='O vídeo foi salvo, mas não foi possível atualizar os destinatários: '+linkError.message;reset();return}
- window.__ivEditingId=null;$('ivCreateMsg').textContent=(editingId?'Atividade atualizada':'Atividade criada')+' e atribuída a '+ids.length+' aluno(s).';if(typeof toast==='function')toast('Vídeo salvo e atribuído a '+ids.length+' aluno(s).','success');await teacherWorkspace();
+ if(!editingId){
+  const rows=ids.map(student_id=>({assignment_id:assignmentId,student_id,status:'pending',active:true}));
+  const {error:linkError}=await sb.from('tic_task_assignments').insert(rows);
+  if(linkError){$('ivCreateMsg').textContent='O vídeo foi salvo, mas não foi possível atribuir: '+linkError.message;reset();return}
+ }
+ window.__ivEditingId=null;$('ivCreateMsg').textContent=editingId?'Atividade atualizada. Os destinatários originais foram mantidos.':'Atividade criada e atribuída a '+ids.length+' aluno(s).';if(typeof toast==='function')toast('Vídeo salvo e atribuído a '+ids.length+' aluno(s).','success');await teacherWorkspace();
 }
 async function saveToLibrary(){
  const url=$('ivUrl').value.trim(),embed=ytEmbed(url),title=$('ivTitle').value.trim();if(!embed||!title){$('ivCreateMsg').textContent='Informe título e link válido do YouTube antes de salvar na biblioteca.';return}
