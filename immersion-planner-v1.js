@@ -303,12 +303,21 @@ window.ticImmersionPlannerOpen=async function(){
  try{
   var requestedLevel=sessionStorage.getItem('ticImmRequestedLevel')||'';
   var requestedSearch=sessionStorage.getItem('ticImmRequestedSearch')||'';
+  var requestedActivityId=sessionStorage.getItem('ticImmRequestedActivityId')||'';
   if(requestedLevel){state.level=requestedLevel;state.showAll=true;state.day=0;}
   if(requestedSearch){state.search=requestedSearch;state.showAll=true;state.day=0;}
   sessionStorage.removeItem('ticImmRequestedLevel');
   sessionStorage.removeItem('ticImmRequestedSearch');
- }catch(_){}
+  sessionStorage.removeItem('ticImmRequestedActivityId');
+ }catch(_){var requestedActivityId='';}
  styles();await refresh();
+ if(requestedActivityId){
+  if(state.activities.some(function(a){return String(a.id)===String(requestedActivityId)})){
+   window.ticImmOpenViewer(requestedActivityId);
+  }else{
+   msg('A aula selecionada não está mais disponível no planner.','error');
+  }
+ }
 };
 var ticImmPreviousLoadView=window.loadView;window.loadView=function(v){if(v==='immersionPlanner')return window.ticImmersionPlannerOpen();if(typeof ticImmPreviousLoadView==='function')return ticImmPreviousLoadView.apply(this,arguments);};
 

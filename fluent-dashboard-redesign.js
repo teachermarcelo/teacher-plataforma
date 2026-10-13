@@ -37,25 +37,46 @@ function style(){
 'body.fi-premium.fi-light .main>.container{overflow:visible!important}body.fi-premium.fi-light #content .card,body.fi-premium.fi-light #content .stat,body.fi-premium.fi-light #content .quick,body.fi-premium.fi-light #content .row,body.fi-premium.fi-light #content .table-wrap,body.fi-premium.fi-light #content .empty{background:#fff!important;border-color:#dce4ef!important;color:#17233a!important}body.fi-premium.fi-light #content .card h1,body.fi-premium.fi-light #content .card h2,body.fi-premium.fi-light #content .card h3,body.fi-premium.fi-light #content .card b,body.fi-premium.fi-light #content .quick b,body.fi-premium.fi-light #content .row b,body.fi-premium.fi-light #content .stat-value{color:#17233a!important}body.fi-premium.fi-light #content .card p,body.fi-premium.fi-light #content .card small,body.fi-premium.fi-light #content .row small,body.fi-premium.fi-light #content .stat-label,body.fi-premium.fi-light #content .stat-note{color:#52647a!important}',
 'body.fi-premium.fi-light #content [style*="background:#fff"],body.fi-premium.fi-light #content [style*="background: #fff"],body.fi-premium.fi-light #content [style*="background-color:#fff"],body.fi-premium.fi-light #content [style*="background-color: #fff"]{background:#fff!important;color:#17233a!important;border-color:#dce4ef!important}',
 '@media(max-width:700px){body.fi-premium .main{margin-left:0!important}body.fi-premium .main>.container{padding:18px 12px 36px!important}body.fi-premium .topbar{padding:0 12px!important}}'
+
+,'body.fi2-home .fi2-menu-toggle{display:none;border:1px solid #3b5876;border-radius:10px;background:#122a42;color:#f5f8ff;padding:9px 11px;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap}'
+,'body.fi2-home .fi2-nav-help{font-size:10px;color:#9eb5ce;white-space:nowrap}'
+,'body.fi2-home .fi2-plan-task{display:flex;align-items:center;gap:8px;background:#10263b;border:1px solid #27445f;border-radius:9px;padding:10px;color:#f5f8ff}'
+,'body.fi2-home .fi2-plan-task>span:nth-child(2){flex:1;min-width:0;font-size:11px;color:#f5f8ff}'
+,'body.fi2-home .fi2-plan-task>span:nth-child(2) small{display:block;color:#aebfd2;font-size:10px;margin-top:3px}'
+,'body.fi2-home .fi2-plan-task>small{font-size:10px;color:#b8c9dc;white-space:nowrap}'
+,'body.fi2-home .fi2-plan-task .fi2-check{display:grid;place-items:center;flex:none;width:18px;height:18px;border-radius:50%;border:1px solid #4a6a88;color:#8ee7ff}'
+,'@media(max-width:900px){body.fi2-home .fi2-menu-toggle{display:inline-flex;align-items:center;justify-content:center}body.fi2-home .fi2-nav-help{display:none}body.fi2-home .fi2-top{gap:8px}body.fi2-home .fi2-search{min-width:0}body.fi2-home .fi2-top-actions{gap:6px}body.fi2-home .fi2-user>span:last-child{display:none}}'
  ].join('\n');
  document.head.appendChild(s);
 }
 const go=v=>{if(typeof window.loadView==='function')window.loadView(v)};
 async function data(){
- let s=null,activities=[],rows=[];
+ let s=null,activities=[],rows=[],taskAssignments=[],tasks=[];
  try{if(typeof window.studentRecord==='function')s=await window.studentRecord()}catch(_){}
  try{if(s&&typeof sb!=='undefined'){
  const r=await Promise.all([
- sb.from('tic_immersion_activities').select('id,title,description,day_number,cefr_level,skill,estimated_minutes,cover_image_url,is_published,is_archived,sort_order').eq('teacher_id',s.teacher_id).eq('is_published',true).eq('is_archived',false).order('day_number').order('sort_order'),
- sb.from('tic_immersion_progress').select('activity_id,status,student_id').eq('student_id',s.id)
+  sb.from('tic_immersion_activities').select('id,title,description,day_number,cefr_level,skill,estimated_minutes,cover_image_url,is_published,is_archived,sort_order').eq('teacher_id',s.teacher_id).eq('is_published',true).eq('is_archived',false).order('day_number').order('sort_order'),
+  sb.from('tic_immersion_progress').select('activity_id,status,student_id').eq('student_id',s.id),
+  sb.from('tic_task_assignments').select('id,assignment_id,status,active,assigned_at,completed_at').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false}).limit(1000)
  ]);
- if(!r[0].error)activities=r[0].data||[];if(!r[1].error)rows=r[1].data||[];
- }}catch(_){}
+  if(!r[0].error)activities=r[0].data||[];
+  if(!r[1].error)rows=r[1].data||[];
+  if(!r[2].error)taskAssignments=r[2].data||[];
+  const ids=[...new Set(taskAssignments.map(x=>x.assignment_id).filter(Boolean))];
+  if(ids.length){
+   const tr=await sb.from('tic_assignments').select('id,title,due_at,points,assignment_type,cefr_level,skill,task_level,active').in('id',ids);
+   if(!tr.error){
+    const map=new Map((tr.data||[]).map(x=>[x.id,x]));
+    tasks=taskAssignments.map(x=>({...x,assignment:map.get(x.assignment_id)})).filter(x=>x.assignment&&x.assignment.active!==false);
+   }
+  }
+ }}catch(err){console.warn('[Fluent dashboard data]',err)}
  const done={};rows.filter(x=>x.status==='completed').forEach(x=>done[x.activity_id]=true);
  activities.sort((a,b)=>levels.findIndex(x=>x[0]===a.cefr_level)-levels.findIndex(x=>x[0]===b.cefr_level)||(a.day_number||0)-(b.day_number||0)||(a.sort_order||0)-(b.sort_order||0));
- return {s,activities,done};
+ return {s,activities,done,tasks};
 }
 function openImmersionFilter(level,search){
+ document.body.classList.remove('fi2-home');
  try{
   if(level)sessionStorage.setItem('ticImmRequestedLevel',String(level).toUpperCase());
   else sessionStorage.removeItem('ticImmRequestedLevel');
@@ -70,38 +91,40 @@ window.fiOpenCourseLevel=function(level){
  try{sessionStorage.setItem('fiRequestedCourseLevel',String(level||'').trim().toUpperCase());}catch(_){}
  if(typeof window.loadView==='function')return window.loadView('studentCourses');
 };
-window.fiOpenImmersionActivity=function(id,title,level){
+function openImmersionActivity(id,title,level){
+ try{if(id)sessionStorage.setItem('ticImmRequestedActivityId',String(id));else sessionStorage.removeItem('ticImmRequestedActivityId')}catch(_){}
  return openImmersionFilter(level||'',title||'');
-};
+}
+window.fiOpenImmersionActivity=function(id,title,level){return openImmersionActivity(id,title,level)};
 function course(a,d,i){
  const complete=!!d[a.id],cover=a.cover_image_url&&/^https?:/i.test(a.cover_image_url)?a.cover_image_url:photos.skills[i%4];
  const title=String(a.title||'English practice'),lev=String(a.cefr_level||'A1');
  return '<article class="fi2-course fi2-searchable" role="button" tabindex="0" data-fi2-activity data-activity-id="'+esc(a.id)+'" data-activity-title="'+esc(title)+'" data-activity-level="'+esc(lev)+'" data-search="'+esc(title+' '+lev+' '+(a.skill||''))+'"><div class="fi2-course-img" style="background-image:url('+esc(cover)+')"><span class="fi2-pill" style="position:absolute;top:7px;left:7px;z-index:2">'+esc(lev)+'</span></div><div class="fi2-course-body"><b>'+esc(title)+'</b><small>Lesson · '+esc(a.skill||'English')+'</small><div class="fi2-course-foot"><div class="fi2-bar"><i style="width:'+(complete?100:15)+'%"></i></div><small>'+(complete?'100%':'Continue')+'</small><button class="fi2-circle" type="button" data-fi2-activity-open aria-label="Open lesson">▶</button></div></div></article>';
 }
 function home(d){
- const s=d.s||{},a=d.activities||[],done=d.done||{},finished=a.filter(x=>done[x.id]).length,percent=a.length?Math.round(finished/a.length*100):0;
- const current=a.find(x=>!done[x.id])||a[0],level=String(s.current_level||current?.cefr_level||'A1').toUpperCase(),levelRows=a.filter(x=>x.cefr_level===level),levelDone=levelRows.filter(x=>done[x.id]).length;
+ const s=d.s||{},a=d.activities||[],done=d.done||{},tasks=d.tasks||[],finished=a.filter(x=>done[x.id]).length,percent=a.length?Math.round(finished/a.length*100):0;
+ const current=a.find(x=>!done[x.id])||a[0],currentIndex=current?Math.max(1,a.findIndex(x=>x.id===current.id)+1):0,level=String(s.current_level||current?.cefr_level||'A1').toUpperCase(),levelRows=a.filter(x=>x.cefr_level===level),levelDone=levelRows.filter(x=>done[x.id]).length;
  const name=(s.display_name||window.profile?.full_name||$('#userName')?.textContent||'Student').trim().split(/\s+/)[0];
  const levelsHtml=levels.map((x,i)=>'<button class="fi2-level" style="--f2-img:url(\''+photos.levels[i]+'\')" data-fi2-level="'+x[0]+'"><b>'+x[0]+'</b><span>'+x[1]+'</span></button>').join('');
  const active=a.filter(x=>!done[x.id]),cards=(active.slice(0,4).length?active.slice(0,4):a.slice(0,4)).map((x,i)=>course(x,done,i)).join('')||'<div class="fi2-panel">Seu professor ainda não publicou aulas nesta trilha.</div>';
  const recommended=(a.slice(4,10).length?a.slice(4,10):a.slice(0,6)).map((x,i)=>course(x,done,i+1)).join('');
- const upcoming=active.slice(0,3).map((x,i)=>'<button class="fi2-upcoming-row" onclick="window.loadView(\'immersionPlanner\')"><span class="fi2-upcoming-img" style="background-image:url(\''+esc(x.cover_image_url&&/^https?:/i.test(x.cover_image_url)?x.cover_image_url:photos.skills[i%4])+'\')"></span><span style="min-width:0;flex:1"><b>'+esc(x.title)+'</b><small><span class="fi2-pill" style="padding:2px 5px">'+esc(x.cefr_level||'A1')+'</span> · '+(Number(x.estimated_minutes)||15)+' min</small></span><span>›</span></button>').join('')||'<div class="fi2-plan-row">Nenhuma aula próxima.</div>';
- const games=[['🏆','Grammar Challenge'],['🃏','Vocabulary Match'],['🎧','Listening Quest'],['🎙️','Speaking Missions'],['🔠','Word Builder'],['🔎','Word Search']];
- const gameHtml=games.map((x,i)=>'<button class="fi2-game" data-fi2-game="'+i+'"><i>'+x[0]+'</i><span>'+x[1]+'</span></button>').join('');
- const skills=[['🎧','Listening','Real conversations',photos.skills[0],'learningHub'],['🎙️','Speaking','Record and practice',photos.skills[1],'immersionPlanner'],['📗','Reading','Articles and texts',photos.skills[2],'studentLessons'],['✏️','Writing','Guided practice',photos.skills[3],'studentLessons']];
+ const upcoming=active.slice(0,3).map((x,i)=>'<button class="fi2-upcoming-row" data-fi2-activity-open="1" data-activity-id="'+esc(x.id)+'" data-activity-title="'+esc(x.title)+'" data-activity-level="'+esc(x.cefr_level||'A1')+'"><span class="fi2-upcoming-img" style="background-image:url(\''+esc(x.cover_image_url&&/^https?:/i.test(x.cover_image_url)?x.cover_image_url:photos.skills[i%4])+'\')"></span><span style="min-width:0;flex:1"><b>'+esc(x.title)+'</b><small><span class="fi2-pill" style="padding:2px 5px">'+esc(x.cefr_level||'A1')+'</span> · '+(Number(x.estimated_minutes)||15)+' min</small></span><span>›</span></button>').join('')||'<div class="fi2-plan-row">Nenhuma aula próxima.</div>';
+ const games=[['🃏','Vocabulary Match','match'],['🏆','Grammar Challenge','grammar'],['🔤','Word Builder','builder'],['🎧','Listening Quest','listening'],['🔎','Reading Detective','reading'],['🚀','Word Sprint','speed']];
+ const gameHtml=games.map(x=>'<button class="fi2-game" data-fi2-game="'+x[2]+'"><i>'+x[0]+'</i><span>'+x[1]+'</span></button>').join('');
+ const skills=[['🎧','Listening','Real conversations',photos.skills[0],'listeningPractice'],['🎙️','Speaking','Record and practice',photos.skills[1],'speakingPractice'],['📗','Reading','Articles and texts',photos.skills[2],'studentLessons'],['✏️','Writing','Guided practice',photos.skills[3],'studentLessons']];
  const skillHtml=skills.map(x=>'<button class="fi2-skill" style="--f2-img:url(\''+x[3]+'\')" data-fi2-view="'+x[4]+'"><i>'+x[0]+'</i><span><b>'+x[1]+'</b><small>'+x[2]+'</small></span></button>').join('');
- const plan=[['Continue your main lesson',(Number(current?.estimated_minutes)||15)+' min'],['Vocabulary practice','10 min'],['Listening practice','15 min'],['Speaking practice','15 min']].map((x,i)=>'<div class="fi2-plan-row"><span class="fi2-check">'+(i===0?'▶':'')+'</span><span>'+x[0]+'</span><small>'+x[1]+'</small></div>').join('');
- return '<div class="fi2-top"><label class="fi2-search"><span>⌕</span><input id="fi2Search" placeholder="Search for lessons, topics, games..." autocomplete="off"><span>⌕</span></label><div class="fi2-top-actions"><button class="fi2-btn" id="fi2Theme" type="button" title="Alternar modo claro/escuro">☼</button><div class="fi2-user"><span class="fi2-avatar">'+esc(name.slice(0,1).toUpperCase())+'</span><span><b>Hello, '+esc(name)+'!</b><br><small style="color:#9eb2c9">Keep learning</small></span></div></div></div>'+
- '<div class="fi2-home-grid"><div class="fi2-maincol"><section class="fi2-hero"><div class="fi2-hero-content"><div class="fi2-eyebrow">▶ CONTINUE LEARNING</div><div class="fi2-pills"><span class="fi2-pill">'+esc(current?.cefr_level||level)+'</span><span>Lesson '+Math.min(finished+1,Math.max(a.length,1))+' of '+Math.max(a.length,1)+'</span></div><h1>'+(current?esc(current.title).replace(/\b(Airports?)\b/i,'<span>$1</span>'):'Your English Journey')+'</h1><p>'+esc(current?.description||'Learn useful vocabulary, practice listening and build confidence speaking English.')+'</p><div class="fi2-actions"><button class="fi2-btn primary" data-fi2-go="immersionPlanner">▶ Continue Lesson</button><button class="fi2-btn" data-fi2-go="studentLessons">▣ View Plan</button><div class="fi2-hero-progress">'+percent+'% completed<div class="fi2-bar"><i style="width:'+percent+'%"></i></div></div></div></div></section>'+
- '<section class="fi2-section"><div class="fi2-section-head"><h2>Explore by Level (CEFR)</h2><button class="fi2-link" data-fi2-go="studentLessons">See all levels →</button></div><div class="fi2-levels">'+levelsHtml+'</div></section>'+
+ const pendingTasks=tasks.filter(t=>!['completed','graded','reviewed'].includes(String(t.status||'').toLowerCase()));const plan=pendingTasks.slice(0,4).map(t=>'<button class="fi2-plan-row fi2-plan-task" data-fi2-task="'+esc(t.id)+'" style="width:100%;text-align:left;cursor:pointer"><span class="fi2-check">'+(String(t.status||'pending').toLowerCase()==='submitted'?'✓':'•')+'</span><span>'+esc(t.assignment?.title||'Task')+'<small>'+esc(t.assignment?.skill||t.assignment?.cefr_level||'Atividade atribuída')+'</small></span><small>'+(t.assignment?.due_at?'Prazo '+new Date(t.assignment.due_at).toLocaleDateString('pt-BR'):'Sem prazo')+'</small></button>').join('')||'<div class="fi2-plan-row">Nenhuma tarefa atribuída pendente nos registros atuais.</div>';
+ return '<div class="fi2-top"><button class="fi2-menu-toggle" id="fi2MenuToggle" type="button" aria-label="Abrir menu de abas">☰ Abas</button><label class="fi2-search"><span>⌕</span><input id="fi2Search" placeholder="Search for lessons, topics, games..." autocomplete="off"><span>⌕</span></label><span class="fi2-nav-help">Use o menu lateral para abrir as abas</span><div class="fi2-top-actions"><button class="fi2-btn" id="fi2Theme" type="button" title="Alternar modo claro/escuro">☼</button><div class="fi2-user"><span class="fi2-avatar">'+esc(name.slice(0,1).toUpperCase())+'</span><span><b>Hello, '+esc(name)+'!</b><br><small style="color:#9eb2c9">Keep learning</small></span></div></div></div>'+
+ '<div class="fi2-home-grid"><div class="fi2-maincol"><section class="fi2-hero"><div class="fi2-hero-content"><div class="fi2-eyebrow">▶ CONTINUE LEARNING</div><div class="fi2-pills"><span class="fi2-pill">'+esc(current?.cefr_level||level)+'</span><span>'+(current?'Lesson '+currentIndex+' of '+a.length:'No published lessons yet')+'</span></div><h1>'+(current?esc(current.title).replace(/\b(Airports?)\b/i,'<span>$1</span>'):'Your English Journey')+'</h1><p>'+esc(current?.description||'Learn useful vocabulary, practice listening and build confidence speaking English.')+'</p><div class="fi2-actions"><button class="fi2-btn primary" data-fi2-activity-open="1" data-activity-id="'+esc(current?.id||'')+'" data-activity-title="'+esc(current?.title||'')+'" data-activity-level="'+esc(current?.cefr_level||level)+'">▶ Continue Lesson</button><button class="fi2-btn" data-fi2-go="studentLessons">▣ View Plan</button><div class="fi2-hero-progress">'+percent+'% completed<div class="fi2-bar"><i style="width:'+percent+'%"></i></div></div></div></div></section>'+
+ '<section class="fi2-section"><div class="fi2-section-head"><h2>Explore by Level (CEFR)</h2><button class="fi2-link" data-fi2-go="studentCourses">See all levels →</button></div><div class="fi2-levels">'+levelsHtml+'</div></section>'+
  '<section class="fi2-section"><div class="fi2-section-head"><h2>Continue Where You Left Off</h2><button class="fi2-link" data-fi2-go="immersionPlanner">See all →</button></div><div class="fi2-courses">'+cards+'</div></section>'+
  '<section class="fi2-section"><div class="fi2-section-head"><h2>Games for You</h2><button class="fi2-link" data-fi2-go="games">See all games →</button></div><div class="fi2-games">'+gameHtml+'</div></section>'+
  '<section class="fi2-section"><div class="fi2-section-head"><h2>Skills Practice</h2><button class="fi2-link" data-fi2-go="learningHub">See all →</button></div><div class="fi2-skills">'+skillHtml+'</div></section>'+
  '<section class="fi2-section"><div class="fi2-section-head"><h2>Recommended for You</h2><button class="fi2-link" data-fi2-go="studentLessons">See all →</button></div><div class="fi2-recommend">'+recommended+'</div></section></div>'+
- '<aside class="fi2-rightcol"><section class="fi2-panel"><div class="fi2-panel-head"><h2>My Progress</h2><button class="fi2-link" data-fi2-go="studentProgress">See details →</button></div><div class="fi2-progress-overview"><div class="fi2-ring" style="--fi2-pct:'+percent+'%"><b>'+percent+'%</b></div><div><strong>'+esc(level)+' · '+(levels.find(x=>x[0]===level)?.[1]||'Learner')+'</strong><p>Great progress!<br>Keep going!</p></div></div><div class="fi2-stat-grid"><div class="fi2-stat"><i>📗</i><b>'+finished+'</b><small>Lessons completed</small></div><div class="fi2-stat"><i>🎯</i><b>'+a.length+'</b><small>Lessons available</small></div><div class="fi2-stat"><i>🔥</i><b>'+levelDone+'</b><small>Level lessons</small></div><div class="fi2-stat"><i>📊</i><b>'+percent+'%</b><small>Completion</small></div></div></section>'+
- '<section class="fi2-panel"><div class="fi2-panel-head"><h2>Today’s Plan</h2><button class="fi2-link" data-fi2-go="studentTasks">View all →</button></div>'+plan+'<button class="fi2-wide-btn" data-fi2-go="immersionPlanner">▶ Continue Plan</button></section>'+
- '<section class="fi2-panel"><div class="fi2-panel-head"><h2>Upcoming Lessons</h2><button class="fi2-link" data-fi2-go="studentLessons">See all →</button></div><div class="fi2-upcoming">'+upcoming+'</div></section>'+
- '<section class="fi2-panel"><div class="fi2-panel-head"><h2>Achievements</h2><button class="fi2-link" data-fi2-go="studentProgress">See all →</button></div><div class="fi2-awards"><div class="fi2-award"><i>🌟</i><b>'+finished+'</b><small>Lessons</small></div><div class="fi2-award"><i>🏅</i><b>'+levelDone+'</b><small>Level</small></div><div class="fi2-award"><i>🎮</i><b>—</b><small>Games</small></div><div class="fi2-award"><i>🚀</i><b>'+percent+'%</b><small>Progress</small></div></div></section></aside></div>';
+ '<aside class="fi2-rightcol"><section class="fi2-panel"><div class="fi2-panel-head"><h2>My Progress</h2><button class="fi2-link" data-fi2-go="studentProgress">See details →</button></div><div class="fi2-progress-overview"><div class="fi2-ring" style="--fi2-pct:'+percent+'%"><b>'+percent+'%</b></div><div><strong>'+esc(level)+' · '+(levels.find(x=>x[0]===level)?.[1]||'Learner')+'</strong><p>'+(percent>=70?'Strong consistency. Keep going!':percent>=35?'Keep building your skills.':'Every step counts. Keep practicing.')+'</p></div></div><div class="fi2-stat-grid"><div class="fi2-stat"><i>📗</i><b>'+finished+'</b><small>Activities completed</small></div><div class="fi2-stat"><i>🎯</i><b>'+a.length+'</b><small>Published activities</small></div><div class="fi2-stat"><i>🔥</i><b>'+levelDone+'</b><small>Completed in level</small></div><div class="fi2-stat"><i>📊</i><b>'+percent+'%</b><small>Completion</small></div></div></section>'+
+ '<section class="fi2-panel"><div class="fi2-panel-head"><h2>My Tasks</h2><button class="fi2-link" data-fi2-go="studentTasks">View all →</button></div>'+plan+'<button class="fi2-wide-btn" data-fi2-go="immersionPlanner">▶ Continue Plan</button></section>'+
+ '<section class="fi2-panel"><div class="fi2-panel-head"><h2>Next Lessons in Your Path</h2><button class="fi2-link" data-fi2-go="immersionPlanner">See all →</button></div><div class="fi2-upcoming">'+upcoming+'</div></section>'+
+ '<section class="fi2-panel"><div class="fi2-panel-head"><h2>Achievements</h2><button class="fi2-link" data-fi2-go="studentProgress">See all →</button></div><div class="fi2-awards"><div class="fi2-award"><i>🌟</i><b>'+finished+'</b><small>Activities</small></div><div class="fi2-award"><i>🏅</i><b>'+levelDone+'</b><small>Level</small></div><div class="fi2-award"><i>📝</i><b>'+tasks.length+'</b><small>Tasks assigned</small></div><div class="fi2-award"><i>🚀</i><b>'+percent+'%</b><small>Progress</small></div></div></section></aside></div>';
 }
 async function render(){
  const root=$('#content');if(!root)return;const d=await data();if(!d.s)return;
@@ -110,59 +133,61 @@ async function render(){
  root.innerHTML=home(d);
  const old=$('#fiThemeToggle'),btn=$('#fi2Theme');if(btn){btn.textContent=document.body.classList.contains('fi-light')?'☾':'☼';btn.addEventListener('click',()=>{if(old)old.click();else{document.body.classList.toggle('fi-light');try{localStorage.setItem('fiDashboardTheme',document.body.classList.contains('fi-light')?'light':'dark')}catch(_){}}btn.textContent=document.body.classList.contains('fi-light')?'☾':'☼'})}
  const search=$('#fi2Search');if(search)search.addEventListener('input',()=>{const q=search.value.trim().toLowerCase();document.querySelectorAll('.fi2-searchable').forEach(el=>el.style.display=!q||el.dataset.search.toLowerCase().includes(q)?'':'none')});
+ const menu=$('#fi2MenuToggle');if(menu)menu.addEventListener('click',()=>{if(typeof window.toggleMobile==='function')window.toggleMobile(true);else{const side=$('#sidebar'),overlay=$('#mobileOverlay');if(side)side.classList.add('open');if(overlay)overlay.classList.add('open')}});
+ document.querySelectorAll('[data-fi2-activity-open]').forEach(el=>el.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();openImmersionActivity(el.dataset.activityId||'',el.dataset.activityTitle||'',el.dataset.activityLevel||'')}));
+ document.querySelectorAll('[data-fi2-task]').forEach(el=>el.addEventListener('click',()=>{if(typeof window.openStudentTask==='function')window.openStudentTask(el.dataset.fi2Task);else if(typeof window.openStudentTaskViewer==='function')window.openStudentTaskViewer(el.dataset.fi2Task)}));
+
  document.querySelectorAll('[data-fi2-level]').forEach(b=>b.addEventListener('click',()=>window.fiOpenCourseLevel?window.fiOpenCourseLevel(b.dataset.fi2Level):window.loadView('studentCourses')));
  document.querySelectorAll('.fi2-course').forEach(card=>{
   card.addEventListener('click',ev=>{
    ev.preventDefault();ev.stopImmediatePropagation();
-   const title=card.querySelector('.fi2-course-body>b')?.textContent||'';
-   const level=card.querySelector('.fi2-pill')?.textContent||'';
-   openImmersionFilter(level,title);
+   const title=card.dataset.activityTitle||card.querySelector('.fi2-course-body>b')?.textContent||'';
+   const level=card.dataset.activityLevel||card.querySelector('.fi2-pill')?.textContent||'';
+   openImmersionActivity(card.dataset.activityId||'',title,level);
   },true);
   card.addEventListener('keydown',ev=>{
    if(ev.key==='Enter'||ev.key===' '){
     ev.preventDefault();
-    const title=card.querySelector('.fi2-course-body>b')?.textContent||'';
-    const level=card.querySelector('.fi2-pill')?.textContent||'';
-    openImmersionFilter(level,title);
+    const title=card.dataset.activityTitle||card.querySelector('.fi2-course-body>b')?.textContent||'';
+    const level=card.dataset.activityLevel||card.querySelector('.fi2-pill')?.textContent||'';
+    openImmersionActivity(card.dataset.activityId||'',title,level);
    }
   });
  });
- document.querySelectorAll('[data-fi2-game]').forEach(b=>b.addEventListener('click',()=>go('games')));
+ document.querySelectorAll('[data-fi2-game]').forEach(b=>b.addEventListener('click',()=>{try{sessionStorage.setItem('ticRequestedGame',b.dataset.fi2Game)}catch(_){}go('games')}));
  document.querySelectorAll('[data-fi2-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.fi2View)));
  document.querySelectorAll('[data-fi2-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.fi2Go)));
 }
 function init(){
  style();
- // Hook the existing navigation itself: the app may call the lexical loadView/studentDashboard
- // bindings rather than the window properties, so we also listen for the actual student-nav click.
+ const baseLoad=window.loadView;
+ if(typeof baseLoad==='function'&&!baseLoad.__fi2RouteWrapped){
+  const route=async function(v){if(v!=='student')document.body.classList.remove('fi2-home');return baseLoad.apply(this,arguments)};
+  route.__fi2RouteWrapped=true;window.loadView=route;
+ }
+ // Clear the redesigned home only when another tab is selected. The student home itself
+ // is rendered before the legacy dashboard, preventing a flash of the old layout.
  document.addEventListener('click',ev=>{
   const b=ev.target.closest('#teacherNav [data-view]');
   if(!b)return;
-  if(b.dataset.view==='student'){
-   document.body.classList.remove('fi2-home');
-   // Render after the original Supabase-backed dashboard finishes; retry once for slower connections.
-   setTimeout(()=>render().catch(e=>console.warn('[Fluent dashboard preview]',e)),1000);
-   setTimeout(()=>render().catch(e=>console.warn('[Fluent dashboard preview]',e)),2200);
-  }else{
-   document.body.classList.remove('fi2-home');
-  }
+  if(b.dataset.view!=='student')document.body.classList.remove('fi2-home');
  },true);
  const original=window.studentDashboard;
  if(typeof original==='function'&&!original.__fi2Wrapped){
   const wrapped=async function(){
    document.body.classList.remove('fi2-home');
+   const root=$('#content');
+   if(root)root.innerHTML='<div class="fi2-loading" role="status" style="padding:24px;color:#c3d5e8">Carregando seu painel de aprendizagem…</div>';
+   try{
+    await render();
+    if(document.body.classList.contains('fi2-home'))return;
+   }catch(e){console.warn('[Fluent dashboard]',e)}
    await original.apply(this,arguments);
-   try{await render()}catch(e){console.warn('[Fluent dashboard preview]',e)}
+   try{await render()}catch(e){console.warn('[Fluent dashboard fallback]',e)}
   };
   wrapped.__fi2Wrapped=true;
   window.studentDashboard=wrapped;
  }
- // If the student dashboard is already open when scripts finish loading, render it once.
- setTimeout(()=>{
-  const view=String(window.currentView||'');
-  const role=String(document.querySelector('#userRole')?.textContent||'').toLowerCase();
-  if(view==='student'||role==='student')render().catch(e=>console.warn('[Fluent dashboard preview]',e));
- },700);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();

@@ -144,7 +144,7 @@
   };
 
   window.ticSubmitGeneratedTask=async function(e,taskAssignmentId){
-    e.preventDefault();const s=await studentRecord();if(!s)return;const {data:ta}=await sb.from('tic_task_assignments').select('id,active,assignment_id').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();if(!ta||ta.active===false)return toast('Esta atribuição não está disponível.','error');const {data:a}=await sb.from('tic_assignments').select('content_json,points').eq('id',ta.assignment_id).maybeSingle();const qs=normalizeQuestions(a?.content_json?.questions||[]);const answers={};qs.forEach(q=>{if(q.type==='multiple_choice'||q.type==='true_false'){const el=document.querySelector(`[name="sq_${q.id}"]:checked`);answers[q.id]=el?.value||''}else answers[q.id]=document.querySelector(`[data-answer="${q.id}"]`)?.value||''});const g=autoGrade(qs,answers);const {data:last}=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',ta.id).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;const r=await sb.from('tic_submissions').insert({task_assignment_id:ta.id,student_id:s.id,attempt,answer_text:null,response_data:{source:'task_builder_v2',answers,auto_grade:g},submitted_at:new Date().toISOString(),grade:g.percent});if(r.error)return toast('Não foi possível enviar: '+r.error.message,'error');const statusUpdate=await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',ta.id).eq('student_id',s.id);if(statusUpdate.error){return toast('Resposta salva, mas não foi possível atualizar o status da tarefa: '+statusUpdate.error.message,'error')}const box=$('generatedTaskResult');if(box)box.innerHTML=`<div class="auto-result ${g.percent>=70?'good':'review'}"><b>✅ Resposta registrada</b><span>Resultado automático: ${g.earned}/${g.total} pontos · ${g.percent??0}%</span><small>O Teacher ainda poderá revisar e enviar feedback.</small></div>`;toast(`Tentativa ${attempt} enviada. ${g.percent??0}% automático.`,'success');
+    e.preventDefault();const s=await studentRecord();if(!s)return;const {data:ta}=await sb.from('tic_task_assignments').select('id,active,assignment_id').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();if(!ta||ta.active===false)return toast('Esta atribuição não está disponível.','error');const {data:a}=await sb.from('tic_assignments').select('content_json,points').eq('id',ta.assignment_id).maybeSingle();const qs=normalizeQuestions(a?.content_json?.questions||[]);const answers={};qs.forEach(q=>{if(q.type==='multiple_choice'||q.type==='true_false'){const el=document.querySelector(`[name="sq_${q.id}"]:checked`);answers[q.id]=el?.value||''}else answers[q.id]=document.querySelector(`[data-answer="${q.id}"]`)?.value||''});const g=autoGrade(qs,answers);const {data:last}=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',ta.id).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;const r=await sb.from('tic_submissions').insert({task_assignment_id:ta.id,student_id:s.id,attempt,answer_text:null,response_data:{source:'task_builder_v2',answers,auto_grade:g},submitted_at:new Date().toISOString(),grade:g.percent});if(r.error)return toast('Não foi possível enviar: '+r.error.message,'error');const statusUpdate=await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',ta.id).eq('student_id',s.id);if(statusUpdate.error){return toast('Resposta salva, mas não foi possível atualizar o status da tarefa: '+statusUpdate.error.message,'error')}if(typeof window.ticLogStudentEventV58==='function')window.ticLogStudentEventV58('task_submitted','Tarefa enviada',currentView||'student','task',ta.id,{assignmentId:ta.assignment_id,attempt:attempt,score:g.percent});const box=$('generatedTaskResult');if(box)box.innerHTML=`<div class="auto-result ${g.percent>=70?'good':'review'}"><b>✅ Resposta registrada</b><span>Resultado automático: ${g.earned}/${g.total} pontos · ${g.percent??0}%</span><small>O Teacher ainda poderá revisar e enviar feedback.</small></div>`;toast(`Tentativa ${attempt} enviada. ${g.percent??0}% automático.`,'success');
   };
 
   function addFloating(){if(document.getElementById('ticTaskFab'))return;const fab=document.createElement('div');fab.id='ticTaskFab';fab.innerHTML=`<button class="tic-fab-main" title="Ações rápidas">＋</button><div class="tic-fab-menu"><button onclick="openAssignmentForm();ticCloseFab()">✨ Nova Task</button><button onclick="loadView('assignments');ticCloseFab()">📋 Tasks</button><button onclick="loadView('studentTasks');ticCloseFab()">🎓 My Tasks</button></div>`;document.body.appendChild(fab);fab.querySelector('.tic-fab-main').onclick=()=>fab.classList.toggle('open');window.ticCloseFab=()=>fab.classList.remove('open')}
@@ -1257,7 +1257,7 @@ async function studentTasks(){
 async function submitTaskWork(e,taskAssignmentId){e.preventDefault();const s=await studentRecord();if(!s)return;const {data:ta}=await sb.from('tic_task_assignments').select('id,active').eq('id',taskAssignmentId).eq('student_id',s.id).maybeSingle();if(!ta||ta.active===false)return toast('Esta atribuição foi removida pelo Teacher.','error');const answer=$(`ans_${taskAssignmentId}`)?.value.trim()||'',file=$(`file_${taskAssignmentId}`)?.value.trim()||null;if(!answer&&!file)return toast('Digite uma resposta ou informe um link.','error');
  const {data:old}=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',taskAssignmentId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1);const attempt=(old?.[0]?.attempt||0)+1;
  const {error}=await sb.from('tic_submissions').insert({task_assignment_id:taskAssignmentId,student_id:s.id,answer_text:answer||null,file_url:file,attempt});if(error)return toast('Não foi possível enviar a entrega: '+error.message,'error');
- const r=await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',taskAssignmentId).eq('student_id',s.id);if(r.error)return toast('Entrega enviada, mas não foi possível atualizar o status: '+r.error.message,'error');toast(`Tentativa ${attempt} enviada para o Teacher. A tarefa continua ativa.`,'success');loadView('studentTasks');
+ const r=await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',taskAssignmentId).eq('student_id',s.id);if(r.error)return toast('Entrega enviada, mas não foi possível atualizar o status: '+r.error.message,'error');if(typeof window.ticLogStudentEventV58==='function')window.ticLogStudentEventV58('task_submitted','Entrega de tarefa enviada',currentView||'student','task',taskAssignmentId,{attempt:attempt});toast(`Tentativa ${attempt} enviada para o Teacher. A tarefa continua ativa.`,'success');loadView('studentTasks');
 }
 
 async function studentClassPage(){
@@ -1518,7 +1518,7 @@ async function submitInteractiveLesson(lessonId,payload){
  const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();
  const attempt=Number(last?.attempt||0)+1;
  const {data:r,error}=await sb.from('tic_lesson_responses').insert({lesson_id:lessonId,student_id:s.id,attempt,response_data:payload.fields||{},response_text:payload.text||null,status:'submitted'}).select().single();
- if(error)return toast('Não foi possível enviar sua resposta: '+error.message,'error');
+ if(error)return toast('Não foi possível enviar sua resposta: '+error.message,'error');if(typeof window.ticLogStudentEventV58==='function')window.ticLogStudentEventV58('lesson_response_submitted','Resposta de Lesson enviada',currentView||'student','lesson',lessonId,{attempt:attempt});
  if($('htmlViewerStatus'))$('htmlViewerStatus').innerHTML=`<b>✅ Resposta enviada.</b> Tentativa ${attempt}. O Teacher poderá corrigir e enviar feedback.`;
  toast('Resposta da Lesson enviada.','success');
 }
@@ -1535,6 +1535,7 @@ async function submitInteractiveTask(taskAssignmentId,payload){
  const attempt=Number(last?.attempt||0)+1;
  const {error}=await sb.from('tic_submissions').insert({task_assignment_id:taskAssignmentId,student_id:s.id,attempt,response_data:payload.fields||{},answer_text:payload.text||null,submitted_at:new Date().toISOString()});
  if(error)return toast('Não foi possível enviar a Task: '+error.message,'error');
+ if(typeof window.ticLogStudentEventV58==='function')window.ticLogStudentEventV58('task_submitted','Task enviada',currentView||'student','task',taskAssignmentId,{attempt:attempt});
  await sb.from('tic_task_assignments').update({status:'submitted'}).eq('id',taskAssignmentId).eq('student_id',s.id);
  if($('htmlViewerStatus'))$('htmlViewerStatus').innerHTML=`<b>✅ Task enviada.</b> Tentativa ${attempt}. A atribuição continua ativa para novas tentativas.`;
  toast('Resposta da Task enviada.','success');
@@ -1572,17 +1573,17 @@ async function studentDashboardV3(){
  $('content').innerHTML=`
  <section class="student-welcome card"><div><span>MY LEARNING</span><h2>Continue your English journey</h2><p>Entre diretamente no curso, na próxima Lesson ou nas Tasks.</p></div><div class="welcome-level"><small>CURRENT LEVEL</small><b>${esc(s.current_level)} → ${esc(s.target_level||'—')}</b><div class="progress"><i style="width:${Math.min(100,overall)}%"></i></div><strong>${overall}% geral</strong></div></section>
  <div class="student-action-grid section">
-  <button class="student-action-card" onclick="loadView('studentCourses')"><span>📚</span><b>My Courses</b><small>${courses.length} curso(s) ativo(s)</small></button>
+  <button class="student-action-card" onclick="loadView(&quot;studentCourses&quot;)"><span>📚</span><b>My Courses</b><small>${courses.length} curso(s) ativo(s)</small></button>
   <button class="student-action-card" onclick="loadView('studentTasks')"><span>✅</span><b>My Tasks</b><small>${pending} pendente(s) · ${submitted} enviada(s)</small></button>
   <button class="student-action-card" onclick="loadView('studentProgress')"><span>📊</span><b>My Progress</b><small>${overall}% no nível atual</small></button>
   <button class="student-action-card" onclick="loadView('studentLessons')"><span>📖</span><b>My Lessons</b><small>${lessons.length} lesson(s) disponíveis</small></button>
  </div>
  <div class="grid cols2 section">
-  <div class="card student-next-card"><div class="section-head"><div><h2>▶ Continue Learning</h2><span>${course?esc(course.title):'Nenhum curso'}</span></div>${course?`<span class="badge blue">${esc(course.level||s.current_level)}</span>`:''}</div>${nextLesson?`<div class="next-lesson-box"><div class="next-lesson-icon">📖</div><div><b>${esc(nextLesson.title)}</b><small>${esc(nextLesson.skill||'Lesson')} ${nextLesson.html_enabled?'· 🧩 Interativa':''}</small></div><button class="btn primary" onclick="viewStudentLessonInteractive('${nextLesson.id}')">Abrir Lesson →</button></div>`:'<div class="empty">O Teacher ainda não adicionou Lessons ao seu curso.</div>'}<button class="btn ghost" onclick="loadView('studentCourses')">Ver currículo completo</button></div>
+  <div class="card student-next-card"><div class="section-head"><div><h2>▶ Continue Learning</h2><span>${course?esc(course.title):'Nenhum curso'}</span></div>${course?`<span class="badge blue">${esc(course.level||s.current_level)}</span>`:''}</div>${nextLesson?`<div class="next-lesson-box"><div class="next-lesson-icon">📖</div><div><b>${esc(nextLesson.title)}</b><small>${esc(nextLesson.skill||'Lesson')} ${nextLesson.html_enabled?'· 🧩 Interativa':''}</small></div><button class="btn primary" onclick="viewStudentLessonInteractive('${nextLesson.id}')">Abrir Lesson →</button></div>`:'<div class="empty">O Teacher ainda não adicionou Lessons ao seu curso.</div>'}<button class="btn ghost" onclick="loadView(&quot;studentCourses&quot;)">Ver currículo completo</button></div>
   <div class="card"><div class="section-head"><div><h2>✅ My Tasks</h2><span>Atividades que precisam da sua atenção.</span></div><span class="badge ${pending?'yellow':'green'}">${pending} pendente(s)</span></div>${(ta||[]).slice(0,3).map(x=>`<div class="dashboard-task-row"><div><b>${esc(x.tic_assignments?.title||'Task')}</b><small>${x.tic_assignments?.due_at?'Prazo informativo: '+fmtDate(x.tic_assignments.due_at):'Sem prazo'} · ${x.tic_assignments?.html_enabled?'HTML interativo':''}</small></div><button class="btn sm secondary" onclick="openStudentTask('${x.id}')">Abrir</button></div>`).join('')||'<div class="empty">Nenhuma Task ativa.</div>'}<button class="btn ghost" onclick="loadView('studentTasks')">Ver todas as Tasks →</button></div>
  </div>
  <div class="grid cols2 section">
-  <div class="card tp-dashboard-link" data-tp-view="studentCourses" role="button" tabindex="0" aria-label="Abrir cursos"><div class="section-head"><h2>📚 Course Snapshot</h2><button class="btn sm secondary" onclick="loadView('studentCourses')">Abrir</button></div>${course?`<div class="course-snapshot"><b>${esc(course.title)}</b><small>${courseLessons.length} Lessons · ${(mods||[]).filter(m=>m.course_id===course.id).length} Módulos</small><div class="progress"><i style="width:${overall}%"></i></div><span>${overall}%</span></div>`:'<div class="empty">Nenhum curso ativo.</div>'}</div>
+  <div class="card tp-dashboard-link" data-tp-view="studentCourses" role="button" tabindex="0" aria-label="Abrir cursos"><div class="section-head"><h2>📚 Course Snapshot</h2><button class="btn sm secondary" onclick="loadView(&quot;studentCourses&quot;)">Abrir</button></div>${course?`<div class="course-snapshot"><b>${esc(course.title)}</b><small>${courseLessons.length} Lessons · ${(mods||[]).filter(m=>m.course_id===course.id).length} Módulos</small><div class="progress"><i style="width:${overall}%"></i></div><span>${overall}%</span></div>`:'<div class="empty">Nenhum curso ativo.</div>'}</div>
   <div class="card tp-dashboard-link" data-tp-view="studentTasks" role="button" tabindex="0" aria-label="Abrir atividades recentes"><div class="section-head"><h2>📝 Latest activity</h2></div><div class="student-mini-stats"><div><b>${pending}</b><small>Pending</small></div><div><b>${submitted}</b><small>Submitted</small></div><div><b>${reviewed}</b><small>Reviewed</small></div></div><div class="notice">💡 As Tasks permanecem abertas até o Teacher removê-las. Depois da correção, você pode fazer novas tentativas quando permitido.</div></div>
  </div>
  <div class="card section tp-dashboard-link" data-tp-view="student" role="button" tabindex="0" aria-label="Atualizar pagamentos"><div class="section-head"><h2>💰 My Payments</h2><button class="btn sm secondary" onclick="loadView('student')">Atualizar</button></div>${(pay||[]).map(x=>`<div class="row"><div><b>${monthLabel(x.reference_month)}</b><small>${x.payment_date?'Pago em '+fmtDate(x.payment_date):'Vencimento '+fmtDate(x.due_date)}</small></div><b>${money(x.amount)} ${badge(x.status)}</b></div>`).join('')||'<div class="empty">Nenhum registro.</div>'}</div>`;
@@ -1593,10 +1594,18 @@ studentDashboard=studentDashboardV3;
 async function studentCoursesPage(){
  const s=await studentRecord();
  if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um aluno.</div>';return}
+ let requestedCourseLevel='';
+ try{requestedCourseLevel=(sessionStorage.getItem('fiRequestedCourseLevel')||'').trim().toUpperCase();sessionStorage.removeItem('fiRequestedCourseLevel')}catch(_){}
  const {data:enroll,error:ee}=await sb.from('tic_course_students').select('course_id,status,enrolled_at').eq('student_id',s.id).eq('status','active').order('enrolled_at',{ascending:false});
  if(ee)return $('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar seus cursos.</b><p>${esc(ee.message)}</p></div>`;
  const ids=(enroll||[]).map(x=>x.course_id).filter(Boolean);
- if(!ids.length){setPage('My Courses','Seus cursos, módulos e currículo.');$('content').innerHTML='<div class="card empty">Você ainda não está matriculado em nenhum curso. Peça ao Teacher para matricular você.</div>';return}
+ if(!ids.length){
+  setPage('My Courses',requestedCourseLevel?'Cursos do nível '+requestedCourseLevel:'Seus cursos, módulos e currículo.');
+  $('content').innerHTML=requestedCourseLevel
+   ? '<div class="card empty"><h2>Nenhum curso ativo do nível '+esc(requestedCourseLevel)+'</h2><p>Você ainda não está matriculado em um curso deste nível. Peça ao Teacher para matricular você.</p><button class="btn primary" onclick="loadView(&quot;studentCourses&quot;)">Ver todos os cursos</button></div>'
+   : '<div class="card empty">Você ainda não está matriculado em nenhum curso. Peça ao Teacher para matricular você.</div>';
+  return;
+ }
  const [{data:cs,error:ce},{data:ms,error:me},{data:ls,error:le},{data:p}]=await Promise.all([
   sb.from('tic_courses').select('*').in('id',ids).eq('active',true),
   sb.from('tic_modules').select('*').in('course_id',ids).order('position'),
@@ -1604,8 +1613,7 @@ async function studentCoursesPage(){
   sb.from('tic_progress').select('level,skill,progress').eq('student_id',s.id)
  ]);
  if(ce||me||le)return $('content').innerHTML=`<div class="card attention"><b>Erro no currículo.</b><p>${esc((ce||me||le).message)}</p></div>`;
- let requestedCourseLevel='';
- try{requestedCourseLevel=(sessionStorage.getItem('fiRequestedCourseLevel')||'').trim().toUpperCase();sessionStorage.removeItem('fiRequestedCourseLevel')}catch(_){}
+
  const visibleCourses=(cs||[]).filter(c=>!requestedCourseLevel||String(c.level||'').trim().toUpperCase()===requestedCourseLevel);
  const courseCards=visibleCourses.map(c=>{
   const lessons=(ls||[]).filter(l=>l.course_id===c.id).sort((a,b)=>(a.position||0)-(b.position||0));
@@ -1619,7 +1627,7 @@ async function studentCoursesPage(){
   </article>`;
  }).join('');
  setPage('My Courses',requestedCourseLevel?'Cursos do nível '+requestedCourseLevel:'Seus cursos, módulos e currículo.');
- $('content').innerHTML=`<div class="notice success">🎓 Você está matriculado em <b>${ids.length} curso(s)</b>. O acesso ao currículo permanece disponível enquanto sua matrícula estiver ativa.</div>${requestedCourseLevel&&!visibleCourses.length?`<div class="card empty"><h2>Nenhum curso ativo do nível ${esc(requestedCourseLevel)}</h2><p>Você ainda não está matriculado em um curso desse nível. Seus outros cursos e seus dados continuam preservados.</p><button class="btn primary" onclick="loadView('studentCourses')">Ver todos os cursos</button></div>`:`<div class="student-course-list-grid section">${courseCards}</div>`}`;
+ $('content').innerHTML=`<div class="notice success">🎓 Você está matriculado em <b>${ids.length} curso(s)</b>. O acesso ao currículo permanece disponível enquanto sua matrícula estiver ativa.</div>${requestedCourseLevel&&!visibleCourses.length?`<div class="card empty"><h2>Nenhum curso ativo do nível ${esc(requestedCourseLevel)}</h2><p>Você ainda não está matriculado em um curso desse nível. Seus outros cursos e seus dados continuam preservados.</p><button class="btn primary" onclick="loadView(&quot;studentCourses&quot;)">Ver todos os cursos</button></div>`:`<div class="student-course-list-grid section">${courseCards}</div>`}`;
 }
 async function openStudentCourse(courseId){
  const s=await studentRecord();if(!s)return;
@@ -1635,7 +1643,7 @@ async function openStudentCourse(courseId){
  const blocks=(mods||[]).map(m=>{const ml=(lessons||[]).filter(l=>l.module_id===m.id);return `<section class="student-module"><div class="student-module-head"><div><span>📁</span><div><h3>${esc(m.title)}</h3><small>${esc(m.description||'')} · ${ml.length} lesson(s)</small></div></div><span class="badge blue">${ml.length}</span></div><div>${ml.map(renderLesson).join('')||'<div class="course-empty">Nenhuma lesson neste módulo.</div>'}</div></section>`}).join('');
  const general=(lessons||[]).filter(l=>!l.module_id); const generalBlock=general.length?`<section class="student-module"><div class="student-module-head"><div><span>📖</span><div><h3>Lessons gerais</h3><small>Lessons do curso ainda sem módulo.</small></div></div><span class="badge yellow">${general.length}</span></div><div>${general.map(renderLesson).join('')}</div></section>`:'';
  setPage(c.title,'Curso · '+(c.level||''));
- $('content').innerHTML=`<div class="page-head"><div><h1>📚 ${esc(c.title)}</h1><p>${esc(c.description||'Currículo do curso')}</p></div><div class="actions"><button class="btn secondary" onclick="loadView('studentCourses')">← My Courses</button><button class="btn primary" onclick="loadView('studentTasks')">✅ My Tasks</button></div></div><div class="student-course-progress card"><div><span class="badge blue">${esc(c.level||'')}</span><h2>Seu currículo</h2><p>Curso → módulo → lesson. Você pode abrir uma Lesson quando quiser.</p></div><div class="progress wide"><i style="width:${Math.min(100,pmap.get('overall:'+c.level)||0)}%"></i></div></div><div class="student-module-stack">${blocks+generalBlock||'<div class="card empty">O Teacher ainda não adicionou Lessons.</div>'}</div>`;
+ $('content').innerHTML=`<div class="page-head"><div><h1>📚 ${esc(c.title)}</h1><p>${esc(c.description||'Currículo do curso')}</p></div><div class="actions"><button class="btn secondary" onclick="loadView(&quot;studentCourses&quot;)">← My Courses</button><button class="btn primary" onclick="loadView('studentTasks')">✅ My Tasks</button></div></div><div class="student-course-progress card"><div><span class="badge blue">${esc(c.level||'')}</span><h2>Seu currículo</h2><p>Curso → módulo → lesson. Você pode abrir uma Lesson quando quiser.</p></div><div class="progress wide"><i style="width:${Math.min(100,pmap.get('overall:'+c.level)||0)}%"></i></div></div><div class="student-module-stack">${blocks+generalBlock||'<div class="card empty">O Teacher ainda não adicionou Lessons.</div>'}</div>`;
 }
 
 /* ---------- Interactive Lesson opening ---------- */
@@ -1814,17 +1822,17 @@ async function studentDashboard(){
  $('content').innerHTML=`
  <section class="student-welcome card"><div><span>MY LEARNING</span><h2>Continue your English journey</h2><p>Acesse rapidamente seu curso, sua próxima Lesson e suas Tasks.</p></div><div class="welcome-level"><small>CURRENT LEVEL</small><b>${esc(s.current_level)} → ${esc(s.target_level||'—')}</b><div class="progress"><i style="width:${Math.min(100,overall)}%"></i></div><strong>${overall}% geral</strong></div></section>
  <div class="student-action-grid section">
-  <button class="student-action-card" onclick="loadView('studentCourses')"><span>📚</span><b>My Courses</b><small>${courses.length} curso(s) ativo(s)</small></button>
+  <button class="student-action-card" onclick="loadView(&quot;studentCourses&quot;)"><span>📚</span><b>My Courses</b><small>${courses.length} curso(s) ativo(s)</small></button>
   <button class="student-action-card" onclick="loadView('studentTasks')"><span>✅</span><b>My Tasks</b><small>${pending} pendente(s) · ${submitted} enviada(s)</small></button>
   <button class="student-action-card" onclick="loadView('studentProgress')"><span>📊</span><b>My Progress</b><small>${overall}% no nível atual</small></button>
   <button class="student-action-card" onclick="loadView('studentLessons')"><span>📖</span><b>My Lessons</b><small>${lessons.length} lesson(s) · ${doneLessons} concluída(s)</small></button>
  </div>
  <div class="grid cols2 section">
-  <div class="card student-next-card"><div class="section-head"><div><h2>▶ Continue Learning</h2><span>${course?esc(course.title):'Nenhum curso ativo'}</span></div>${course?`<span class="badge blue">${esc(course.level||s.current_level)}</span>`:''}</div>${nextLesson?`<div class="next-lesson-box"><div class="next-lesson-icon">📖</div><div><b>${esc(nextLesson.title)}</b><small>${esc(nextLesson.skill||'Lesson')} · ${nextLesson.html_enabled?'🧩 Interativa':'Conteúdo'}</small></div><button class="btn primary" onclick="viewStudentLessonInteractive('${nextLesson.id}')">Abrir Lesson →</button></div>`:'<div class="empty">O Teacher ainda não adicionou Lessons ao seu curso.</div>'}<button class="btn ghost" onclick="loadView('studentCourses')">Ver currículo completo →</button></div>
+  <div class="card student-next-card"><div class="section-head"><div><h2>▶ Continue Learning</h2><span>${course?esc(course.title):'Nenhum curso ativo'}</span></div>${course?`<span class="badge blue">${esc(course.level||s.current_level)}</span>`:''}</div>${nextLesson?`<div class="next-lesson-box"><div class="next-lesson-icon">📖</div><div><b>${esc(nextLesson.title)}</b><small>${esc(nextLesson.skill||'Lesson')} · ${nextLesson.html_enabled?'🧩 Interativa':'Conteúdo'}</small></div><button class="btn primary" onclick="viewStudentLessonInteractive('${nextLesson.id}')">Abrir Lesson →</button></div>`:'<div class="empty">O Teacher ainda não adicionou Lessons ao seu curso.</div>'}<button class="btn ghost" onclick="loadView(&quot;studentCourses&quot;)">Ver currículo completo →</button></div>
   <div class="card"><div class="section-head"><div><h2>✅ My Tasks</h2><span>Atividades atribuídas pelo Teacher.</span></div><span class="badge ${pending?'yellow':'green'}">${pending} pendente(s)</span></div>${(ta||[]).slice(0,4).map(x=>`<div class="dashboard-task-row"><div><b>${esc(x.tic_assignments?.title||'Task')}</b><small>${x.tic_assignments?.due_at?'Prazo informativo: '+fmtDate(x.tic_assignments.due_at):'Sem prazo'} · Atribuição ativa</small></div><button class="btn sm secondary" onclick="openStudentTask('${x.id}')">Abrir</button></div>`).join('')||'<div class="empty">Nenhuma Task ativa.</div>'}<button class="btn ghost" onclick="loadView('studentTasks')">Ver todas →</button></div>
  </div>
  <div class="grid cols2 section">
-  <div class="card"><div class="section-head"><h2>📚 Course Snapshot</h2><button class="btn sm secondary" onclick="loadView('studentCourses')">Abrir</button></div>${course?`<div class="course-snapshot"><b>${esc(course.title)}</b><small>${cl.length} Lessons · ${(mods||[]).filter(m=>m.course_id===course.id).length} Módulos</small><div class="progress"><i style="width:${Math.min(100,overall)}%"></i></div><span>${overall}%</span></div>`:'<div class="empty">Nenhum curso ativo.</div>'}</div>
+  <div class="card"><div class="section-head"><h2>📚 Course Snapshot</h2><button class="btn sm secondary" onclick="loadView(&quot;studentCourses&quot;)">Abrir</button></div>${course?`<div class="course-snapshot"><b>${esc(course.title)}</b><small>${cl.length} Lessons · ${(mods||[]).filter(m=>m.course_id===course.id).length} Módulos</small><div class="progress"><i style="width:${Math.min(100,overall)}%"></i></div><span>${overall}%</span></div>`:'<div class="empty">Nenhum curso ativo.</div>'}</div>
   <div class="card"><div class="section-head"><h2>🎯 Learning focus</h2></div><div class="student-mini-stats"><div><b>${pending}</b><small>Tasks pendentes</small></div><div><b>${doneLessons}</b><small>Lessons concluídas</small></div><div><b>${lessons.length}</b><small>Lessons disponíveis</small></div></div><div class="notice">💡 As Lessons e Tasks podem ser abertas novamente. A conclusão da Lesson é registrada na primeira vez e o histórico permanece.</div></div>
  </div>`;
 }
@@ -1859,6 +1867,7 @@ async function submitTaskWorkV4(e,taskAssignmentId){
  const {data:last}=await sb.from('tic_submissions').select('attempt').eq('task_assignment_id',taskAssignmentId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();
  const attempt=Number(last?.attempt||0)+1;
  const {error}=await sb.from('tic_submissions').insert({task_assignment_id:taskAssignmentId,student_id:s.id,answer_text:answer||null,file_url:file,attempt,submitted_at:new Date().toISOString()});if(error)return toast('Não foi possível enviar: '+error.message,'error');
+ if(typeof window.ticLogStudentEventV58==='function')window.ticLogStudentEventV58('task_submitted','Task enviada',currentView||'student','task',taskAssignmentId,{attempt:attempt});
  await sb.from('tic_task_assignments').update({status:'submitted',completed_at:null}).eq('id',taskAssignmentId).eq('student_id',s.id);toast(`Tentativa ${attempt} enviada ao Teacher. A Task continua ativa.`,'success');studentTasks();
 }
 
@@ -1928,7 +1937,7 @@ async function viewStudentLessonInteractive(id){
  if(contentFrame){const f=document.querySelector('.lesson-formatted-viewer iframe');if(f)f.srcdoc=ticPlainOrHtmlFrame(l.content)}
  if(htmlFrame){ticHtmlViewerContext={mode:'studentLesson',refId:l.id,html:l.html_content};const f=$('htmlViewerFrame');if(f)f.srcdoc=l.html_content+ticHtmlBridge()}
 }
-async function submitPlainLessonResponse(e,lessonId){e.preventDefault();const s=await studentRecord();if(!s)return;const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;const r=await sb.from('tic_lesson_responses').insert({lesson_id:lessonId,student_id:s.id,attempt,response_text:$('lessonResponseText').value.trim(),response_data:{},status:'submitted'});if(r.error)return toast('Não foi possível enviar: '+r.error.message,'error');await markLessonCompleted(lessonId)}
+async function submitPlainLessonResponse(e,lessonId){e.preventDefault();const s=await studentRecord();if(!s)return;const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;const r=await sb.from('tic_lesson_responses').insert({lesson_id:lessonId,student_id:s.id,attempt,response_text:$('lessonResponseText').value.trim(),response_data:{},status:'submitted'});if(r.error)return toast('Não foi possível enviar: '+r.error.message,'error');if(typeof window.ticLogStudentEventV58==='function')window.ticLogStudentEventV58('lesson_response_submitted','Resposta de Lesson enviada',currentView||'student','lesson',lessonId,{attempt:attempt});await markLessonCompleted(lessonId)}
 
 /* ---------- Direct Lesson assignment ---------- */
 async function openAssignContent(sourceType,source){
@@ -3792,6 +3801,8 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   }
 
   async function startActivityV41(){
+    /* V58 is the single source of session timing; V41 remains available for legacy aggregation only. */
+    if(typeof window.ticStartStudentActivityV58==='function') return;
     if(activityStartingV41 || activityRowV41 || !session?.user?.id) return;
     activityStartingV41=true;
     try{
@@ -5930,6 +5941,24 @@ window.renderStudentActivityV58=function(){
   }).join('')||'<div class="v58-empty">Nenhum aluno corresponde ao filtro.</div>';
 };
 
+window.openStudentEventDetailsV58=function(eventId){
+  const r=(window.__v58ActivityEvents||[]).find(x=>String(x.id)===String(eventId));if(!r)return;
+  const metadata=r.metadata&&typeof r.metadata==='object'?r.metadata:{};
+  openModal('🧭 Detalhes da atividade',`
+    <div class="form">
+      <div class="notice success"><b>${e58(r.event_label||r.event_type||'Ação do aluno')}</b><br>${d58(r.created_at)}</div>
+      <div class="card">
+       <div class="row"><b>Tipo de evento</b><span>${e58(r.event_type||'—')}</span></div>
+       <div class="row"><b>Aba</b><span>${e58(r.view_name||'—')}</span></div>
+       <div class="row"><b>Tipo de registro</b><span>${e58(r.entity_type||'—')}</span></div>
+       <div class="row"><b>ID do registro</b><span style="overflow-wrap:anywhere">${e58(r.entity_id||'—')}</span></div>
+       <h3>Metadados registrados</h3>
+       <pre style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto;padding:12px;border-radius:8px">${e58(JSON.stringify(metadata,null,2))}</pre>
+      </div>
+      <p class="muted">Um clique não significa que a aula foi concluída. A conclusão só aparece quando existe um registro de conclusão.</p>
+    </div>`);
+};
+
 window.openStudentActivityDetailsV58=function(studentId){
   const x=window.__v58ActivityRows?.[studentId];if(!x)return;
   const sessions=(window.__v58ActivitySessions||[]).filter(r=>r.student_id===studentId);
@@ -5941,7 +5970,7 @@ window.openStudentActivityDetailsV58=function(studentId){
         ${(sessions||[]).slice(0,30).map(r=>`<div class="row"><div><b>${d58(r.started_at)}</b><small>Última atividade: ${d58(r.last_seen_at)}</small></div><b>${dur58(r.duration_seconds)}</b></div>`).join('')||'<div class="empty">Nenhuma sessão.</div>'}
       </div>
       <div class="card"><div class="section-head"><h3>🧭 Ações registradas</h3><span>${events.length}</span></div>
-        ${(events||[]).slice(0,50).map(r=>`<div class="row"><div><b>${e58(r.event_label||r.event_type||'Ação')}</b><small>${d58(r.created_at)} · ${e58(r.view_name||'')}</small></div><small>${e58(r.entity_type||'')}</small></div>`).join('')||'<div class="empty">Nenhuma ação registrada ainda.</div>'}
+        ${(events||[]).slice(0,50).map(r=>`<button type="button" class="row" style="width:100%;text-align:left;cursor:pointer" onclick="openStudentEventDetailsV58('${e58(r.id)}')"><span><b>${e58(r.event_label||r.event_type||'Ação')}</b><small>${d58(r.created_at)} · ${e58(r.view_name||'')}</small></span><small>${e58(r.entity_type||'')} · Ver detalhes ↗</small></button>`).join('')||'<div class="empty">Nenhuma ação registrada ainda.</div>'}
       </div>
     </div>`);
 };
@@ -7651,11 +7680,12 @@ td,th{padding-top:12px;padding-bottom:12px}
  document.addEventListener('keydown',function(ev){if(ev.key!=='Enter'&&ev.key!==' ')return;var el=ev.target.closest('.tp-dashboard-link[data-tp-view]');if(!el)return;ev.preventDefault();go(el)});
 })();
 </script>
-<script src="./teacher-ia.js?v=1" defer></script>
-<script src="./games.js?v=2" defer></script>
+<!-- Teacher IA removed per request; the separate teacher layout is otherwise preserved. -->
+<script src="./games.js?v=3" defer></script>
 <script src="./teacher-games.js?v=2" defer></script>
-<script src="./dashboard-theme.js?v=4" defer></script>
-<script src="./fluent-dashboard-redesign.js?v=5" defer></script>
-<script src="./pwa.js?v=1" defer></script>
+<script src="./dashboard-theme.js?v=6" defer></script>
+<script src="./fluent-dashboard-redesign.js?v=7" defer></script>
+<script src="./pwa.js?v=2" defer></script>
+<script src="./teacher-learning-reports.js?v=2" defer></script>
 </body>
 </html>

@@ -243,10 +243,96 @@ function addStyle(){
  body.fi-premium.fi-light #content .curriculum-lesson .lesson-number{background:#eee8ff!important;color:#5634b6!important}
  body.fi-premium.fi-light #content .curriculum-lesson button,
  body.fi-premium.fi-light #content .curriculum-lesson .btn{background:#6845d8!important;color:#fff!important;border-color:#6845d8!important}
- /* Remove floating controls that cover content; keep Teacher IA available in the top bar. */
- #ticTaskFab,#tpInstallAppBtn{display:none!important;visibility:hidden!important;pointer-events:none!important}
- #teacherIAFab{position:static!important;inset:auto!important;margin:0 0 0 8px!important;padding:9px 12px!important;font-size:12px!important;box-shadow:none!important;white-space:nowrap!important;flex:none!important}
- @media(max-width:700px){#teacherIAFab{padding:8px!important;font-size:11px!important}}
+ /* Keep the install control visible; hide only obstructive/removed floating tools. */
+ #ticTaskFab{display:none!important;visibility:hidden!important;pointer-events:none!important}
+ #teacherIAFab{display:none!important;visibility:hidden!important;pointer-events:none!important}
+ #tpInstallAppBtn:not([hidden]){display:flex!important;visibility:visible!important;pointer-events:auto!important;right:14px!important;bottom:68px!important;z-index:99990!important;max-width:calc(100vw - 28px)!important}#tpInstallAppBtn[hidden]{display:none!important;visibility:hidden!important;pointer-events:none!important}
+ @media(max-width:520px){#tpInstallAppBtn:not([hidden]){right:10px!important;bottom:62px!important;padding:10px 12px!important;font-size:12px!important}}
+ /* Consistent readable contrast on internal tabs. Does not change the Teacher dashboard structure. */
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .card,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .stat,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .quick,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .table-wrap,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .empty,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .student-curriculum-item,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .student-module,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .student-module-head,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .student-course-hero,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .student-course-progress,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .student-action-card,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .v58-activity-card,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .v58-activity-stat,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .review-card,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .resource-card,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content [style*="background:#fff"],
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content [style*="background: #fff"],
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content [style*="background-color:#fff"],
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content [style*="background-color: #fff"],
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content [style*="background:#ffffff"],
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content [style*="background: #ffffff"],
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content [style*="background-color: white"]{
+  background:#10263b!important;background-color:#10263b!important;color:#f4f7ff!important;border-color:#2b4966!important
+ }
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .card h1,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .card h2,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .card h3,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .card h4,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .card b,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .card strong,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .card label,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .card span,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .student-curriculum-item *,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .student-module *,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .student-action-card *,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .v58-activity-card *,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .v58-activity-stat *{color:#f4f7ff!important}
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .card p,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .card small,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .card .muted,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .student-curriculum-item small,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .student-module small{color:#c3d2e4!important}
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content button.btn,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .btn{background:#6845d8!important;color:#fff!important;border-color:#8b6af1!important}
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content button.btn.secondary,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .btn.secondary,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content .btn.ghost{background:#172f49!important;color:#f4f7ff!important;border-color:#385673!important}
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content input,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content select,
+ body.fi-premium:not(.fi-light):not(.fi2-home) #content textarea{background:#091b2d!important;color:#f4f7ff!important;border-color:#34506b!important}
+ body.fi-premium.fi-light:not(.fi2-home) #content .card,
+ body.fi-premium.fi-light:not(.fi2-home) #content .stat,
+ body.fi-premium.fi-light:not(.fi2-home) #content .quick,
+ body.fi-premium.fi-light:not(.fi2-home) #content .table-wrap,
+ body.fi-premium.fi-light:not(.fi2-home) #content .empty,
+ body.fi-premium.fi-light:not(.fi2-home) #content .student-curriculum-item,
+ body.fi-premium.fi-light:not(.fi2-home) #content .student-module,
+ body.fi-premium.fi-light:not(.fi2-home) #content .student-module-head,
+ body.fi-premium.fi-light:not(.fi2-home) #content .student-course-hero,
+ body.fi-premium.fi-light:not(.fi2-home) #content .student-course-progress,
+ body.fi-premium.fi-light:not(.fi2-home) #content .student-action-card,
+ body.fi-premium.fi-light:not(.fi2-home) #content .v58-activity-card,
+ body.fi-premium.fi-light:not(.fi2-home) #content .v58-activity-stat{background:#fff!important;background-color:#fff!important;color:#17233a!important;border-color:#dce4ef!important}
+ body.fi-premium.fi-light:not(.fi2-home) #content .card h1,
+ body.fi-premium.fi-light:not(.fi2-home) #content .card h2,
+ body.fi-premium.fi-light:not(.fi2-home) #content .card h3,
+ body.fi-premium.fi-light:not(.fi2-home) #content .card b,
+ body.fi-premium.fi-light:not(.fi2-home) #content .card strong,
+ body.fi-premium.fi-light:not(.fi2-home) #content .card label,
+ body.fi-premium.fi-light:not(.fi2-home) #content .card span,
+ body.fi-premium.fi-light:not(.fi2-home) #content .student-curriculum-item *,
+ body.fi-premium.fi-light:not(.fi2-home) #content .student-module *,
+ body.fi-premium.fi-light:not(.fi2-home) #content .student-action-card *,
+ body.fi-premium.fi-light:not(.fi2-home) #content .v58-activity-card *,
+ body.fi-premium.fi-light:not(.fi2-home) #content .v58-activity-stat *{color:#17233a!important}
+ body.fi-premium.fi-light:not(.fi2-home) #content .card p,
+ body.fi-premium.fi-light:not(.fi2-home) #content .card small,
+ body.fi-premium.fi-light:not(.fi2-home) #content .card .muted,
+ body.fi-premium.fi-light:not(.fi2-home) #content .student-curriculum-item small,
+ body.fi-premium.fi-light:not(.fi2-home) #content .student-module small{color:#596b81!important}
+ body.fi-premium.fi-light:not(.fi2-home) #content .btn{background:#6845d8!important;color:#fff!important;border-color:#6845d8!important}
+ body.fi-premium.fi-light:not(.fi2-home) #content input,
+ body.fi-premium.fi-light:not(.fi2-home) #content select,
+ body.fi-premium.fi-light:not(.fi2-home) #content textarea{background:#fff!important;color:#17233a!important;border-color:#cbd5e1!important}
 
  `;
  document.head.appendChild(st);
@@ -287,8 +373,7 @@ function init(){
  if(/student/i.test(role))document.body.classList.add('fi-student-mode');
  let saved='dark';try{saved=localStorage.getItem('fiDashboardTheme')||'dark'}catch(_){}
  applyTheme(saved);installThemeToggle();
- const ia=document.getElementById('teacherIAFab'),top=document.querySelector('.top-right');
- if(ia&&top&&!top.contains(ia))top.appendChild(ia);
+ const ia=document.getElementById('teacherIAFab');if(ia)ia.remove();
 }
 const originalStudentDashboard=window.studentDashboard;
 if(typeof originalStudentDashboard==='function'){
