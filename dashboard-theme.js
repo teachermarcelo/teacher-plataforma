@@ -248,7 +248,31 @@ function addStyle(){
  #teacherIAFab{position:static!important;inset:auto!important;margin:0 0 0 8px!important;padding:9px 12px!important;font-size:12px!important;box-shadow:none!important;white-space:nowrap!important;flex:none!important}
  @media(max-width:700px){#teacherIAFab{padding:8px!important;font-size:11px!important}}
 
- `;
+ 
+ /* FIX live Lessons table: ensure lesson-name pills have readable text on pale background. */
+ body.fi-premium #content table tbody td:first-child button,
+ body.fi-premium #content table tbody td:first-child .btn,
+ body.fi-premium #content table tbody td:first-child a,
+ body.fi-premium #content table tbody td:first-child [role="button"] {
+   background:#eee9ff!important;
+   background-color:#eee9ff!important;
+   color:#49318f!important;
+   -webkit-text-fill-color:#49318f!important;
+   border:1px solid #d4c8ff!important;
+   font-weight:800!important;
+ }
+ body.fi-premium #content table tbody td:first-child button *,
+ body.fi-premium #content table tbody td:first-child .btn *,
+ body.fi-premium #content table tbody td:first-child a *,
+ body.fi-premium #content table tbody td:first-child [role="button"] * {
+   color:#49318f!important;
+   -webkit-text-fill-color:#49318f!important;
+ }
+ body.fi-premium #content table tbody td:first-child button svg,
+ body.fi-premium #content table tbody td:first-child .btn svg,
+ body.fi-premium #content table tbody td:first-child a svg { color:#49318f!important; }
+
+`;
  document.head.appendChild(st);
 }
 function addStudentHome(){
