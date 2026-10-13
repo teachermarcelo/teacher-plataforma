@@ -2216,6 +2216,65 @@ body.fi-premium:not(.fi-light) .class-center-page .cc-studio-shortcut small{colo
 })();
 </script>
 
+
+<style id="fi-class-center-all-tabs-v2">
+.class-center-page a:not(.btn){overflow-wrap:anywhere;word-break:break-word}
+.class-center-page .cc-auto-link{display:inline-flex;align-items:center;gap:5px;max-width:100%;margin:4px 5px 2px 0;padding:5px 8px;border:1px solid #cbbcff;border-radius:8px;background:#f5f1ff;color:#4f2ca5!important;font-size:11px;font-weight:750;line-height:1.4;text-decoration:none}
+.class-center-page .cc-auto-link:hover{text-decoration:underline;background:#ece4ff}
+.class-center-page .cc-auto-link:focus-visible{outline:3px solid #8b5cf6;outline-offset:2px}
+.class-center-page .cc-url-text{overflow-wrap:anywhere;word-break:break-word}
+body.fi-premium:not(.fi-light) .class-center-page .cc-auto-link{background:#241d42;color:#e4d9ff!important;border-color:#7760b8}
+.class-center-page .class-center-empty{padding:22px;text-align:center;border:1px dashed var(--cc-line);border-radius:12px}
+</style>
+<script id="fi-class-center-all-tabs-v2">
+(function(){
+ 'use strict';
+ const root=()=>document.querySelector('.class-center-page[data-class-center]');
+ const urlRx=/https?:\/\/[^\s<>"'\x60]+/gi;
+ function safeHref(raw){
+   const trimmed=String(raw||'').replace(/[),.;!?\]}]+$/,'');
+   try{const u=new URL(trimmed,location.href);return /^https?:$/.test(u.protocol)?u.href:''}catch(_){return ''}
+ }
+ function linkifyTextNode(node){
+   if(!node||!node.parentNode)return;
+   const text=node.nodeValue||'';
+   if(!/https?:\/\//i.test(text))return;
+   const parent=node.parentElement;
+   if(!parent||parent.closest('a,button,script,style,textarea,input,select,code,pre,[data-no-linkify]'))return;
+   const matches=[...text.matchAll(urlRx)];if(!matches.length)return;
+   const frag=document.createDocumentFragment();let cursor=0,changed=false;
+   for(const m of matches){
+     const raw=m[0],href=safeHref(raw);if(!href)continue;
+     const index=m.index??0;
+     if(index>cursor)frag.appendChild(document.createTextNode(text.slice(cursor,index)));
+     const a=document.createElement('a');a.className='cc-auto-link';a.href=href;a.target='_blank';a.rel='noopener noreferrer';a.textContent='↗ '+raw.replace(/[),.;!?\]}]+$/,'');a.title='Abrir recurso em nova aba';
+     frag.appendChild(a);cursor=index+raw.length;changed=true;
+   }
+   if(!changed)return;
+   if(cursor<text.length)frag.appendChild(document.createTextNode(text.slice(cursor)));
+   node.parentNode.replaceChild(frag,node);
+ }
+ function linkifyVisibleUrls(){
+   const r=root();if(!r)return;
+   const walker=document.createTreeWalker(r,NodeFilter.SHOW_TEXT);
+   const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+   nodes.forEach(linkifyTextNode);
+ }
+ function addTabAccessibility(){
+   const r=root();if(!r)return;
+   r.querySelectorAll('.class-center-tabs button').forEach((b,i)=>{
+     if(!b.hasAttribute('aria-label'))b.setAttribute('aria-label',(b.textContent||'Aba '+(i+1)).trim());
+   });
+ }
+ function apply(){addTabAccessibility();linkifyVisibleUrls()}
+ let scheduled=false;
+ const observer=new MutationObserver(()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;apply()})});
+ function start(){const r=root();if(!r)return;observer.observe(r,{childList:true,subtree:true,characterData:true});apply()}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+ window.addEventListener('tic:class-center-updated',apply);
+})();
+</script>
+
 </body></html>';
 }
 async function submitInteractiveLesson(lessonId,payload){
