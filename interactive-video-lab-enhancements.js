@@ -111,7 +111,7 @@ function decorate(){
    });
    const apply=()=>{
      const q=(el('ivLibrarySearch')?.value||'').toLowerCase().trim(),f=el('ivLibraryFilter')?.value||'all';let visible=0;
-     cards.forEach(card=>{const status=card.querySelector('.iv-status')?.dataset.state||'pending',hasTools=!!card.querySelector('.iv-feature span:not(:first-child)')||!card.textContent.includes('Assistir agora')&&!!card.querySelector('.iv-feature span');let show=(!q||card.dataset.search.includes(q))&&(f==='all'||f===status||(f==='tools'&&hasTools)||(f==='video'&&!hasTools));card.hidden=!show;if(show)visible++});
+     cards.forEach(card=>{const status=card.querySelector('.iv-status')?.dataset.state||'pending',featureText=(card.querySelector('.iv-feature')?.textContent||'').trim(),hasTools=!!featureText&&featureText!=='▶ Vídeo';let show=(!q||card.dataset.search.includes(q))&&(f==='all'||f===status||(f==='tools'&&hasTools)||(f==='video'&&!hasTools));card.hidden=!show;if(show)visible++});
      if(el('ivLibraryResultCount'))el('ivLibraryResultCount').textContent=visible+' resultado(s)';
    };
    el('ivLibrarySearch').addEventListener('input',apply);el('ivLibraryFilter').addEventListener('change',apply);
