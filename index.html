@@ -7857,7 +7857,7 @@ body.fi-premium:not(.fi-light) #fi-cc-floating .fi-cc-links button:hover{backgro
   let dock=document.getElementById(dockId);
   if(!dock){
    dock=document.createElement('div');dock.id=dockId;dock.dataset.open='false';
-   dock.innerHTML='<div class="fi-cc-pop" role="dialog" aria-label="Conectividade e acesso rápido"><div class="fi-cc-pophead"><div><strong>Conectividade rápida</strong><div class="fi-cc-online">Central disponível</div></div><button class="fi-cc-close" type="button" aria-label="Fechar">×</button></div><div class="fi-cc-links"></div><div class="fi-cc-foot">Atalhos para as abas existentes da sala</div></div><button class="fi-cc-fab" type="button" aria-label="Abrir conectividade rápida" aria-expanded="false">＋</button>';
+   dock.innerHTML='<div class="fi-cc-pop" role="dialog" aria-label="Conectividade e acesso rápido"><div class="fi-cc-pophead"><div><strong>Conectividade rápida</strong><div class="fi-cc-online">Acesso rápido às abas</div></div><button class="fi-cc-close" type="button" aria-label="Fechar">×</button></div><div class="fi-cc-links"></div><div class="fi-cc-foot">Atalhos para as abas existentes da sala</div></div><button class="fi-cc-fab" type="button" aria-label="Abrir conectividade rápida" aria-expanded="false">＋</button>';
    document.body.appendChild(dock);
    const fab=dock.querySelector('.fi-cc-fab');
    const close=dock.querySelector('.fi-cc-close');
