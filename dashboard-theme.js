@@ -350,6 +350,27 @@ function addStyle(){
    body.fi-premium #mobileOverlay{cursor:pointer}
  }
 
+
+ /* Fix unreadable pale lesson-title pills in dark mode: dark ink on light chips. */
+ body.fi-premium:not(.fi-light) #content table tbody td:first-child button,
+ body.fi-premium:not(.fi-light) #content table tbody td:first-child .btn,
+ body.fi-premium:not(.fi-light) #content table tbody td:first-child a,
+ body.fi-premium:not(.fi-light) #content .lesson-title-chip,
+ body.fi-premium:not(.fi-light) #content .lesson-name-chip {
+   background:#eee9ff!important;
+   background-color:#eee9ff!important;
+   color:#49318f!important;
+   -webkit-text-fill-color:#49318f!important;
+   border-color:#d4c8ff!important;
+   font-weight:800!important;
+ }
+ body.fi-premium:not(.fi-light) #content table tbody td:first-child button *,
+ body.fi-premium:not(.fi-light) #content table tbody td:first-child .btn *,
+ body.fi-premium:not(.fi-light) #content table tbody td:first-child a * {
+   color:#49318f!important;
+   -webkit-text-fill-color:#49318f!important;
+ }
+
  /* Hide only the legacy task FAB. Keep the PWA install control available. */
  #ticTaskFab{display:none!important;visibility:hidden!important;pointer-events:none!important}
 
