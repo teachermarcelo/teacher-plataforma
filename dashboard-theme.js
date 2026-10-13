@@ -243,10 +243,8 @@ function addStyle(){
  body.fi-premium.fi-light #content .curriculum-lesson .lesson-number{background:#eee8ff!important;color:#5634b6!important}
  body.fi-premium.fi-light #content .curriculum-lesson button,
  body.fi-premium.fi-light #content .curriculum-lesson .btn{background:#6845d8!important;color:#fff!important;border-color:#6845d8!important}
- /* Remove floating controls that cover content; keep Teacher IA available in the top bar. */
- #ticTaskFab,#tpInstallAppBtn{display:none!important;visibility:hidden!important;pointer-events:none!important}
- #teacherIAFab{position:static!important;inset:auto!important;margin:0 0 0 8px!important;padding:9px 12px!important;font-size:12px!important;box-shadow:none!important;white-space:nowrap!important;flex:none!important}
- @media(max-width:700px){#teacherIAFab{padding:8px!important;font-size:11px!important}}
+ /* Hide only the legacy task FAB. Keep the PWA install control available. */
+ #ticTaskFab{display:none!important;visibility:hidden!important;pointer-events:none!important}
 
  `;
  document.head.appendChild(st);
