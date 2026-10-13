@@ -7739,8 +7739,8 @@ body.fi-premium:not(.fi-light) .class-center-page .cc-live-link{background:#241d
   const materials=tabs.find(b=>/materiais|resources/i.test(b.textContent||''));
   const shouldShow=/materiais|resources/i.test(selected);
   const existing=r.querySelector('.cc-live-studio');
-  if(existing)existing.remove();
-  if(!shouldShow||!materials||!pane)return;
+  if(!shouldShow||!materials||!pane){if(existing)existing.remove();return}
+  if(existing)return;
   const bar=document.createElement('div');bar.className='cc-live-studio';
   const copy=document.createElement('div');const b=document.createElement('b');b.textContent='🎬 Classroom Content Studio';
   const small=document.createElement('small');small.textContent='Organize vídeos, PDFs, áudios e links com as ferramentas existentes.';
