@@ -4915,7 +4915,7 @@ window.studentClassPage=async function(){
  ]);if(__classReq!==window.__fiStudentClassReq||currentView!==__classRoute)return;
  const cls=classes||[],map=new Map(cls.map(c=>[c.id,c])),taMap=new Map((tas||[]).map(t=>[t.assignment_id,t]));
  let selected=cls[0]?.id||'';
- const go=name=>{document.querySelectorAll('[data-v44cp]').forEach(b=>b.classList.toggle('active',b.dataset.v44cp===name));document.querySelectorAll('[data-v44pane]').forEach(p=>p.classList.toggle('active',p.dataset.v44pane===name))};
+ const root=$('content');const go=name=>{root?.querySelectorAll('[data-v44cp]').forEach(btn=>btn.classList.toggle('active',btn.dataset.v44cp===name));root?.querySelectorAll('[data-v44pane]').forEach(p=>p.classList.toggle('active',p.dataset.v44pane===name))};
  const render=()=>{
   const c=map.get(selected)||cls[0];if(!c)return;selected=c.id;
   const cs=(sessions||[]).filter(x=>x.class_id===c.id),now=new Date(),past=cs.filter(x=>new Date(x.session_date)<now).sort((a,b)=>new Date(b.session_date)-new Date(a.session_date)),next=cs.filter(x=>new Date(x.session_date)>=now).sort((a,b)=>new Date(a.session_date)-new Date(b.session_date))[0];
@@ -4945,7 +4945,7 @@ window.studentClassPage=async function(){
    <section class="v44-class-pane" data-v44pane="previous"><div class="v44-card"><h3>📖 Aulas anteriores</h3><p class="desc">Somente aulas que o Teacher registrou em Class → Aulas.</p><div class="v44-list">${past.map(a=>`<div class="v44-session"><div class="v44-date"><b>${new Date(a.session_date).getDate()}</b><small>${new Date(a.session_date).toLocaleDateString('pt-BR',{month:'short'}).replace('.','')}</small></div><div><b>${x44(a.lesson_title||'Aula')}</b><small>${dt44(a.session_date)} · ${a.duration_minutes||'—'} min${a.summary?' · '+x44(a.summary):''}</small></div><span class="badge ${a.status==='completed'?'green':'blue'}">${x44(a.status||'Registrada')}</span></div>`).join('')||'<div class="v44-empty">Nenhuma aula anterior foi registrada pelo Teacher.</div>'}</div></div></section>
    <section class="v44-class-pane" data-v44pane="board"><div class="v44-card"><h3>📌 Board</h3><p class="desc">Somente avisos e itens publicados no Board desta Class.</p><div class="v44-list">${bi.map(b=>`<div class="v44-row"><div class="v44-row-icon">📌</div><div class="v44-row-main"><b>${x44(b.title)}</b><small>${x44(b.description||'')}${b.item_type?' · '+x44(b.item_type):''}</small></div><span class="badge ${b.status==='completed'?'green':b.status==='in_progress'?'yellow':'blue'}">${x44(b.status||'Publicado')}</span></div>`).join('')||'<div class="v44-empty">Nenhum item no Board.</div>'}</div></div></section>
   </div>`;
-  document.querySelectorAll('[data-v44cp]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.v44cp)));
+  root?.querySelectorAll('[data-v44cp]').forEach(btn=>btn.addEventListener('click',()=>go(btn.dataset.v44cp)));
   $('v44ClassSelect')?.addEventListener('change',ev=>{selected=ev.target.value;render()});
  };
  render();
