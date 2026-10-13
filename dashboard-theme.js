@@ -249,6 +249,87 @@ function addStyle(){
  @media(max-width:700px){#teacherIAFab{padding:8px!important;font-size:11px!important}}
 
  
+
+ /* Readability patch for student curriculum cards and action buttons in both themes. */
+ body.fi-premium #content .student-curriculum-item {
+   background:#ffffff!important;
+   color:#17233a!important;
+   border-bottom-color:#e1e7f0!important;
+ }
+ body.fi-premium #content .student-curriculum-item .lesson-copy b,
+ body.fi-premium #content .student-curriculum-item .lesson-copy strong {
+   color:#17233a!important;
+   -webkit-text-fill-color:#17233a!important;
+   font-weight:800!important;
+ }
+ body.fi-premium #content .student-curriculum-item .lesson-copy small {
+   color:#52647b!important;
+   -webkit-text-fill-color:#52647b!important;
+ }
+ body.fi-premium #content .student-curriculum-item .lesson-number {
+   background:#eee8ff!important;
+   color:#5634b6!important;
+   -webkit-text-fill-color:#5634b6!important;
+ }
+ body.fi-premium #content button.btn.primary,
+ body.fi-premium #content a.btn.primary,
+ body.fi-premium #content .btn.primary,
+ body.fi-premium #content button[class~="primary"] {
+   background:#5634c8!important;
+   background-image:linear-gradient(120deg,#6845d8,#5634c8)!important;
+   color:#ffffff!important;
+   -webkit-text-fill-color:#ffffff!important;
+   border:1px solid #5634c8!important;
+   font-weight:800!important;
+ }
+ body.fi-premium #content button.btn.secondary,
+ body.fi-premium #content a.btn.secondary,
+ body.fi-premium #content .btn.secondary {
+   background:#eee9ff!important;
+   color:#49318f!important;
+   -webkit-text-fill-color:#49318f!important;
+   border:1px solid #d4c8ff!important;
+   font-weight:800!important;
+ }
+ body.fi-premium #content button.btn.ghost,
+ body.fi-premium #content a.btn.ghost,
+ body.fi-premium #content .btn.ghost {
+   background:#edf2f8!important;
+   color:#26374d!important;
+   -webkit-text-fill-color:#26374d!important;
+   border:1px solid #cbd6e5!important;
+   font-weight:800!important;
+ }
+ body.fi-premium #content button.btn.danger,
+ body.fi-premium #content .btn.danger {
+   background:#b42342!important;
+   color:#ffffff!important;
+   -webkit-text-fill-color:#ffffff!important;
+   border:1px solid #b42342!important;
+ }
+ body.fi-premium:not(.fi-light) #content .student-curriculum-item {
+   background:#10263b!important;
+   color:#f4f7ff!important;
+   border-bottom-color:#2b4966!important;
+ }
+ body.fi-premium:not(.fi-light) #content .student-curriculum-item .lesson-copy b,
+ body.fi-premium:not(.fi-light) #content .student-curriculum-item .lesson-copy strong {
+   color:#ffffff!important;
+   -webkit-text-fill-color:#ffffff!important;
+ }
+ body.fi-premium:not(.fi-light) #content .student-curriculum-item .lesson-copy small {
+   color:#c1d0e2!important;
+   -webkit-text-fill-color:#c1d0e2!important;
+ }
+ body.fi-premium:not(.fi-light) #content button.btn.ghost,
+ body.fi-premium:not(.fi-light) #content a.btn.ghost,
+ body.fi-premium:not(.fi-light) #content .btn.ghost {
+   background:#1a3049!important;
+   color:#f4f7ff!important;
+   -webkit-text-fill-color:#f4f7ff!important;
+   border-color:#49617b!important;
+ }
+
  /* FIX live Lessons table: ensure lesson-name pills have readable text on pale background. */
  body.fi-premium #content table tbody td:first-child button,
  body.fi-premium #content table tbody td:first-child .btn,
