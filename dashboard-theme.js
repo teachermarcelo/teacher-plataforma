@@ -402,6 +402,38 @@ function addStyle(){
 
 
 
+
+ /* Hard fix: constrain the full dashboard content width, and show a real horizontal scrollbar. */
+ body.fi-premium .main{width:calc(100% - 255px)!important;min-width:0!important;box-sizing:border-box!important}
+ body.fi-premium .main>.container{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
+ body.fi-premium #content{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
+ body.fi-premium #content .card{min-width:0!important;max-width:100%!important;box-sizing:border-box!important}
+ body.fi-premium #content .table-wrap{
+   display:block!important;position:relative!important;
+   width:100%!important;max-width:100%!important;min-width:0!important;
+   box-sizing:border-box!important;overflow-x:scroll!important;overflow-y:hidden!important;
+   overscroll-behavior-x:contain!important;-webkit-overflow-scrolling:touch!important;
+   scrollbar-width:thin!important;scrollbar-color:#6845d8 #dce4ef!important;
+   padding-bottom:4px!important
+ }
+ body.fi-premium #content .table-wrap>.table{
+   display:table!important;width:max-content!important;min-width:1000px!important;
+   max-width:none!important;table-layout:auto!important
+ }
+ body.fi-premium #content .table-wrap::-webkit-scrollbar{height:14px!important;display:block!important}
+ body.fi-premium #content .table-wrap::-webkit-scrollbar-track{background:#dce4ef!important;border-radius:99px!important}
+ body.fi-premium #content .table-wrap::-webkit-scrollbar-thumb{background:#6845d8!important;border:3px solid #dce4ef!important;border-radius:99px!important}
+ body.fi-premium:not(.fi-light) .main{width:calc(100% - 255px)!important}
+ body.fi-premium:not(.fi-light) #content .table-wrap{scrollbar-color:#9b83ff #203953!important}
+ body.fi-premium:not(.fi-light) #content .table-wrap::-webkit-scrollbar-track{background:#203953!important}
+ body.fi-premium:not(.fi-light) #content .table-wrap::-webkit-scrollbar-thumb{background:#9b83ff!important;border-color:#203953!important}
+ @media(max-width:760px){
+   body.fi-premium .main{width:100%!important;margin-left:0!important}
+   body.fi-premium .main>.container{width:100%!important;max-width:100%!important;padding-left:12px!important;padding-right:12px!important}
+   body.fi-premium #content .table-wrap{overflow-x:scroll!important;max-width:calc(100vw - 24px)!important}
+   body.fi-premium #content .table-wrap>.table{min-width:1000px!important}
+ }
+
  /* Force the actual Lessons table wrapper to become a usable horizontal scroller. */
  body.fi-premium #content .table-wrap{
    display:block!important;width:100%!important;max-width:100%!important;
