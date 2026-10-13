@@ -339,6 +339,17 @@ function addStyle(){
  body.fi-premium.fi-light #content th { background:#f1f4fa!important;color:#34445b!important; }
  body.fi-premium.fi-light #content td { color:#24334a!important;border-color:#e1e7f0!important; }
 
+
+ /* Responsive sidebar controls: open/close navigation on teacher and student views. */
+ body.fi-premium #fiSidebarClose{display:none}
+ @media(max-width:760px){
+   body.fi-premium #sidebar{padding-top:58px!important}
+   body.fi-premium #fiSidebarClose{display:flex;align-items:center;justify-content:center;position:absolute;top:12px;right:12px;width:38px;height:38px;border-radius:12px;border:1px solid #49617b;background:#10243a;color:#fff;font-size:25px;line-height:1;z-index:45;cursor:pointer;box-shadow:0 4px 12px #0002}
+   body.fi-premium.fi-light #fiSidebarClose{background:#f0edff;border-color:#d8cdfc;color:#5630b7}
+   body.fi-premium .topbar .mobile{display:flex!important;align-items:center;justify-content:center;min-width:40px;min-height:40px;font-size:21px}
+   body.fi-premium #mobileOverlay{cursor:pointer}
+ }
+
  /* Hide only the legacy task FAB. Keep the PWA install control available. */
  #ticTaskFab{display:none!important;visibility:hidden!important;pointer-events:none!important}
 
@@ -373,8 +384,47 @@ function installThemeToggle(){
  b.addEventListener('click',()=>applyTheme(document.body.classList.contains('fi-light')?'dark':'light'));
  top.insertBefore(b,top.firstChild);
 }
+
+function installResponsiveSidebar(){
+ const sidebar=$('#sidebar'),overlay=$('#mobileOverlay');
+ if(!sidebar||!overlay)return;
+ let close=$('#fiSidebarClose');
+ if(!close){
+   close=document.createElement('button');
+   close.id='fiSidebarClose';close.type='button';close.className='fi-sidebar-close';
+   close.textContent='×';close.setAttribute('aria-label','Fechar menu de navegação');close.title='Fechar menu';
+   close.addEventListener('click',()=>{if(typeof window.toggleMobile==='function')window.toggleMobile(false);else{sidebar.classList.remove('open');overlay.classList.remove('open')}});
+   sidebar.appendChild(close);
+ }
+ const opener=document.querySelector('.topbar .mobile');
+ if(opener){
+   opener.setAttribute('aria-label','Abrir menu de navegação');
+   opener.setAttribute('title','Abrir menu');
+   opener.setAttribute('aria-controls','sidebar');
+ }
+ if(!sidebar.dataset.fiResponsiveBound){
+   sidebar.dataset.fiResponsiveBound='1';
+   sidebar.addEventListener('click',e=>{
+     if(e.target.closest('nav button,.sidebar-footer button')){
+       if(window.matchMedia&&window.matchMedia('(max-width: 760px)').matches){
+         window.setTimeout(()=>{if(typeof window.toggleMobile==='function')window.toggleMobile(false);else{sidebar.classList.remove('open');overlay.classList.remove('open')}},0);
+       }
+     }
+   });
+ }
+ if(!document.documentElement.dataset.fiEscapeBound){
+   document.documentElement.dataset.fiEscapeBound='1';
+   document.addEventListener('keydown',e=>{
+     if(e.key==='Escape'&&sidebar.classList.contains('open')&&window.matchMedia&&window.matchMedia('(max-width: 760px)').matches){
+       if(typeof window.toggleMobile==='function')window.toggleMobile(false);else{sidebar.classList.remove('open');overlay.classList.remove('open')}
+     }
+   });
+ }
+}
+
 function init(){
  addStyle();
+ installResponsiveSidebar();
  const role=window.profile?.role||$('#userRole')?.textContent||'';
  document.body.classList.add('fi-premium');
  document.body.classList.toggle('fi-teacher-mode',/teacher|admin/i.test(role));
