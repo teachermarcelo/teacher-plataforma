@@ -1291,7 +1291,7 @@ async function openStudentTask(taskId){
 
 async function studentTasks(){
  const s=await studentRecord();if(!s){$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}
- const {data,error}=await sb.from('tic_task_assignments').select('id,status,active,removed_at,completed_at,assigned_at,assignment_id,tic_assignments(title,instructions,due_at,points,resource_items,cover_image_url,assignment_type)').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false});
+ const {data,error}=await sb.from('tic_task_assignments').select('id,status,active,removed_at,completed_at,assigned_at,assignment_id,tic_assignments(title,instructions,due_at,points,resource_items,cover_image_url,assignment_type,active)').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false});
  if(error){$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar suas tarefas.</b><p>${esc(error.message)}</p></div>`;return}
  const ids=(data||[]).map(x=>x.id);let subs=[];let feedback=[];
  if(ids.length){const r=await sb.from('tic_submissions').select('id,task_assignment_id,answer_text,file_url,audio_url,video_url,submitted_at,attempt,grade').in('task_assignment_id',ids).order('submitted_at',{ascending:false});subs=r.data||[];const subIds=subs.map(x=>x.id);if(subIds.length){const f=await sb.from('tic_feedback').select('id,submission_id,comment,grade,private_note,improvement_skill,improvement_link,created_at').in('submission_id',subIds).order('created_at',{ascending:false});feedback=f.data||[]}}
@@ -4908,7 +4908,7 @@ window.studentClassPage=async function(){
   sb.from('tic_classes').select('id,name,level,schedule_text,meeting_url,status').in('id',ids).eq('status','active').order('name'),
   sb.from('tic_class_sessions').select('id,class_id,session_date,duration_minutes,lesson_title,summary,status').in('class_id',ids).order('session_date',{ascending:false}).limit(100),
   sb.from('tic_class_material_links').select('id,class_id,title,url,material_type,note,position,created_at').in('class_id',ids).order('created_at',{ascending:false}).limit(100),
-  sb.from('tic_assignments').select('id,title,instructions,assignment_type,due_at,points,priority,class_id,resource_items,cefr_level,skill,created_at').in('class_id',ids).order('created_at',{ascending:false}).limit(100),
+  sb.from('tic_assignments').select('id,title,instructions,assignment_type,due_at,points,priority,class_id,resource_items,cefr_level,skill,created_at,active').in('class_id',ids).order('created_at',{ascending:false}).limit(100),
   sb.from('tic_task_assignments').select('id,assignment_id,status,due_at,active').eq('student_id',s.id).eq('active',true).limit(100),
   sb.from('tic_class_board_items').select('id,class_id,title,description,item_type,status,position,created_at').in('class_id',ids).order('position').order('created_at',{ascending:false}).limit(100)
  ]);
@@ -4919,7 +4919,7 @@ window.studentClassPage=async function(){
   const c=map.get(selected)||cls[0];if(!c)return;selected=c.id;
   const cs=(sessions||[]).filter(x=>x.class_id===c.id),now=new Date(),past=cs.filter(x=>new Date(x.session_date)<now).sort((a,b)=>new Date(b.session_date)-new Date(a.session_date)),next=cs.filter(x=>new Date(x.session_date)>=now).sort((a,b)=>new Date(a.session_date)-new Date(b.session_date))[0];
   const rs=(links||[]).filter(x=>x.class_id===c.id);
-  const as=(assignments||[]).filter(x=>x.class_id===c.id);
+  const as=(assignments||[]).filter(x=>x.class_id===c.id&&x.active!==false);
   const lessons=as.filter(x=>String(x.assignment_type||'').toLowerCase()==='lesson');
   const materials=as.filter(x=>String(x.assignment_type||'').toLowerCase()==='material');
   const tasks=as.filter(x=>!['lesson','material'].includes(String(x.assignment_type||'').toLowerCase()));
@@ -8046,6 +8046,128 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
 @media(max-width:1100px){.fi-media-filterbar{grid-template-columns:repeat(3,minmax(0,1fr))}.fi-media-search{grid-column:span 3}.fi-media-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.fi-media-hero{padding:18px;align-items:flex-start;flex-direction:column}.fi-media-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.fi-media-filterbar{grid-template-columns:1fr 1fr}.fi-media-search{grid-column:1/-1}.fi-media-cards{grid-template-columns:minmax(0,1fr)}.fi-media-cover{min-height:112px}}
 </style>
+
+
+<style id="fi-task-link-management-v1">
+.fi-task-mgmt-bar{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.fi-task-mgmt-bar .btn{font-size:11px}
+.fi-task-recipients{display:grid;gap:8px;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:10px}
+.fi-task-recipient{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--card,#fff)}
+.fi-task-recipient small{display:block;color:var(--muted);margin-top:3px}
+.fi-task-sync-note{border:1px solid #d9d0f2;background:#f7f3ff;color:#4d347e;border-radius:12px;padding:11px;font-size:12px;margin-bottom:12px}
+</style>
+<script id="fi-task-link-management-v1">
+(function(){
+ 'use strict';
+ const $id=id=>document.getElementById(id);
+ const escv=v=>typeof esc==='function'?esc(String(v??'')):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const toastv=(m,t='success')=>{if(typeof toast==='function')toast(m,t);else alert(m)};
+ const fmtv=v=>v?new Date(v).toLocaleDateString('pt-BR'):'—';
+ const isActive=x=>x.active!==false;
+ window.assignmentsPage=async function(){
+  const host=$id('content');if(!host||!session?.user?.id)return;
+  const token=window.__fiAssignmentListToken=(window.__fiAssignmentListToken||0)+1;
+  host.innerHTML='<div class="card" style="padding:24px">Carregando tarefas e vínculos com alunos…</div>';
+  const {data,error}=await sb.from('tic_assignments').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+  if(token!==window.__fiAssignmentListToken||currentView!=='assignments')return;
+  if(error){host.innerHTML='<div class="card attention"><b>Não foi possível carregar as tarefas.</b><p>'+escv(error.message)+'</p></div>';return}
+  const all=data||[],active=all.filter(isActive),ids=active.map(x=>x.id);
+  let links=[],students=[];
+  if(ids.length){
+   const [lr,sr]=await Promise.all([
+    sb.from('tic_task_assignments').select('id,assignment_id,student_id,status,active,assigned_at').in('assignment_id',ids),
+    sb.from('tic_students').select('id,display_name,email').eq('teacher_id',session.user.id).eq('status','active').order('display_name')
+   ]);
+   if(token!==window.__fiAssignmentListToken||currentView!=='assignments')return;
+   if(lr.error){host.innerHTML='<div class="card attention"><b>As tarefas foram carregadas, mas não foi possível consultar os vínculos.</b><p>'+escv(lr.error.message)+'</p></div>';return}
+   links=lr.data||[];students=sr.data||[];
+  }else{
+   const sr=await sb.from('tic_students').select('id,display_name,email').eq('teacher_id',session.user.id).eq('status','active').order('display_name');
+   if(token!==window.__fiAssignmentListToken||currentView!=='assignments')return;students=sr.data||[];
+  }
+  window.__fiTaskLinks=links;window.__fiTaskStudents=students;window.__fiTasks=all;
+  const visibleLinks=links.filter(isActive);
+  host.innerHTML='<div class="fi-task-sync-note">🔗 <b>Vínculo Teacher → Student:</b> cada tarefa fica ligada a registros individuais em tic_task_assignments. Você pode editar a atividade, reatribuir alunos ou arquivar sem apagar o histórico de entregas.</div>'+
+   '<div class="card" style="padding:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><b>'+active.length+' tarefa(s) ativas</b><div style="font-size:12px;color:var(--muted);margin-top:4px">'+visibleLinks.length+' vínculo(s) ativo(s) com alunos</div></div><button class="btn primary" onclick="openAssignmentForm()">＋ Nova tarefa</button></div>'+
+   '<div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Tarefa</th><th>Tipo / nível</th><th>Alunos</th><th>Prazo</th><th>Status</th><th>Ações</th></tr></thead><tbody>'+
+   active.map(x=>{const xs=visibleLinks.filter(l=>l.assignment_id===x.id),assigned=xs.map(l=>students.find(st=>st.id===l.student_id)?.display_name).filter(Boolean);return '<tr><td><b>'+escv(x.title)+'</b><br><small>'+escv((x.instructions||'').slice(0,85))+'</small></td><td>'+escv(x.assignment_type||'assignment')+'<br><small>'+escv(x.cefr_level||'')+(x.skill?' · '+escv(x.skill):'')+'</small></td><td><b>'+xs.length+'</b><br><small>'+escv(assigned.slice(0,2).join(', ')+(assigned.length>2?' +'+(assigned.length-2):''))+'</small></td><td>'+fmtv(x.due_at)+'</td><td><span class="badge '+(xs.length?'green':'yellow')+'">'+(xs.length?'Atribuída':'Sem vínculo')+'</span></td><td><div class="fi-task-mgmt-bar"><button class="btn secondary" onclick="openAssignmentFormByIdV1(\''+x.id+'\')">✏️ Editar</button><button class="btn secondary" onclick="manageTaskLinksV1(\''+x.id+'\')">👥 Atribuir / Reatribuir</button><button class="btn secondary" onclick="openAssignmentSubmissions(\''+x.id+'\')">📝 Entregas</button><button class="btn danger" onclick="archiveTaskV1(\''+x.id+'\')">Arquivar</button></div></td></tr>'}).join('')+
+   (all.some(x=>!isActive(x))?'<tr><td colspan="6"><details><summary>Ver '+all.filter(x=>!isActive(x)).length+' tarefa(s) arquivada(s)</summary><div style="padding:10px">'+all.filter(x=>!isActive(x)).map(x=>'<div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)"><span>'+escv(x.title)+'</span><button class="btn secondary" onclick="restoreTaskV1(\''+x.id+'\')">Restaurar</button></div>').join('')+'</div></details></td></tr>':'')+
+   '</tbody></table></div></div>';
+ };
+ window.openAssignmentFormByIdV1=async function(id){
+  const x=(window.__fiTasks||[]).find(a=>a.id===id);if(!x)return toastv('Tarefa não encontrada.','error');
+  if(typeof window.openAssignmentForm==='function')return window.openAssignmentForm(x);
+  return toastv('O editor de tarefas não está disponível.','error');
+ };
+ window.manageTaskLinksV1=async function(id){
+  const task=(window.__fiTasks||[]).find(x=>x.id===id);if(!task)return toastv('Tarefa não encontrada.','error');
+  const [{data:students,error:se},{data:links,error:le}]=await Promise.all([
+   sb.from('tic_students').select('id,display_name,email,current_level').eq('teacher_id',session.user.id).eq('status','active').order('display_name'),
+   sb.from('tic_task_assignments').select('id,assignment_id,student_id,status,active,assigned_at').eq('assignment_id',id)
+  ]);
+  if(se||le)return toastv('Não foi possível carregar os alunos/vínculos: '+(se?.message||le?.message),'error');
+  const map=new Map((links||[]).map(x=>[x.student_id,x]));
+  const rows=(students||[]).map(st=>{const l=map.get(st.id);return '<label class="fi-task-recipient"><input type="checkbox" data-fi-student="'+escv(st.id)+'" '+(l&&isActive(l)?'checked':'')+'><span style="flex:1"><b>'+escv(st.display_name)+'</b><small>'+escv(st.email||st.current_level||'Aluno')+(l?' · '+escv(l.status||'pending'):' · Ainda não atribuído')+'</small></span></label>'}).join('');
+  openModal('👥 Atribuir / reatribuir tarefa', '<div class="fi-task-sync-note"><b>'+escv(task.title)+'</b><br>Marque os alunos que devem manter acesso. Desmarcar remove o acesso ativo, mas preserva o vínculo e o histórico de entregas.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button type="button" class="btn secondary" onclick="document.querySelectorAll(\'[data-fi-student]\').forEach(x=>x.checked=true)">Selecionar todos</button><button type="button" class="btn secondary" onclick="document.querySelectorAll(\'[data-fi-student]\').forEach(x=>x.checked=false)">Limpar seleção</button></div><div class="fi-task-recipients">'+(rows||'<div class="empty">Nenhum aluno ativo cadastrado.</div>')+'</div><div class="modal-actions"><button class="btn ghost" type="button" onclick="closeModal()">Cancelar</button><button class="btn primary" type="button" onclick="saveTaskLinksV1(\''+id+'\')">💾 Salvar atribuições</button></div>');
+ };
+ window.saveTaskLinksV1=async function(id){
+  const task=(window.__fiTasks||[]).find(x=>x.id===id);if(!task)return;
+  const wanted=[...document.querySelectorAll('[data-fi-student]:checked')].map(x=>x.dataset.fiStudent);
+  if(!wanted.length)return toastv('Selecione pelo menos um aluno. Para retirar todos, arquive a tarefa.','error');
+  const {data:existing,error}=await sb.from('tic_task_assignments').select('id,student_id,status,active,assigned_at').eq('assignment_id',id);
+  if(error)return toastv('Não foi possível ler os vínculos: '+error.message,'error');
+  const map=new Map((existing||[]).map(x=>[x.student_id,x])),wantedSet=new Set(wanted);
+  const updates=[];
+  for(const row of existing||[])if(!wantedSet.has(row.student_id)&&isActive(row))updates.push(sb.from('tic_task_assignments').update({active:false,removed_at:new Date().toISOString()}).eq('id',row.id));
+  for(const studentId of wanted){
+   const row=map.get(studentId);
+   if(row){if(!isActive(row))updates.push(sb.from('tic_task_assignments').update({active:true,removed_at:null,assigned_at:new Date().toISOString()}).eq('id',row.id))}
+   else updates.push(sb.from('tic_task_assignments').insert({assignment_id:id,student_id:studentId,status:'pending',active:true,assigned_at:new Date().toISOString()}));
+  }
+  const results=await Promise.all(updates);const failure=results.find(x=>x.error);
+  if(failure)return toastv('Alguns vínculos não foram salvos: '+failure.error.message,'error');
+  closeModal();toastv('Atribuições atualizadas. O aluno verá a tarefa em sua próxima atualização.','success');await assignmentsPage();
+ };
+ window.archiveTaskV1=async function(id){
+  const task=(window.__fiTasks||[]).find(x=>x.id===id);if(!task)return;
+  if(!confirm('Arquivar esta tarefa? Ela sairá das listas ativas, mas os vínculos e o histórico de entregas serão preservados.'))return;
+  const r=await sb.from('tic_assignments').update({active:false}).eq('id',id).eq('teacher_id',session.user.id);
+  if(r.error)return toastv('Não foi possível arquivar: '+r.error.message,'error');
+  const links=await sb.from('tic_task_assignments').update({active:false,removed_at:new Date().toISOString()}).eq('assignment_id',id).eq('active',true);
+  if(links.error)return toastv('Tarefa arquivada, mas alguns vínculos não foram desativados: '+links.error.message,'error');
+  toastv('Tarefa arquivada; histórico preservado.','success');await assignmentsPage();
+ };
+ window.restoreTaskV1=async function(id){
+  const r=await sb.from('tic_assignments').update({active:true}).eq('id',id).eq('teacher_id',session.user.id);
+  if(r.error)return toastv('Não foi possível restaurar: '+r.error.message,'error');
+  toastv('Tarefa restaurada. Reative os alunos em Atribuir / Reatribuir.','success');await assignmentsPage();
+ };
+ // Prevent an older async My Class request from painting over a newer navigation.
+ const originalClass=window.studentClassPage;
+ if(typeof originalClass==='function'){
+  window.studentClassPage=async function(){
+   const req=window.__fiStudentClassReq=(window.__fiStudentClassReq||0)+1;
+   const route=currentView;
+   const orig=window.__fiClassPageOriginal||originalClass;
+   window.__fiClassPageOriginal=orig;
+   const content=$id('content');
+   if(content)content.innerHTML='<div class="card" style="padding:22px">Carregando sua Class…</div>';
+   await orig();
+   if(req!==window.__fiStudentClassReq||currentView!==route||route!=='studentClass')return;
+  };
+ }
+ // Invalidate pending student/class render requests whenever another top-level route is selected.
+ const baseLoad=window.loadView;
+ if(typeof baseLoad==='function'&&!baseLoad.__fiRouteGuard){
+  const guarded=async function(v){
+   window.__fiStudentClassReq=(window.__fiStudentClassReq||0)+1;
+   window.__fiAssignmentListToken=(window.__fiAssignmentListToken||0)+1;
+   window.__fiRouteEpoch=(window.__fiRouteEpoch||0)+1;
+   return baseLoad(v);
+  };
+  guarded.__fiRouteGuard=true;window.loadView=guarded;
+ }
+})();
+</script>
 
 </body>
 </html>
