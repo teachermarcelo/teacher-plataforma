@@ -243,6 +243,102 @@ function addStyle(){
  body.fi-premium.fi-light #content .curriculum-lesson .lesson-number{background:#eee8ff!important;color:#5634b6!important}
  body.fi-premium.fi-light #content .curriculum-lesson button,
  body.fi-premium.fi-light #content .curriculum-lesson .btn{background:#6845d8!important;color:#fff!important;border-color:#6845d8!important}
+ 
+ /* High-contrast text system for the theme switch. Keep the dashboard layout unchanged. */
+ body.fi-premium:not(.fi-light) #content,
+ body.fi-premium:not(.fi-light) #content p,
+ body.fi-premium:not(.fi-light) #content li,
+ body.fi-premium:not(.fi-light) #content label,
+ body.fi-premium:not(.fi-light) #content dt,
+ body.fi-premium:not(.fi-light) #content dd,
+ body.fi-premium:not(.fi-light) #content th,
+ body.fi-premium:not(.fi-light) #content td,
+ body.fi-premium:not(.fi-light) #content legend,
+ body.fi-premium:not(.fi-light) #content summary { color:#edf4ff!important; }
+ body.fi-premium:not(.fi-light) #content h1,
+ body.fi-premium:not(.fi-light) #content h2,
+ body.fi-premium:not(.fi-light) #content h3,
+ body.fi-premium:not(.fi-light) #content h4,
+ body.fi-premium:not(.fi-light) #content h5,
+ body.fi-premium:not(.fi-light) #content strong,
+ body.fi-premium:not(.fi-light) #content b { color:#ffffff!important; }
+ body.fi-premium:not(.fi-light) #content .muted,
+ body.fi-premium:not(.fi-light) #content .text-muted,
+ body.fi-premium:not(.fi-light) #content .help,
+ body.fi-premium:not(.fi-light) #content .hint,
+ body.fi-premium:not(.fi-light) #content .description,
+ body.fi-premium:not(.fi-light) #content .subtitle,
+ body.fi-premium:not(.fi-light) #content .meta,
+ body.fi-premium:not(.fi-light) #content .stat-label,
+ body.fi-premium:not(.fi-light) #content .stat-note,
+ body.fi-premium:not(.fi-light) #content small { color:#bdcce0!important; }
+ body.fi-premium:not(.fi-light) #content a:not(.btn),
+ body.fi-premium:not(.fi-light) #content .link { color:#72cfff!important; }
+ body.fi-premium:not(.fi-light) #content input,
+ body.fi-premium:not(.fi-light) #content select,
+ body.fi-premium:not(.fi-light) #content textarea { color:#f7faff!important;background:#081a2b!important;border-color:#49617b!important; }
+ body.fi-premium:not(.fi-light) #content input::placeholder,
+ body.fi-premium:not(.fi-light) #content textarea::placeholder { color:#9fb2c9!important;opacity:1!important; }
+ body.fi-premium:not(.fi-light) #content button:not(.btn):not(.fi-action):not(.fi-theme-toggle) { color:#f7faff; }
+ body.fi-premium:not(.fi-light) #content button:disabled { color:#aab8ca!important;opacity:.75; }
+ body.fi-premium:not(.fi-light) #content .btn.primary,
+ body.fi-premium:not(.fi-light) #content .btn:not(.secondary):not(.ghost),
+ body.fi-premium:not(.fi-light) #content .fi-action,
+ body.fi-premium:not(.fi-light) #content button[type="submit"] { color:#ffffff!important; }
+ body.fi-premium:not(.fi-light) #content .btn.secondary,
+ body.fi-premium:not(.fi-light) #content .btn.ghost { color:#edf4ff!important;background:#1a3049!important;border-color:#49617b!important; }
+ body.fi-premium:not(.fi-light) #content .notice.error { background:#421f2a!important;color:#ffe8ee!important;border-color:#a8445e!important; }
+ body.fi-premium:not(.fi-light) #content .notice.warning { background:#43351b!important;color:#fff2cc!important;border-color:#96732d!important; }
+ body.fi-premium:not(.fi-light) #content .notice.success { background:#10372f!important;color:#d7fff3!important;border-color:#258a72!important; }
+
+ body.fi-premium.fi-light #content,
+ body.fi-premium.fi-light #content p,
+ body.fi-premium.fi-light #content li,
+ body.fi-premium.fi-light #content label,
+ body.fi-premium.fi-light #content dt,
+ body.fi-premium.fi-light #content dd,
+ body.fi-premium.fi-light #content th,
+ body.fi-premium.fi-light #content td,
+ body.fi-premium.fi-light #content legend,
+ body.fi-premium.fi-light #content summary { color:#24334a!important; }
+ body.fi-premium.fi-light #content h1,
+ body.fi-premium.fi-light #content h2,
+ body.fi-premium.fi-light #content h3,
+ body.fi-premium.fi-light #content h4,
+ body.fi-premium.fi-light #content h5,
+ body.fi-premium.fi-light #content strong,
+ body.fi-premium.fi-light #content b { color:#17233a!important; }
+ body.fi-premium.fi-light #content .muted,
+ body.fi-premium.fi-light #content .text-muted,
+ body.fi-premium.fi-light #content .help,
+ body.fi-premium.fi-light #content .hint,
+ body.fi-premium.fi-light #content .description,
+ body.fi-premium.fi-light #content .subtitle,
+ body.fi-premium.fi-light #content .meta,
+ body.fi-premium.fi-light #content .stat-label,
+ body.fi-premium.fi-light #content .stat-note,
+ body.fi-premium.fi-light #content small { color:#586a80!important; }
+ body.fi-premium.fi-light #content a:not(.btn),
+ body.fi-premium.fi-light #content .link { color:#5630b7!important; }
+ body.fi-premium.fi-light #content input,
+ body.fi-premium.fi-light #content select,
+ body.fi-premium.fi-light #content textarea { color:#17233a!important;background:#ffffff!important;border-color:#cbd6e5!important; }
+ body.fi-premium.fi-light #content input::placeholder,
+ body.fi-premium.fi-light #content textarea::placeholder { color:#687991!important;opacity:1!important; }
+ body.fi-premium.fi-light #content button:not(.btn):not(.fi-action):not(.fi-theme-toggle) { color:#24334a; }
+ body.fi-premium.fi-light #content .btn.primary,
+ body.fi-premium.fi-light #content .btn:not(.secondary):not(.ghost),
+ body.fi-premium.fi-light #content .fi-action,
+ body.fi-premium.fi-light #content button[type="submit"] { color:#ffffff!important; }
+ body.fi-premium.fi-light #content .btn.secondary,
+ body.fi-premium.fi-light #content .btn.ghost { color:#48308e!important;background:#f0edff!important;border-color:#d6cafa!important; }
+ body.fi-premium.fi-light #content .notice.error { background:#fff0f2!important;color:#8b1e35!important;border-color:#e9a8b5!important; }
+ body.fi-premium.fi-light #content .notice.warning { background:#fff7df!important;color:#75510a!important;border-color:#e6cc80!important; }
+ body.fi-premium.fi-light #content .notice.success { background:#e9fbf4!important;color:#12644f!important;border-color:#91dbc2!important; }
+ body.fi-premium.fi-light #content table { background:#ffffff!important; }
+ body.fi-premium.fi-light #content th { background:#f1f4fa!important;color:#34445b!important; }
+ body.fi-premium.fi-light #content td { color:#24334a!important;border-color:#e1e7f0!important; }
+
  /* Hide only the legacy task FAB. Keep the PWA install control available. */
  #ticTaskFab{display:none!important;visibility:hidden!important;pointer-events:none!important}
 
