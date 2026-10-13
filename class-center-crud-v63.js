@@ -11,11 +11,12 @@
    const body=document.getElementById('ticV41ClassBody');if(!body)return;
    const students=state.students||[],tasks=state.tasks||[],events=state.evs||[],cls=state.cls||{};
    const kpis='<div class="v41-kpis"><div class="v41-kpi"><span>👥 Alunos</span><b>'+students.length+'</b></div><div class="v41-kpi"><span>📝 Conteúdos</span><b>'+tasks.length+'</b></div><div class="v41-kpi"><span>📚 Aulas</span><b>'+events.length+'</b></div><div class="v41-kpi"><span>🧰 Resources</span><b>'+tasks.reduce((n,t)=>n+(Array.isArray(t.resource_items)?t.resource_items.length:0),0)+'</b></div><div class="v41-kpi"><span>📅 Nível</span><b>'+esc(cls.level||'—')+'</b></div></div>';
-   body.innerHTML=kpis+'<div class="v41-panel v63-lessons"><div class="v63-heading"><div><h3>📚 Aulas</h3><p>Edite ou remova cada registro. O título é opcional.</p></div><button class="btn primary" onclick="openClassLessonForm(\''+esc(classId)+'\')">＋ Registrar aula</button></div><div class="v63-list">'+events.map(e=>{
+   const rows=events.map(e=>{
      const title=e.title&&e.title.trim()?e.title:((e.event_type==='next_class'||e.event_type==='next')?'Próxima aula':e.event_type==='review'?'Revisão':'Aula')+' · '+(e.starts_at?new Date(e.starts_at).toLocaleDateString('pt-BR'):'sem data');
      const date=e.starts_at||e.created_at;
      return '<article class="v63-record"><div class="v63-record-main"><b>'+esc(title)+'</b><small>'+esc(e.event_type==='next_class'||e.event_type==='next'?'Próxima aula':e.event_type==='review'?'Revisão':'Aula')+(e.notes?' · '+esc(e.notes):'')+'</small><small>'+esc(fmt(date))+(e.meeting_url?' · 🔗 Link configurado':'')+'</small></div><div class="v63-actions"><button type="button" class="btn sm secondary" onclick="ticV61EditEvent(\''+esc(e.id)+'\',\''+esc(classId)+'\')">✏️ Editar</button><button type="button" class="btn sm ghost v61-danger" onclick="ticV61DeleteEvent(\''+esc(e.id)+'\',\''+esc(classId)+'\')">🗑 Remover</button></div></article>';
-   }).join('')||'<div class="v41-empty">Nenhuma aula registrada. Clique em “Registrar aula” para adicionar a primeira.</div>'+'</div></div>';
+   }).join('');
+   body.innerHTML=kpis+'<div class="v41-panel v63-lessons"><div class="v63-heading"><div><h3>📚 Aulas</h3><p>Edite ou remova cada registro. O título é opcional.</p></div><button class="btn primary" onclick="openClassLessonForm(\''+esc(classId)+'\')">＋ Registrar aula</button></div><div class="v63-list">'+(rows||'<div class="v41-empty">Nenhuma aula registrada. Clique em “Registrar aula” para adicionar a primeira.</div>')+'</div></div>';
  }
  const wrapped=async function(classId,tab){if(tab==='lessons')return renderLessons(classId);return original.apply(this,arguments)};
  wrapped.__v63Crud=true;
