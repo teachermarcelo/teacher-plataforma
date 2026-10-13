@@ -445,7 +445,7 @@ $('loginForm').onsubmit=async e=>{
  startDiag(); diag('Tentativa de autenticação',true,'enviando e-mail e senha ao Supabase Auth');
  msg('Verificando suas credenciais...');
  const {data,error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
- if(error){ diag('Autenticação',false,error.message+' | código: '+(error.code||'sem código')); msg(error.message,true); btn.disabled=false;btn.textContent='Entrar'; $('diagModal').classList.remove('hidden'); return; }
+ if(error){ const authMessage=error.code==='invalid_credentials'?'E-mail ou senha incorretos. Confira o e-mail da conta do aluno ou use “Esqueci minha senha” para criar uma nova senha.':error.message; diag('Autenticação',false,authMessage+' | código: '+(error.code||'sem código')); msg(authMessage,true); btn.disabled=false;btn.textContent='Entrar'; $('diagModal').classList.remove('hidden'); return; }
  diag('Autenticação',true,'Sessão criada. ID: '+data.user.id);
  
  btn.disabled=false;btn.textContent='Entrar';
