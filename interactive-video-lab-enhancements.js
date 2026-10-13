@@ -83,6 +83,47 @@ body.fi-light .iv-lab .iv-student-tools-panel,body.fi-premium.fi-light .iv-lab .
 body.fi-light .iv-lab .iv-student-tools-panel h3,body.fi-premium.fi-light .iv-lab .iv-student-tools-panel h3{color:#17233a}
 body.fi-light .iv-lab .iv-empty,body.fi-premium.fi-light .iv-lab .iv-empty{background:#fff;border-color:#d5ddeb;color:#17233a}
 @media(max-width:720px){.iv-library-controls{grid-template-columns:1fr}.iv-student-hero-card{grid-template-columns:1fr}.iv-student-hero-art{min-height:120px;order:-1}.iv-student-hero-art:after{background:linear-gradient(0deg,#1b1730,transparent)}.iv-student-hero-copy{padding:17px}.iv-student-library-head{padding:17px}.iv-lab>.page-head{padding:18px}}
+/* Responsive sizing pass: comfortable cards and a clean learner viewer */
+.iv-lab,.iv-lab #ivWorkspace,.iv-lab .iv-grid,.iv-lab .iv-card,.iv-lab .iv-catalog{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+.iv-lab .iv-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);align-items:start}
+.iv-lab .iv-catalog{grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:18px;align-items:stretch}
+.iv-lab .iv-media-card{width:100%;min-width:0;height:fit-content;display:flex;flex-direction:column}
+.iv-lab .iv-thumb{width:100%;aspect-ratio:16/9;flex:0 0 auto}
+.iv-lab .iv-thumb img{width:100%;height:100%;object-fit:cover}
+.iv-lab .iv-media-content{width:100%;box-sizing:border-box;gap:12px}
+.iv-lab .iv-media-content h3{font-size:clamp(16px,1.35vw,19px);line-height:1.35;overflow-wrap:anywhere}
+.iv-lab .iv-media-content p{font-size:13px;line-height:1.55;overflow-wrap:anywhere}
+.iv-lab .iv-media-content>.iv-btn,.iv-lab .iv-media-content [data-open-video]{width:100%;min-height:44px;margin:0}
+.iv-lab .iv-media-content .iv-feature{gap:7px}
+.iv-lab .iv-media-content .iv-feature button{flex:1 1 90px;min-width:0;min-height:42px;margin:0;padding:10px 8px;font-size:12px}
+.iv-lab .iv-media-content .iv-feature span{max-width:100%;overflow-wrap:anywhere}
+.iv-lab .iv-student-tools-panel{width:100%;max-width:100%;box-sizing:border-box;overflow:hidden}
+.iv-lab .iv-student-tools-panel .iv-player{width:100%;aspect-ratio:16/9}
+.iv-lab .iv-student-tools-panel input,.iv-lab .iv-student-tools-panel textarea{max-width:100%;box-sizing:border-box}
+.iv-lab .iv-task-details .iv-btn{min-height:42px}
+.iv-lab .iv-library-controls{width:100%;grid-template-columns:minmax(0,1fr) minmax(150px,210px)}
+.iv-lab #ivCreate{min-width:0}
+.iv-lab #ivStudents{min-height:150px}
+@media(max-width:1000px){
+ .iv-lab .iv-grid{grid-template-columns:minmax(0,1fr)}
+ .iv-lab .iv-catalog{grid-template-columns:repeat(auto-fill,minmax(min(100%,245px),1fr))}
+}
+@media(max-width:600px){
+ .iv-lab{gap:14px}
+ .iv-lab>.page-head{padding:16px;border-radius:16px}
+ .iv-lab .iv-card{padding:14px;border-radius:16px}
+ .iv-lab .iv-catalog{grid-template-columns:minmax(0,1fr);gap:14px}
+ .iv-lab .iv-media-content{padding:14px}
+ .iv-lab .iv-library-controls{grid-template-columns:minmax(0,1fr)}
+ .iv-lab .iv-student-hero-card{grid-template-columns:minmax(0,1fr)}
+ .iv-lab .iv-student-hero-art{min-height:155px;order:-1}
+ .iv-lab .iv-student-hero-copy{padding:16px}
+ .iv-lab .iv-student-hero-copy h3{font-size:21px}
+ .iv-lab .iv-media-content .iv-feature button{flex:1 1 100%}
+ .iv-lab .iv-tools-grid{grid-template-columns:minmax(0,1fr)}
+ .iv-lab .iv-topline{align-items:flex-start}
+}
+
 `;
 function installStyle(){if(document.getElementById('iv-premium-enhancements-css'))return;const s=document.createElement('style');s.id='iv-premium-enhancements-css';s.textContent=css;document.head.appendChild(s)}
 function el(id){return document.getElementById(id)}
