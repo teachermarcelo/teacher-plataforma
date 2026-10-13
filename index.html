@@ -7885,5 +7885,78 @@ body.fi-premium:not(.fi-light) #fi-cc-floating .fi-cc-links button:hover{backgro
 })();
 </script>
 
+
+<style id="fi-class-center-netflix-v3">
+/* Fix viewport clipping and make Class Center fit the real content column */
+html,body{max-width:100%;overflow-x:hidden}
+.class-center-page,.class-center-shell{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+.class-center-page *,.class-center-shell *{box-sizing:border-box}
+.class-center-page .class-center-top,.class-center-page #classCenterBody,.class-center-page .class-center-body{width:100%;max-width:100%;min-width:0}
+.class-center-page .class-center-kpis{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(155px,100%),1fr))!important;width:100%;min-width:0}
+.class-center-page .class-center-kpi{min-width:0!important;width:auto;overflow-wrap:anywhere}
+.class-center-page .class-center-panel,.class-center-page .class-center-list,.class-center-page .class-center-board{min-width:0;max-width:100%}
+.class-center-page .class-center-board{overflow-x:auto;overscroll-behavior-x:contain}
+.class-center-page .class-center-card{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.class-center-page .class-center-list-item{min-width:0;grid-template-columns:minmax(0,1fr) auto}
+.class-center-page .class-center-title,.class-center-page .class-center-tabs{min-width:0;max-width:100%}
+.class-center-page .class-center-tabs{overflow-x:auto;scrollbar-width:thin}
+.class-center-page .class-center-top{position:relative}
+#fi-cc-floating{position:fixed!important;right:20px!important;bottom:20px!important;left:auto!important;z-index:2147483000!important;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+#fi-cc-floating .fi-cc-fab{display:grid!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+@media(max-width:900px){
+ .class-center-page .class-center-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .class-center-page .class-center-list-item{grid-template-columns:minmax(0,1fr)}
+ .class-center-page .class-center-list-item>small:last-child{text-align:left}
+}
+@media(max-width:520px){
+ .class-center-page .class-center-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px}
+ .class-center-page .class-center-kpi{padding:12px;min-height:80px}
+ .class-center-page .class-center-top{padding:14px 12px 10px}
+ .class-center-page #classCenterBody{padding:12px}
+ #fi-cc-floating{right:12px!important;bottom:12px!important}
+}
+</style>
+<script id="fi-class-center-netflix-v3">
+(function(){
+ 'use strict';
+ const dockId='fi-cc-floating';
+ function currentCenter(){
+  return document.querySelector('.class-center-shell[data-class-center],.class-center-page[data-class-center],.class-center-page');
+ }
+ function buildDock(center){
+  let dock=document.getElementById(dockId);
+  if(!dock){
+   dock=document.createElement('div');dock.id=dockId;dock.dataset.open='false';
+   dock.innerHTML='<div class="fi-cc-pop" role="dialog" aria-label="Conectividade e acesso rápido"><div class="fi-cc-pophead"><div><strong>Conectividade rápida</strong><div class="fi-cc-online">Acesso rápido às abas</div></div><button class="fi-cc-close" type="button" aria-label="Fechar">×</button></div><div class="fi-cc-links"></div><div class="fi-cc-foot">Atalhos para as abas existentes da sala</div></div><button class="fi-cc-fab" type="button" aria-label="Abrir conectividade rápida" aria-expanded="false">＋</button>';
+   document.body.appendChild(dock);
+   const fab=dock.querySelector('.fi-cc-fab');
+   const close=dock.querySelector('.fi-cc-close');
+   const closeDock=()=>{dock.dataset.open='false';fab.setAttribute('aria-expanded','false');fab.textContent='＋';};
+   fab.addEventListener('click',()=>{const open=dock.dataset.open!=='true';dock.dataset.open=String(open);fab.setAttribute('aria-expanded',String(open));fab.textContent=open?'×':'＋';});
+   close.addEventListener('click',closeDock);
+   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDock()});
+  }
+  const tabs=Array.from(center.querySelectorAll('.class-center-tabs button'));
+  const list=dock.querySelector('.fi-cc-links');
+  const signature=tabs.map(t=>(t.textContent||'').trim()).join('|');
+  if(list.dataset.signature!==signature){
+   list.dataset.signature=signature;list.replaceChildren();
+   tabs.forEach(tab=>{
+    const label=(tab.textContent||'').trim().replace(/^\S+\s*/,'').trim()||'Abrir aba';
+    const b=document.createElement('button');b.type='button';b.textContent='↗ '+label;
+    b.addEventListener('click',()=>{tab.click();dock.dataset.open='false';const fab=dock.querySelector('.fi-cc-fab');fab.setAttribute('aria-expanded','false');fab.textContent='＋';center.scrollIntoView({behavior:'smooth',block:'start'})});
+    list.appendChild(b);
+   });
+  }
+  if(dock.parentElement!==document.body)document.body.appendChild(dock);
+ }
+ let queued=false;
+ function apply(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;const center=currentCenter();if(center)buildDock(center);else{const dock=document.getElementById(dockId);if(dock)dock.remove()}})}
+ function start(){apply();new MutationObserver(apply).observe(document.body,{childList:true,subtree:true});}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+ window.addEventListener('tic:class-center-updated',apply);
+})();
+</script>
+
 </body>
 </html>
