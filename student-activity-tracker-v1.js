@@ -39,7 +39,7 @@
    return state.queue;
  }
  window.fiLogStudentActivity=log;
- window.ticLogStudentEventV58=window.ticLogStudentEventV58||log;
+ window.ticLogStudentEventV58=log;
 
  function elementInfo(el){
    const a=el?.closest?.('a[href]'),data=el?.dataset||{};
