@@ -399,6 +399,94 @@ function addStyle(){
  /* Mobile navigation tabs handle: always visible on small screens. */
  #fiMobileTabsHandle{display:none}
  @media(max-width:760px){body.fi-premium #fiMobileTabsHandle{display:flex!important;position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 82px)!important;left:10px!important;z-index:80!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-width:58px!important;height:42px!important;padding:0 11px!important;border:1px solid #a99aff!important;border-radius:13px!important;background:#603de0!important;color:#fff!important;font-size:12px!important;font-weight:900!important;box-shadow:0 5px 18px #0005!important;cursor:pointer!important}body.fi-premium #fiMobileTabsHandle .fi-tabs-bars{font-size:20px!important;color:#fff!important}body.fi-premium #sidebar{padding-top:64px!important}}
+
+ /* Final contrast pass for Lessons/Courses tables: every pill and action readable in both themes. */
+ body.fi-premium #content table{border-collapse:separate!important;border-spacing:0!important}
+ body.fi-premium #content table thead th{font-weight:800!important;letter-spacing:.35px!important}
+ body.fi-premium #content table tbody td{vertical-align:middle!important}
+ body.fi-premium.fi-light #content table thead th{background:#f2f5fb!important;color:#43536b!important;border-color:#dce4ef!important}
+ body.fi-premium.fi-light #content table tbody tr td{background:#fff!important;color:#24334a!important;border-color:#e1e7f0!important}
+ body.fi-premium.fi-light #content table tbody tr:hover td{background:#f7f5ff!important}
+ body.fi-premium:not(.fi-light) #content table thead th{background:#142941!important;color:#dceaff!important;border-color:#35506d!important}
+ body.fi-premium:not(.fi-light) #content table tbody tr td{background:#0e2034!important;color:#f0f5ff!important;border-color:#2b4560!important}
+ body.fi-premium:not(.fi-light) #content table tbody tr:hover td{background:#142b43!important}
+ /* Metadata chips such as "Sem curso", "Sem módulo", and level tags */
+ body.fi-premium #content table tbody td .badge,
+ body.fi-premium #content table tbody td .pill,
+ body.fi-premium #content table tbody td .tag,
+ body.fi-premium #content table tbody td span[class*="badge"],
+ body.fi-premium #content table tbody td span[class*="pill"]{
+   display:inline-flex!important;align-items:center!important;justify-content:center!important;
+   min-height:26px!important;padding:5px 10px!important;border-radius:999px!important;
+   font-size:11px!important;font-weight:800!important;line-height:1.2!important;text-shadow:none!important
+ }
+ body.fi-premium.fi-light #content table tbody td .badge,
+ body.fi-premium.fi-light #content table tbody td .pill,
+ body.fi-premium.fi-light #content table tbody td .tag,
+ body.fi-premium.fi-light #content table tbody td span[class*="badge"],
+ body.fi-premium.fi-light #content table tbody td span[class*="pill"]{
+   background:#e9e5ff!important;color:#39247c!important;-webkit-text-fill-color:#39247c!important;border:1px solid #cfc4ff!important
+ }
+ body.fi-premium:not(.fi-light) #content table tbody td .badge,
+ body.fi-premium:not(.fi-light) #content table tbody td .pill,
+ body.fi-premium:not(.fi-light) #content table tbody td .tag,
+ body.fi-premium:not(.fi-light) #content table tbody td span[class*="badge"],
+ body.fi-premium:not(.fi-light) #content table tbody td span[class*="pill"]{
+   background:#29425e!important;color:#f4f8ff!important;-webkit-text-fill-color:#f4f8ff!important;border:1px solid #496784!important
+ }
+ /* Action buttons inside tables: distinct purpose colors and readable labels */
+ body.fi-premium #content table tbody td button,
+ body.fi-premium #content table tbody td a.btn{
+   min-height:34px!important;padding:7px 11px!important;border-radius:10px!important;
+   font-size:11px!important;font-weight:800!important;line-height:1.2!important;
+   opacity:1!important;text-shadow:none!important
+ }
+ body.fi-premium.fi-light #content table tbody td button:not(:first-child),
+ body.fi-premium.fi-light #content table tbody td a.btn:not(:first-child){
+   color:#273750!important;-webkit-text-fill-color:#273750!important;
+   background:#edf2f8!important;border:1px solid #c9d5e5!important
+ }
+ body.fi-premium.fi-light #content table tbody td button[onclick*="edit"],
+ body.fi-premium.fi-light #content table tbody td button[onclick*="Edit"],
+ body.fi-premium.fi-light #content table tbody td button[onclick*="openLessonForm"]{
+   background:#e7efff!important;color:#174a9b!important;-webkit-text-fill-color:#174a9b!important;border-color:#b9cef5!important
+ }
+ body.fi-premium.fi-light #content table tbody td button[onclick*="assign"],
+ body.fi-premium.fi-light #content table tbody td button[onclick*="Assign"]{
+   background:#eee8ff!important;color:#4c2ba4!important;-webkit-text-fill-color:#4c2ba4!important;border-color:#cfc0ff!important
+ }
+ body.fi-premium #content table tbody td button[onclick*="delete"],
+ body.fi-premium #content table tbody td button[onclick*="Delete"],
+ body.fi-premium #content table tbody td button.danger{
+   background:#b42342!important;color:#fff!important;-webkit-text-fill-color:#fff!important;border:1px solid #b42342!important
+ }
+ body.fi-premium:not(.fi-light) #content table tbody td button:not(:first-child),
+ body.fi-premium:not(.fi-light) #content table tbody td a.btn:not(:first-child){
+   background:#203953!important;color:#f4f8ff!important;-webkit-text-fill-color:#f4f8ff!important;border:1px solid #496784!important
+ }
+ body.fi-premium:not(.fi-light) #content table tbody td button[onclick*="edit"],
+ body.fi-premium:not(.fi-light) #content table tbody td button[onclick*="Edit"],
+ body.fi-premium:not(.fi-light) #content table tbody td button[onclick*="openLessonForm"]{
+   background:#203953!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;border-color:#587795!important
+ }
+ body.fi-premium:not(.fi-light) #content table tbody td button[onclick*="assign"],
+ body.fi-premium:not(.fi-light) #content table tbody td button[onclick*="Assign"]{
+   background:#443080!important;color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;border-color:#8b74d7!important
+ }
+ body.fi-premium #content table tbody td:first-child button,
+ body.fi-premium #content table tbody td:first-child .btn,
+ body.fi-premium #content table tbody td:first-child a,
+ body.fi-premium #content table tbody td:first-child [role="button"]{
+   background:#eee9ff!important;background-color:#eee9ff!important;color:#39247c!important;
+   -webkit-text-fill-color:#39247c!important;border:1px solid #cfc4ff!important;font-weight:800!important
+ }
+ body.fi-premium #content table tbody td:first-child button *,
+ body.fi-premium #content table tbody td:first-child .btn *,
+ body.fi-premium #content table tbody td:first-child a *,
+ body.fi-premium #content table tbody td:first-child [role="button"] *{
+   color:#39247c!important;-webkit-text-fill-color:#39247c!important
+ }
+
  /* FIX live Lessons table: ensure lesson-name pills have readable text on pale background. */
  body.fi-premium #content table tbody td:first-child button,
  body.fi-premium #content table tbody td:first-child .btn,
