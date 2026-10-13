@@ -246,8 +246,8 @@ function addStyle(){
  /* Keep the install control visible; hide only obstructive/removed floating tools. */
  #ticTaskFab{display:none!important;visibility:hidden!important;pointer-events:none!important}
  #teacherIAFab{display:none!important;visibility:hidden!important;pointer-events:none!important}
- #tpInstallAppBtn{display:flex!important;visibility:visible!important;pointer-events:auto!important;right:14px!important;bottom:68px!important;z-index:99990!important;max-width:calc(100vw - 28px)!important}
- @media(max-width:520px){#tpInstallAppBtn{right:10px!important;bottom:62px!important;padding:10px 12px!important;font-size:12px!important}}
+ #tpInstallAppBtn:not([hidden]){display:flex!important;visibility:visible!important;pointer-events:auto!important;right:14px!important;bottom:68px!important;z-index:99990!important;max-width:calc(100vw - 28px)!important}#tpInstallAppBtn[hidden]{display:none!important;visibility:hidden!important;pointer-events:none!important}
+ @media(max-width:520px){#tpInstallAppBtn:not([hidden]){right:10px!important;bottom:62px!important;padding:10px 12px!important;font-size:12px!important}}
  /* Consistent readable contrast on internal tabs. Does not change the Teacher dashboard structure. */
  body.fi-premium:not(.fi-light):not(.fi2-home) #content .card,
  body.fi-premium:not(.fi-light):not(.fi2-home) #content .stat,
