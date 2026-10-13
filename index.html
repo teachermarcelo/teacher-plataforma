@@ -7672,5 +7672,91 @@ td,th{padding-top:12px;padding-bottom:12px}
 <script src="./class-center-crud-v63.js?v=2"></script>
 <script src="./class-center-netflix-v64.js?v=5"></script>
 <script src="./student-activity-tracker-v1.js?v=1"></script>
+<style id="fi-class-center-polish-v1">
+/* Fluent Immersion Class Center — accessible themes, balanced cards, and links */
+.class-center-page{--cc-bg:var(--bg,#f7f8fc);--cc-panel:var(--card,#fff);--cc-text:var(--text,#20263a);--cc-muted:var(--muted,#697386);--cc-line:var(--line,#e2e6ef);color:var(--cc-text);min-width:0}
+.class-center-page .class-center-top,.class-center-page .class-center-panel,.class-center-page .class-center-kpi,.class-center-page .class-center-list-item,.class-center-page .class-center-card,.class-center-page .class-center-student-card{min-width:0;box-sizing:border-box}
+.class-center-page .class-center-top,.class-center-page .class-center-panel,.class-center-page .class-center-kpi{background:var(--cc-panel);border-color:var(--cc-line);color:var(--cc-text)}
+.class-center-page .class-center-title h2,.class-center-page .class-center-panel h3,.class-center-page .class-center-kpi b,.class-center-page .class-center-list-item b,.class-center-page .class-center-card b{color:var(--cc-text)}
+.class-center-page .class-center-title small,.class-center-page .class-center-panel>p,.class-center-page .class-center-kpi span,.class-center-page .class-center-list-item small,.class-center-page .class-center-card small{color:var(--cc-muted)}
+.class-center-page .class-center-kpis{grid-template-columns:repeat(auto-fit,minmax(145px,1fr));align-items:stretch}
+.class-center-page .class-center-kpi{height:100%;min-height:100px;overflow-wrap:anywhere}
+.class-center-page .class-center-grid{grid-template-columns:minmax(0,1.6fr) minmax(260px,.9fr);align-items:start}
+.class-center-page .class-center-list-item{align-items:flex-start;flex-wrap:wrap}
+.class-center-page .class-center-list-item>div:first-child{flex:1 1 220px;min-width:0;overflow-wrap:anywhere}
+.class-center-page .class-center-list-item>small{overflow-wrap:anywhere}
+.class-center-page .class-center-board{grid-template-columns:repeat(4,minmax(205px,1fr));overflow-x:auto;overscroll-behavior-x:contain}
+.class-center-page .class-center-column{min-width:0}
+.class-center-page .class-center-tabs button:focus-visible,.class-center-page a:focus-visible,.class-center-page button:focus-visible{outline:3px solid #8b5cf6;outline-offset:2px}
+.class-center-page .cc-resource-links{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;min-width:0}
+.class-center-page .cc-resource-link{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:7px 10px;border:1px solid #b9a5f6;border-radius:9px;background:#f4f0ff;color:#4f2ba8!important;font-size:11px;font-weight:800;text-decoration:none;overflow-wrap:anywhere;word-break:break-word}
+.class-center-page .cc-resource-link:hover{background:#e8ddff;text-decoration:underline}
+.class-center-page .cc-resource-url{display:block;margin-top:5px;color:#5a3db0!important;font-size:11px;overflow-wrap:anywhere;word-break:break-word}
+.class-center-page .class-center-empty{color:var(--cc-muted);border-color:var(--cc-line)}
+body.fi-premium:not(.fi-light) .class-center-page,body.dark .class-center-page,body.dark-mode .class-center-page,body[data-theme="dark"] .class-center-page,html[data-theme="dark"] .class-center-page{--cc-panel:#0d1b2b;--cc-text:#f2f5ff;--cc-muted:#b7c5d8;--cc-line:#2b4058}
+body.fi-premium:not(.fi-light) .class-center-page .class-center-column,body.dark .class-center-page .class-center-column,body.dark-mode .class-center-page .class-center-column,body[data-theme="dark"] .class-center-page .class-center-column,html[data-theme="dark"] .class-center-page .class-center-column{background:#102238;border-color:#2b4058}
+body.fi-premium:not(.fi-light) .class-center-page .class-center-list-item,body.dark .class-center-page .class-center-list-item,body.dark-mode .class-center-page .class-center-list-item,body[data-theme="dark"] .class-center-page .class-center-list-item,html[data-theme="dark"] .class-center-page .class-center-list-item{background:#0d1b2b;border-color:#2b4058}
+body.fi-premium:not(.fi-light) .class-center-page .cc-resource-link,body.dark .class-center-page .cc-resource-link,body.dark-mode .class-center-page .cc-resource-link,body[data-theme="dark"] .class-center-page .cc-resource-link,html[data-theme="dark"] .class-center-page .cc-resource-link{background:#241d42;color:#e4d9ff!important;border-color:#7760b8}
+@media(max-width:1000px){.class-center-page .class-center-grid{grid-template-columns:minmax(0,1fr)}.class-center-page .class-center-kpis{grid-template-columns:repeat(auto-fit,minmax(135px,1fr))}}
+@media(max-width:650px){.class-center-page .class-center-title{align-items:flex-start}.class-center-page .class-center-actions{width:100%;justify-content:flex-start}.class-center-page .class-center-actions .btn{flex:1 1 auto}.class-center-page .class-center-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.class-center-page .class-center-kpi{padding:12px;min-height:86px}.class-center-page .class-center-kpi b{font-size:22px}.class-center-page .class-center-board{grid-template-columns:repeat(4,minmax(205px,1fr))}.class-center-page .class-center-float{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.class-center-page .class-center-float .btn{min-width:0;white-space:normal}}
+@media(prefers-reduced-motion:reduce){.class-center-page *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style>
+<script id="fi-class-center-links-v1">
+(function(){
+ 'use strict';
+ const safeUrl=value=>{try{const u=new URL(String(value||'').trim(),location.href);return /^https?:$/.test(u.protocol)?u.href:''}catch(_){return ''}};
+ const escText=value=>String(value==null?'':value);
+ function makeLink(url,label){
+   const href=safeUrl(url);if(!href)return null;
+   const a=document.createElement('a');a.className='cc-resource-link';a.href=href;a.target='_blank';a.rel='noopener noreferrer';a.textContent='↗ '+(label||'Abrir recurso');a.title=href;return a;
+ }
+ function addLinks(container,items){
+   if(!container||!Array.isArray(items)||!items.length)return;
+   let wrap=container.querySelector(':scope > .cc-resource-links');if(!wrap){wrap=document.createElement('div');wrap.className='cc-resource-links';container.appendChild(wrap)}
+   const seen=new Set(Array.from(wrap.querySelectorAll('a')).map(a=>a.href));
+   items.forEach(item=>{if(!item)return;const url=typeof item==='string'?item:(item.url||item.href||item.link||item.resource_url||'');const label=typeof item==='string'?'Abrir link':(item.title||item.label||item.name||item.type||'Abrir recurso');const a=makeLink(url,label);if(a&&!seen.has(a.href)){seen.add(a.href);wrap.appendChild(a)}});
+ }
+ function enhance(){
+   const root=document.querySelector('.class-center-page[data-class-center]');const body=root&&root.querySelector('#classCenterBody');const state=window.__ticClassCenter;
+   if(!root||!body||!state)return;
+   const tasks=Array.isArray(state.tasks)?state.tasks:[],events=Array.isArray(state.evs)?state.evs:[];
+   body.querySelectorAll('.class-center-list-item').forEach(row=>{
+     const title=row.querySelector('b')?.textContent?.trim();if(!title)return;
+     const task=tasks.find(t=>String(t.title||'').trim()===title);
+     if(task){
+       const resources=Array.isArray(task.resource_items)?task.resource_items:[];
+       addLinks(row,resources);
+       const url=task.url||task.resource_url||task.link;
+       if(url)addLinks(row,[{url,title:'Abrir material'}]);
+     }
+     const event=events.find(e=>String(e.title||'').trim()===title);
+     if(event){
+       const resources=[];
+       if(event.meeting_url)resources.push({url:event.meeting_url,title:'Entrar na aula'});
+       const notes=String(event.notes||'');
+       const matches=notes.match(/https?:\/\/[^\s<>"']+/g)||[];
+       matches.forEach(url=>resources.push({url,title:'Abrir link da aula'}));
+       addLinks(row,resources);
+     }
+   });
+   body.querySelectorAll('.class-center-card').forEach(card=>{
+     const title=card.querySelector('b')?.textContent?.trim();if(!title)return;
+     const task=tasks.find(t=>String(t.title||'').trim()===title);if(!task)return;
+     const parent=card.querySelector('.board-card-actions')||card;
+     addLinks(parent,Array.isArray(task.resource_items)?task.resource_items:[]);
+     const url=task.url||task.resource_url||task.link;if(url)addLinks(parent,[{url,title:'Abrir material'}]);
+   });
+ }
+ const oldTab=window.classCenterTab;
+ if(typeof oldTab==='function'&&!oldTab.__fiLinksWrapped){
+   const wrapped=async function(){const result=await oldTab.apply(this,arguments);setTimeout(enhance,0);setTimeout(enhance,250);return result};
+   wrapped.__fiLinksWrapped=true;window.classCenterTab=wrapped;
+ }
+ const observer=new MutationObserver(()=>enhance());
+ function start(){const body=document.getElementById('classCenterBody');if(body)observer.observe(body,{childList:true,subtree:true});enhance()}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+ window.addEventListener('tic:class-center-updated',enhance);
+})();
+</script>
 </body>
 </html>
