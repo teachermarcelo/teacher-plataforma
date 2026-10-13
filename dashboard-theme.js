@@ -400,6 +400,45 @@ function addStyle(){
  #fiMobileTabsHandle{display:none}
  @media(max-width:760px){body.fi-premium #fiMobileTabsHandle{display:flex!important;position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 82px)!important;left:10px!important;z-index:80!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-width:58px!important;height:42px!important;padding:0 11px!important;border:1px solid #a99aff!important;border-radius:13px!important;background:#603de0!important;color:#fff!important;font-size:12px!important;font-weight:900!important;box-shadow:0 5px 18px #0005!important;cursor:pointer!important}body.fi-premium #fiMobileTabsHandle .fi-tabs-bars{font-size:20px!important;color:#fff!important}body.fi-premium #sidebar{padding-top:64px!important}}
 
+
+ /* Responsive table viewport: keep all columns reachable on narrow screens. */
+ body.fi-premium #content{min-width:0!important;max-width:100%!important}
+ body.fi-premium #content .table-wrap,
+ body.fi-premium #content .table-responsive,
+ body.fi-premium #content .table-container,
+ body.fi-premium #content .card:has(> table),
+ body.fi-premium #content .card:has(> div > table){
+   max-width:100%!important;min-width:0!important;overflow-x:auto!important;
+   overscroll-behavior-x:contain!important;scrollbar-width:thin!important;
+   scrollbar-color:#7659db #dfe5ef!important
+ }
+ body.fi-premium #content table{
+   max-width:100%!important
+ }
+ @media(max-width:900px){
+   body.fi-premium #content table{min-width:900px!important}
+   body.fi-premium #content .table-wrap,
+   body.fi-premium #content .table-responsive,
+   body.fi-premium #content .table-container{
+     border:1px solid #c9d4e4!important;border-radius:12px!important;
+     position:relative!important
+   }
+   body.fi-premium.fi-light #content .table-wrap:after,
+   body.fi-premium.fi-light #content .table-responsive:after,
+   body.fi-premium.fi-light #content .table-container:after{
+     content:'Deslize para ver todas as colunas →';display:block;position:sticky;left:0;
+     width:max-content;padding:7px 10px;font-size:11px;font-weight:800;color:#49318f;
+     background:#eee9ff;border-top:1px solid #d4c8ff
+   }
+   body.fi-premium:not(.fi-light) #content .table-wrap:after,
+   body.fi-premium:not(.fi-light) #content .table-responsive:after,
+   body.fi-premium:not(.fi-light) #content .table-container:after{
+     content:'Deslize para ver todas as colunas →';display:block;position:sticky;left:0;
+     width:max-content;padding:7px 10px;font-size:11px;font-weight:800;color:#fff;
+     background:#263e59;border-top:1px solid #496784
+   }
+ }
+
  /* Final contrast pass for Lessons/Courses tables: every pill and action readable in both themes. */
  body.fi-premium #content table{border-collapse:separate!important;border-spacing:0!important}
  body.fi-premium #content table thead th{font-weight:800!important;letter-spacing:.35px!important}
