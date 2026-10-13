@@ -395,6 +395,10 @@ function addStyle(){
  body.fi-premium:not(.fi-light) #content .row small,
  body.fi-premium:not(.fi-light) #content .stat-note{color:#c4d2e4!important}
 
+
+ /* Mobile navigation tabs handle: always visible on small screens. */
+ #fiMobileTabsHandle{display:none}
+ @media(max-width:760px){body.fi-premium #fiMobileTabsHandle{display:flex!important;position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 82px)!important;left:10px!important;z-index:80!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-width:58px!important;height:42px!important;padding:0 11px!important;border:1px solid #a99aff!important;border-radius:13px!important;background:#603de0!important;color:#fff!important;font-size:12px!important;font-weight:900!important;box-shadow:0 5px 18px #0005!important;cursor:pointer!important}body.fi-premium #fiMobileTabsHandle .fi-tabs-bars{font-size:20px!important;color:#fff!important}body.fi-premium #sidebar{padding-top:64px!important}}
  /* FIX live Lessons table: ensure lesson-name pills have readable text on pale background. */
  body.fi-premium #content table tbody td:first-child button,
  body.fi-premium #content table tbody td:first-child .btn,
@@ -471,9 +475,11 @@ function installMobileNavToggle(){
  }
 }
 
+function installAlwaysVisibleMobileTabs(){const sidebar=$('#sidebar'),overlay=$('#mobileOverlay');if(!sidebar||!overlay)return;let b=$('#fiMobileTabsHandle');if(!b){b=document.createElement('button');b.id='fiMobileTabsHandle';b.type='button';b.setAttribute('aria-label','Abrir abas do menu lateral');b.setAttribute('aria-controls','sidebar');b.innerHTML='<span class="fi-tabs-bars" aria-hidden="true">☰</span><span>ABAS</span>';b.addEventListener('click',()=>{const opening=!sidebar.classList.contains('open');if(typeof window.toggleMobile==='function')window.toggleMobile(opening);else{sidebar.classList.toggle('open',opening);overlay.classList.toggle('open',opening)}});document.body.appendChild(b)}}
 function init(){
  addStyle();
  installMobileNavToggle();
+ installAlwaysVisibleMobileTabs();
  const role=window.profile?.role||$('#userRole')?.textContent||'';
  document.body.classList.add('fi-premium');
  document.body.classList.toggle('fi-teacher-mode',/teacher|admin/i.test(role));
