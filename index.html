@@ -7396,7 +7396,7 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
       <div class="form">
         <div class="notice success"><b>Último login:</b> ${fmt62(x.last)} · <b>Última atividade:</b> ${fmt62(x.seen)} · <b>Tempo:</b> ${dur62(x.total)}</div>
         <div class="card"><div class="section-head"><h3>🔐 Sessões</h3><span>${ss.length}</span></div>${ss.slice(0,50).map(r=>`<div class="row"><div><b>${fmt62(r.started_at)}</b><small>Última atividade: ${fmt62(r.last_seen_at)} · ${esc62(r.user_agent||'')}</small></div><b>${dur62(r.duration_seconds)}</b></div>`).join('')||'<div class="empty">Nenhuma sessão.</div>'}</div>
-        <div class="card"><div class="section-head"><h3>🧭 Ações</h3><span>${ee.length}</span></div>${ee.slice(0,100).map(r=>`<div class="row"><div><b>${esc62(r.event_label||r.event_type||'Ação')}</b><small>${fmt62(r.created_at)} · ${esc62(r.view_name||'')}</small></div><small>${esc62(r.entity_type||'')}</small></div>`).join('')||'<div class="empty">Nenhuma ação registrada.</div>'}</div>
+        <div class="card"><div class="section-head"><h3>🧭 Ações</h3><span>${ee.length}</span></div>${ee.slice(0,100).map(r=>`<div class="row"><div><b>${esc62(r.event_label||r.event_type||'Ação')}</b><small>${esc62(r.event_type||'evento')} · ${fmt62(r.created_at)} · ${esc62(r.view_name||'')}</small><small>${esc62([r.entity_type,r.entity_id].filter(Boolean).join(' · '))}</small>${r.metadata&&Object.keys(r.metadata).length?'<small style="white-space:normal;overflow-wrap:anywhere;color:var(--muted,#75809a)">'+esc62(JSON.stringify(r.metadata))+'</small>':''}</div></div>`).join('')||'<div class="empty">Nenhuma ação registrada.</div>'}</div>
       </div>`);
   };
 
