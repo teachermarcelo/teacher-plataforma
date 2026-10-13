@@ -401,6 +401,35 @@ function addStyle(){
  @media(max-width:760px){body.fi-premium #fiMobileTabsHandle{display:flex!important;position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 82px)!important;left:10px!important;z-index:80!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-width:58px!important;height:42px!important;padding:0 11px!important;border:1px solid #a99aff!important;border-radius:13px!important;background:#603de0!important;color:#fff!important;font-size:12px!important;font-weight:900!important;box-shadow:0 5px 18px #0005!important;cursor:pointer!important}body.fi-premium #fiMobileTabsHandle .fi-tabs-bars{font-size:20px!important;color:#fff!important}body.fi-premium #sidebar{padding-top:64px!important}}
 
 
+
+ /* Force the actual Lessons table wrapper to become a usable horizontal scroller. */
+ body.fi-premium #content .table-wrap{
+   display:block!important;width:100%!important;max-width:100%!important;
+   min-width:0!important;overflow-x:auto!important;overflow-y:visible!important;
+   box-sizing:border-box!important;scrollbar-width:thin!important;
+   -webkit-overflow-scrolling:touch!important;touch-action:pan-x pan-y!important;
+ }
+ body.fi-premium #content .table-wrap > table{
+   width:max-content!important;min-width:900px!important;max-width:none!important;
+   table-layout:auto!important;
+ }
+ body.fi-premium #content .table-wrap::-webkit-scrollbar{height:12px!important}
+ body.fi-premium #content .table-wrap::-webkit-scrollbar-track{background:#dfe5ef!important;border-radius:99px!important}
+ body.fi-premium #content .table-wrap::-webkit-scrollbar-thumb{background:#7253d6!important;border-radius:99px!important;border:2px solid #dfe5ef!important}
+ body.fi-premium:not(.fi-light) #content .table-wrap::-webkit-scrollbar-track{background:#142941!important}
+ body.fi-premium:not(.fi-light) #content .table-wrap::-webkit-scrollbar-thumb{background:#9a83ff!important;border-color:#142941!important}
+ @media(max-width:900px){
+   body.fi-premium #content .table-wrap:before{
+     content:'← Deslize a tabela para ver Curso, Módulo e Ações →';
+     display:block!important;position:sticky!important;left:0!important;width:max-content!important;
+     max-width:100%!important;box-sizing:border-box!important;padding:7px 10px!important;
+     margin-bottom:4px!important;border-radius:8px!important;font-size:11px!important;
+     font-weight:900!important;letter-spacing:.1px!important
+   }
+   body.fi-premium.fi-light #content .table-wrap:before{background:#eee9ff!important;color:#39247c!important;border:1px solid #cfc4ff!important}
+   body.fi-premium:not(.fi-light) #content .table-wrap:before{background:#263e59!important;color:#fff!important;border:1px solid #496784!important}
+ }
+
  /* Responsive table viewport: keep all columns reachable on narrow screens. */
  body.fi-premium #content{min-width:0!important;max-width:100%!important}
  body.fi-premium #content .table-wrap,
