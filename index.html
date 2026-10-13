@@ -874,28 +874,67 @@ function openClassForm(x=null){openModal(x?'Editar turma':'Nova turma',`<form cl
 function openCourseForm(x=null){openModal(x?'Editar curso':'Novo curso',`<form class="form" onsubmit="saveGeneric(event,'tic_courses','${x?.id||''}','courses')"><div class="field"><label>Título</label><input id="g1" value="${esc(x?.title||'')}" required></div><div class="field"><label>Nível</label><select id="g2">${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Descrição</label><textarea id="g3">${esc(x?.description||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">Salvar</button></div></form>`)}
 
 /* V53 — Teacher Materials: biblioteca privada do professor. Nunca é publicada automaticamente para alunos. */
+function tm53Theme(x){const t=String(x?.tags||'').match(/(?:^|\\|)\\s*Theme:\\s*([^|]*)/i);return t?(t[1]||'').trim():''}
+function tm53Tags(x){return String(x?.tags||'').replace(/(?:^|\\|)\\s*Theme:\\s*[^|]*/ig,'').replace(/^\\s*\\|\\s*|\\s*\\|\\s*$/g,'').trim()}
+function tm53EscapeAttr(v){return esc(String(v??''))}
 async function teacherMaterialsPageV53(){
  const {data,error}=await sb.from('tic_teacher_materials').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
  if(error){$('content').innerHTML=`<div class="card attention"><b>Teacher Materials ainda não está disponível.</b><p>${esc(error.message)}</p><small>Execute o SQL V53 no Supabase para criar a biblioteca privada.</small></div>`;return}
  window.__teacherMaterialsV53=data||[];
- $('content').innerHTML=`<div class="notice">🔒 <b>Biblioteca privada do Teacher.</b> Tudo aqui é para sua organização. Nada é enviado ao aluno ou à Class automaticamente. Quando quiser usar um item com um aluno, você poderá copiar o link para Materials/Resources ou criar uma atribuição específica.</div>
- <div class="card section"><div class="toolbar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="tm53Search" class="input" style="flex:1;min-width:220px" placeholder="🔎 Buscar website, material, ferramenta..." oninput="renderTeacherMaterialsV53()"><select id="tm53Cat" onchange="renderTeacherMaterialsV53()" style="min-width:160px"><option value="">Todas as categorias</option><option value="website">🌐 Website</option><option value="tool">🛠️ Ferramenta</option><option value="ai">🤖 IA</option><option value="pdf">📄 PDF</option><option value="video">🎬 Vídeo</option><option value="audio">🎧 Áudio</option><option value="worksheet">📝 Worksheet</option><option value="book">📚 Livro</option><option value="other">📦 Outros</option></select><button class="btn primary" onclick="openTeacherMaterialFormV53()">＋ Novo</button></div></div>
- <div id="tm53Grid" class="grid cols3 section"></div>`;
+ $('content').innerHTML=`<section class="fi-media-library">
+ <div class="fi-media-hero"><div><span class="fi-media-eyebrow">FLUENT IMMERSION · TEACHER SPACE</span><h2>🎬 Media Library</h2><p>Sua biblioteca de materiais, links e atividades — organizada por nível, tema e categoria.</p></div><button class="btn primary" onclick="openTeacherMaterialFormV53()">＋ Adicionar material</button></div>
+ <div class="fi-media-stats" id="tm53Stats"></div>
+ <div class="fi-media-filterbar"><label class="fi-media-search">⌕ <input id="tm53Search" placeholder="Buscar título, tema, tag ou link..." oninput="renderTeacherMaterialsV53()"></label>
+ <select id="tm53Level" onchange="renderTeacherMaterialsV53()" aria-label="Filtrar por nível"><option value="">Todos os níveis</option>${levels.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('')}</select>
+ <select id="tm53Cat" onchange="renderTeacherMaterialsV53()" aria-label="Filtrar por categoria"><option value="">Todas as categorias</option><option value="website">🌐 Website</option><option value="tool">🛠️ Ferramenta</option><option value="ai">🤖 IA</option><option value="pdf">📄 PDF</option><option value="video">🎬 Vídeo</option><option value="audio">🎧 Áudio</option><option value="worksheet">📝 Worksheet</option><option value="book">📚 Livro</option><option value="other">📦 Outros</option></select>
+ <input id="tm53Theme" placeholder="Filtrar tema (ex.: Daily Routines)" oninput="renderTeacherMaterialsV53()">
+ <select id="tm53Group" onchange="renderTeacherMaterialsV53()" aria-label="Organização dos materiais"><option value="all">Todos juntos</option><option value="level">Agrupar por nível</option><option value="category">Agrupar por categoria</option></select>
+ </div><div class="fi-media-activefilters" id="tm53FilterSummary"></div>
+ <div id="tm53Grid" class="fi-media-groups"></div>
+ </section>`;
  renderTeacherMaterialsV53();
 }
 function renderTeacherMaterialsV53(){
- const q=($('tm53Search')?.value||'').toLowerCase().trim(),cat=$('tm53Cat')?.value||'';
- const data=(window.__teacherMaterialsV53||[]).filter(x=>!cat||x.category===cat).filter(x=>!q||[x.title,x.description,x.notes,x.tags].join(' ').toLowerCase().includes(q));
- $('tm53Grid').innerHTML=data.map(x=>{const rs=Array.isArray(x.resource_items)?x.resource_items.filter(r=>r?.url||r?.value):[];return `<article class="card" style="position:relative"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><span class="badge blue">${esc(x.category||'other')}</span><span class="badge gray">${rs.length} recurso(s)</span></div><h3 style="margin:12px 0 6px">${esc(x.title)}</h3><p style="color:var(--muted);font-size:12px;min-height:34px">${esc(x.description||'')}</p>${x.tags?`<small style="color:var(--muted)">🏷️ ${esc(x.tags)}</small>`:''}<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:14px"><button class="btn secondary" onclick="openTeacherMaterialViewV53('${x.id}')">👁️ Abrir</button><button class="btn secondary" onclick='openTeacherMaterialFormV53(${JSON.stringify(x)})'>✏️ Editar</button><button class="btn danger" onclick="deleteTeacherMaterialV53('${x.id}')">Excluir</button></div></article>`}).join('')||'<div class="card empty" style="grid-column:1/-1">Nenhum Teacher Material encontrado. Clique em <b>+ Novo</b> para guardar seu primeiro website, link, PDF ou ferramenta.</div>';
+ const q=($('tm53Search')?.value||'').toLowerCase().trim(),cat=$('tm53Cat')?.value||'',level=$('tm53Level')?.value||'',theme=($('tm53Theme')?.value||'').toLowerCase().trim(),group=$('tm53Group')?.value||'all';
+ const all=window.__teacherMaterialsV53||[];
+ const data=all.filter(x=>!cat||x.category===cat).filter(x=>!level||String(x.level||'')===level).filter(x=>!theme||tm53Theme(x).toLowerCase().includes(theme)||String(x.tags||'').toLowerCase().includes(theme)).filter(x=>!q||[x.title,x.description,x.notes,x.tags,...(Array.isArray(x.resource_items)?x.resource_items.map(r=>[r.title,r.url,r.description].join(' ')):[])].join(' ').toLowerCase().includes(q));
+ const stat=$('tm53Stats');if(stat)stat.innerHTML=[['Materiais',all.length],['Com links',all.filter(x=>(x.resource_items||[]).some(r=>r?.url)).length],['Níveis',new Set(all.map(x=>x.level).filter(Boolean)).size],['Favoritos de organização','CEFR A0–C2']].map((z,i)=>`<div class="fi-media-stat"><span>${['📚','🔗','🎓','✨'][i]} ${z[0]}</span><b>${z[1]}</b></div>`).join('');
+ const sum=$('tm53FilterSummary');if(sum)sum.textContent=`${data.length} de ${all.length} materiais · ${group==='level'?'agrupados por nível':group==='category'?'agrupados por categoria':'visualização em cartões'}`;
+ const grid=$('tm53Grid');if(!grid)return;
+ if(!data.length){grid.innerHTML='<div class="fi-media-empty"><b>📭 Nenhum material encontrado</b><p>Altere os filtros ou adicione seu primeiro material por link.</p><button class="btn primary" onclick="openTeacherMaterialFormV53()">＋ Adicionar material</button></div>';return}
+ const groups={};
+ data.forEach(x=>{const key=group==='level'?(x.level||'Sem nível'):group==='category'?(x.category||'other'):'Todos os materiais';(groups[key]||(groups[key]=[])).push(x)});
+ grid.innerHTML=Object.entries(groups).map(([key,items])=>`<section class="fi-media-group">${group==='all'?'':`<div class="fi-media-grouphead"><h3>${esc(key)}</h3><span>${items.length} material(is)</span></div>`}<div class="fi-media-cards">${items.map(x=>{
+ const rs=Array.isArray(x.resource_items)?x.resource_items.filter(r=>r&&(r.url||r.value)):[],first=rs.find(r=>/^https?:\\/\\//i.test(r.url||'')),th=tm53Theme(x),catName=({website:'Website',tool:'Ferramenta',ai:'Inteligência artificial',pdf:'PDF',video:'Vídeo',audio:'Áudio',worksheet:'Worksheet',book:'Livro',other:'Outro'})[x.category]||x.category||'Material',host=first?(()=>{try{return new URL(first.url).hostname.replace(/^www\\./,'')}catch(e){return 'Link externo'}})():'Link ainda não cadastrado';
+ return `<article class="fi-media-card"><div class="fi-media-cover"><span class="fi-media-format">${esc(catName)}</span><span class="fi-media-level">${esc(x.level||'Todos os níveis')}</span><div class="fi-media-covericon">${x.category==='video'?'▶':x.category==='pdf'?'▤':x.category==='audio'?'♫':x.category==='ai'?'✦':x.category==='worksheet'?'✎':'↗'}</div><small>${esc(host)}</small></div><div class="fi-media-cardbody"><div class="fi-media-tags"><span>${esc(x.level||'Sem nível')}</span>${th?`<span>⌁ ${esc(th)}</span>`:''}</div><h3>${esc(x.title||'Material sem título')}</h3><p>${esc(x.description||'Sem descrição adicionada.')}</p>${x.tags?`<div class="fi-media-keywords">${esc(tm53Tags(x))}</div>`:''}<div class="fi-media-resourcecount">🔗 ${rs.length} recurso(s)</div><div class="fi-media-actions"><button class="btn primary" onclick="openTeacherMaterialViewV53('${x.id}')">Abrir</button>${first?`<button class="btn secondary" onclick="copyTeacherMaterialLinkV1('${x.id}')">Copiar link</button>`:''}<button class="btn secondary" onclick="assignTeacherMaterialV1('${x.id}')">Atribuir</button><button class="btn secondary" onclick='openTeacherMaterialFormV53(${JSON.stringify(x).replace(/'/g,"&#39;")})' aria-label="Editar material">✎</button></div></div></article>`;
+ }).join('')}</div></section>`).join('');
+}
+async function copyTeacherMaterialLinkV1(id){
+ const x=(window.__teacherMaterialsV53||[]).find(z=>z.id===id);const r=(x?.resource_items||[]).find(v=>/^https?:\\/\\//i.test(v?.url||''));
+ if(!r)return toast('Este material ainda não tem um link HTTP/HTTPS para copiar.','error');
+ try{await navigator.clipboard.writeText(r.url);toast('Link copiado!','success')}catch(e){const ta=document.createElement('textarea');ta.value=r.url;document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();toast(ok?'Link copiado!':'Não foi possível copiar automaticamente. Abra o material para copiar o endereço. ',ok?'success':'error')}
+}
+async function assignTeacherMaterialV1(id){
+ const x=(window.__teacherMaterialsV53||[]).find(z=>z.id===id);if(!x)return;
+ const rs=(x.resource_items||[]).filter(r=>r&&(r.url||r.value));if(!rs.length)return toast('Adicione um link ao material antes de atribuir.','error');
+ const open=window.openAssignmentForm||openAssignmentForm;
+ await open();
+ if(!$('a1')||!$('aResources'))return toast('O formulário de tarefa não ficou disponível.','error');
+ $('a1').value=x.title||'Material da biblioteca';
+ $('a2').value='Acesse o material e realize a atividade proposta pelo Teacher.';
+ renderResourceRows('aResources',rs.map(r=>({type:r.type||'link',title:r.title||x.title,url:r.url||r.value,description:r.description||x.description||''})));
+ toast('Material adicionado à tarefa. Escolha o aluno ou turma e salve para atribuir.','success');
 }
 function openTeacherMaterialFormV53(x=null){
- openModal(x?'✏️ Editar Teacher Material':'🗂️ Novo Teacher Material',`<form class="form" onsubmit="saveTeacherMaterialV53(event,'${x?.id||''}')">
- <div class="field"><label>Nome / título</label><input id="tm1" value="${esc(x?.title||'')}" placeholder="Ex.: ESL Games Plus, British Council, Canva..." required></div>
- <div class="form-grid"><div class="field"><label>Categoria</label><select id="tm2">${['website','tool','ai','pdf','video','audio','worksheet','book','other'].map(c=>`<option value="${c}" ${c===(x?.category||'website')?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Nível (opcional)</label><select id="tm3"><option value="">Todos</option>${levels.map(l=>`<option ${l===x?.level?'selected':''}>${l}</option>`).join('')}</select></div></div>
- <div class="field"><label>Descrição</label><textarea id="tm4" rows="3" placeholder="Para que serve? O que você quer lembrar sobre este recurso?">${esc(x?.description||'')}</textarea></div>
- <div class="field"><label>Tags</label><input id="tm5" value="${esc(x?.tags||'')}" placeholder="A1, grammar, listening, AI, free, worksheets..."></div>
- <div class="resource-box"><div class="resource-head"><b>🔗 Links e arquivos guardados</b><button type="button" class="btn secondary" onclick="addResourceRow('tmResources')">＋ Adicionar recurso</button></div><div id="tmResources"></div><div class="resource-help">Você pode guardar vários links no mesmo card: website + YouTube + PDF + Drive + ferramenta + outros.</div></div>
- <div class="field"><label>Notas privadas do Teacher</label><textarea id="tm6" rows="4" placeholder="Anotações, senha não deve ser colocada aqui, ideias de uso, observações...">${esc(x?.notes||'')}</textarea></div>
+ const theme=tm53Theme(x),tags=tm53Tags(x);
+ openModal(x?'✏️ Editar material':'🗂️ Adicionar material por link',`<form class="form" onsubmit="saveTeacherMaterialV53(event,'${x?.id||''}')">
+ <div class="field"><label>Nome / título</label><input id="tm1" value="${esc(x?.title||'')}" placeholder="Ex.: Life Style A1 Fluent" required></div>
+ <div class="form-grid"><div class="field"><label>Categoria</label><select id="tm2">${['website','tool','ai','pdf','video','audio','worksheet','book','other'].map(c=>`<option value="${c}" ${c===(x?.category||'website')?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Nível CEFR</label><select id="tm3"><option value="">Todos os níveis</option>${levels.map(l=>`<option value="${esc(l)}" ${l===x?.level?'selected':''}>${esc(l)}</option>`).join('')}</select></div></div>
+ <div class="field"><label>Tema principal</label><input id="tmTheme" value="${esc(theme)}" placeholder="Ex.: Daily Routines, Food, Travel, Present Simple"></div>
+ <div class="field"><label>Descrição</label><textarea id="tm4" rows="3" placeholder="Objetivo, habilidade trabalhada e como usar o material.">${esc(x?.description||'')}</textarea></div>
+ <div class="field"><label>Tags / palavras-chave</label><input id="tm5" value="${esc(tags)}" placeholder="grammar, listening, speaking, interactive..."></div>
+ <div class="resource-box"><div class="resource-head"><b>🔗 Link do material e recursos extras</b><button type="button" class="btn secondary" onclick="addResourceRow('tmResources')">＋ Adicionar recurso</button></div><div id="tmResources"></div><div class="resource-help">Cole o link compartilhável do Meta AI, Canva, HTML, YouTube, Drive ou outra plataforma. Você pode guardar vários recursos no mesmo cartão.</div></div>
+ <div class="field"><label>Notas privadas do Teacher</label><textarea id="tm6" rows="3" placeholder="Observações e ideias de uso (não coloque senhas).">${esc(x?.notes||'')}</textarea></div>
  <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">💾 Guardar na biblioteca</button></div></form>`);
  renderResourceRows('tmResources',x?.resource_items||[]);
 }
@@ -903,10 +942,12 @@ async function saveTeacherMaterialV53(e,id){
  e.preventDefault();
  const resources=collectResources('tmResources').filter(r=>r.url||r.value);
  if(!resources.length)return toast('Adicione pelo menos um link ou recurso.','error');
- const o={teacher_id:session.user.id,title:$('tm1').value.trim(),category:$('tm2').value,level:$('tm3').value||null,description:$('tm4').value.trim()||null,tags:$('tm5').value.trim()||null,notes:$('tm6').value.trim()||null,resource_items:resources};
+ const theme=$('tmTheme').value.trim(),tags=$('tm5').value.trim();
+ const combinedTags=[theme?'Theme: '+theme:'',tags].filter(Boolean).join(' | ')||null;
+ const o={teacher_id:session.user.id,title:$('tm1').value.trim(),category:$('tm2').value,level:$('tm3').value||null,description:$('tm4').value.trim()||null,tags:combinedTags,notes:$('tm6').value.trim()||null,resource_items:resources};
  const r=id?await sb.from('tic_teacher_materials').update(o).eq('id',id).eq('teacher_id',session.user.id):await sb.from('tic_teacher_materials').insert(o);
  if(r.error)return toast('Não foi possível guardar: '+r.error.message,'error');
- closeModal();toast(id?'Teacher Material atualizado.':'Teacher Material guardado na sua biblioteca.','success');await teacherMaterialsPageV53();
+ closeModal();toast(id?'Material atualizado.':'Material guardado na Media Library.','success');await teacherMaterialsPageV53();
 }
 function openTeacherMaterialViewV53(id){
  const x=(window.__teacherMaterialsV53||[]).find(z=>z.id===id);if(!x)return;
@@ -7957,6 +7998,53 @@ html,body{max-width:100%;overflow-x:hidden}
  window.addEventListener('tic:class-center-updated',apply);
 })();
 </script>
+
+
+<style id="fi-media-library-v1">
+.fi-media-library{--ml-bg:#f3f2f8;--ml-card:#fff;--ml-ink:#1c1930;--ml-muted:#77728b;--ml-line:#e5e0ef;color:var(--ml-ink)}
+.fi-media-hero{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:26px;border-radius:22px;background:radial-gradient(ellipse at 88% 0%,#9c7af533,transparent 40%),linear-gradient(120deg,#17131f,#292039 65%,#33245a);color:white;margin-bottom:16px}
+.fi-media-eyebrow{font-size:10px;letter-spacing:1.6px;font-weight:900;color:#c7b3ff}
+.fi-media-hero h2{font-size:clamp(25px,3vw,36px);letter-spacing:-1px;margin:8px 0}
+.fi-media-hero p{margin:0;color:#c9c2d9;font-size:13px}
+.fi-media-hero .btn{white-space:nowrap}
+.fi-media-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.fi-media-stat{border:1px solid var(--ml-line);background:var(--ml-card);border-radius:15px;padding:14px;display:flex;flex-direction:column;gap:7px;min-width:0;box-shadow:0 5px 16px #28194b08}
+.fi-media-stat span{font-size:11px;color:var(--ml-muted)}.fi-media-stat b{font-size:24px;letter-spacing:-.6px}
+.fi-media-filterbar{display:grid;grid-template-columns:minmax(200px,1.6fr) repeat(3,minmax(130px,1fr)) minmax(140px,1fr);gap:9px;align-items:center;padding:12px;background:var(--ml-card);border:1px solid var(--ml-line);border-radius:16px;margin-bottom:10px}
+.fi-media-filterbar input,.fi-media-filterbar select{width:100%;min-width:0;border:1px solid var(--ml-line);border-radius:10px;padding:11px 12px;background:var(--ml-card);color:var(--ml-ink);font:inherit;font-size:12px}
+.fi-media-search{display:flex;gap:8px;align-items:center;border:1px solid var(--ml-line);border-radius:10px;padding:0 10px;color:#8055df;min-width:0}
+.fi-media-search input{border:0;outline:0;padding-left:0}
+.fi-media-activefilters{font-size:11px;color:var(--ml-muted);margin:10px 2px 14px}
+.fi-media-groups{display:grid;gap:20px}
+.fi-media-group{min-width:0}
+.fi-media-grouphead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 2px 12px}
+.fi-media-grouphead h3{font-size:18px;margin:0;letter-spacing:-.4px}.fi-media-grouphead span{font-size:11px;color:var(--ml-muted)}
+.fi-media-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.fi-media-card{min-width:0;overflow:hidden;border:1px solid var(--ml-line);border-radius:18px;background:var(--ml-card);box-shadow:0 7px 24px #28194b08;transition:transform .18s,box-shadow .18s}
+.fi-media-card:hover{transform:translateY(-3px);box-shadow:0 15px 32px #28194b15}
+.fi-media-cover{position:relative;min-height:128px;padding:14px;background:radial-gradient(circle at 78% 25%,#8d5cff70,transparent 32%),linear-gradient(135deg,#21172e,#4a2e76 72%,#7044d8);color:white;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.fi-media-format,.fi-media-level{font-size:9px;font-weight:850;letter-spacing:.4px;padding:6px 8px;border-radius:999px;background:#ffffff1b;border:1px solid #ffffff2a;max-width:68%;overflow-wrap:anywhere}
+.fi-media-level{margin-left:auto;text-align:right}
+.fi-media-covericon{position:absolute;left:16px;bottom:11px;font-size:38px;font-weight:900;color:#ffffffd9}
+.fi-media-cover small{position:absolute;right:14px;bottom:16px;max-width:56%;text-align:right;color:#e4d9ff;font-size:10px;overflow-wrap:anywhere}
+.fi-media-cardbody{padding:16px}
+.fi-media-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+.fi-media-tags span{font-size:10px;color:#5b3aab;background:#f0eaff;border-radius:999px;padding:5px 8px;font-weight:800}
+.fi-media-cardbody h3{font-size:16px;line-height:1.35;margin:0 0 7px;overflow-wrap:anywhere}
+.fi-media-cardbody p{font-size:12px;line-height:1.55;color:var(--ml-muted);min-height:36px;margin:0 0 10px;overflow-wrap:anywhere}
+.fi-media-keywords{font-size:10px;color:var(--ml-muted);overflow-wrap:anywhere}
+.fi-media-resourcecount{font-size:10px;color:var(--ml-muted);margin:12px 0}
+.fi-media-actions{display:flex;gap:7px;flex-wrap:wrap}
+.fi-media-actions .btn{font-size:11px;padding:8px 10px}
+.fi-media-empty{background:var(--ml-card);border:1px dashed var(--ml-line);border-radius:18px;padding:36px;text-align:center;grid-column:1/-1}
+.fi-media-empty p{color:var(--ml-muted);font-size:12px}
+body.fi-premium:not(.fi-light) .fi-media-library{--ml-bg:#100e16;--ml-card:#1b1724;--ml-ink:#f4efff;--ml-muted:#b0a7c1;--ml-line:#383044;color:var(--ml-ink)}
+body.fi-premium:not(.fi-light) .fi-media-stat,body.fi-premium:not(.fi-light) .fi-media-filterbar,body.fi-premium:not(.fi-light) .fi-media-card,body.fi-premium:not(.fi-light) .fi-media-empty{background:var(--ml-card);border-color:var(--ml-line);color:var(--ml-ink)}
+body.fi-premium:not(.fi-light) .fi-media-filterbar input,body.fi-premium:not(.fi-light) .fi-media-filterbar select,body.fi-premium:not(.fi-light) .fi-media-search{background:#211b2b;color:var(--ml-ink);border-color:var(--ml-line)}
+body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d4ff}
+@media(max-width:1100px){.fi-media-filterbar{grid-template-columns:repeat(3,minmax(0,1fr))}.fi-media-search{grid-column:span 3}.fi-media-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.fi-media-hero{padding:18px;align-items:flex-start;flex-direction:column}.fi-media-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.fi-media-filterbar{grid-template-columns:1fr 1fr}.fi-media-search{grid-column:1/-1}.fi-media-cards{grid-template-columns:minmax(0,1fr)}.fi-media-cover{min-height:112px}}
+</style>
 
 </body>
 </html>
