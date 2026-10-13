@@ -330,6 +330,71 @@ function addStyle(){
    border-color:#49617b!important;
  }
 
+
+ /* Mobile/tablet navigation drawer and high-contrast shared theme */
+ body.fi-premium #fiMobileNavToggle{display:none}
+ @media(max-width:760px){
+   body.fi-premium #fiMobileNavToggle{
+     display:inline-flex!important;align-items:center;justify-content:center;gap:7px;
+     min-width:44px;height:42px;padding:0 12px;border-radius:12px;
+     border:1px solid #6b50d9;background:#5b3bd1;color:#fff!important;
+     -webkit-text-fill-color:#fff!important;font-size:20px;font-weight:900;
+     box-shadow:0 4px 14px #3921a52b;flex-shrink:0;cursor:pointer
+   }
+   body.fi-premium .topbar>div:first-child{min-width:0;gap:8px!important}
+   body.fi-premium .topbar .crumb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+   body.fi-premium #sidebar{z-index:60!important;width:min(300px,86vw)!important;max-width:86vw!important;box-shadow:12px 0 35px #0004}
+   body.fi-premium #mobileOverlay{z-index:55!important;background:rgba(3,10,22,.62)!important;backdrop-filter:blur(2px)}
+   body.fi-premium #fiSidebarClose{display:flex!important}
+   body.fi-premium .main{margin-left:0!important;width:100%!important;min-width:0!important}
+   body.fi-premium .topbar{gap:8px!important;padding:0 10px!important}
+   body.fi-premium .container{padding:16px 12px 40px!important}
+   body.fi-premium .top-right{gap:5px!important}
+   body.fi-premium .fi-theme-toggle{padding:8px!important;font-size:11px!important}
+ }
+ /* Strong, consistent contrast for buttons and text in both themes */
+ body.fi-premium #content .btn.primary,
+ body.fi-premium #content button.primary,
+ body.fi-premium #content button[type="submit"]{
+   background:#5634c8!important;background-image:linear-gradient(120deg,#6845d8,#5634c8)!important;
+   color:#fff!important;-webkit-text-fill-color:#fff!important;border:1px solid #5634c8!important;
+   font-weight:800!important;text-shadow:none!important
+ }
+ body.fi-premium #content .btn.secondary{
+   background:#eee9ff!important;color:#402582!important;-webkit-text-fill-color:#402582!important;
+   border:1px solid #cbbaff!important;font-weight:800!important
+ }
+ body.fi-premium #content .btn.ghost{
+   background:#edf2f8!important;color:#26374d!important;-webkit-text-fill-color:#26374d!important;
+   border:1px solid #c5d2e2!important;font-weight:800!important
+ }
+ body.fi-premium #content .btn.danger{
+   background:#b42342!important;color:#fff!important;-webkit-text-fill-color:#fff!important;
+   border:1px solid #b42342!important;font-weight:800!important
+ }
+ body.fi-premium.fi-light #content .card,
+ body.fi-premium.fi-light #content .row,
+ body.fi-premium.fi-light #content .table-wrap,
+ body.fi-premium.fi-light #content article{
+   color:#17233a!important
+ }
+ body.fi-premium.fi-light #content .card p,
+ body.fi-premium.fi-light #content .card small,
+ body.fi-premium.fi-light #content .row small,
+ body.fi-premium.fi-light #content .stat-note{color:#53647b!important}
+ body.fi-premium:not(.fi-light) #content .btn.ghost{
+   background:#1b3049!important;color:#f7faff!important;-webkit-text-fill-color:#f7faff!important;
+   border-color:#49617b!important
+ }
+ body.fi-premium:not(.fi-light) #content .btn.secondary{
+   background:#30245a!important;color:#eee8ff!important;-webkit-text-fill-color:#eee8ff!important;
+   border-color:#7660c9!important
+ }
+ body.fi-premium:not(.fi-light) #content .card p,
+ body.fi-premium:not(.fi-light) #content .card small,
+ body.fi-premium:not(.fi-light) #content .row small,
+ body.fi-premium:not(.fi-light) #content .stat-note{color:#c4d2e4!important}
+
  /* FIX live Lessons table: ensure lesson-name pills have readable text on pale background. */
  body.fi-premium #content table tbody td:first-child button,
  body.fi-premium #content table tbody td:first-child .btn,
@@ -384,8 +449,31 @@ function installThemeToggle(){
  b.addEventListener('click',()=>applyTheme(document.body.classList.contains('fi-light')?'dark':'light'));
  top.insertBefore(b,top.firstChild);
 }
+
+function installMobileNavToggle(){
+ const topLeft=document.querySelector('.topbar>div:first-child');
+ const sidebar=$('#sidebar'),overlay=$('#mobileOverlay');
+ if(!topLeft||!sidebar||!overlay)return;
+ let b=$('#fiMobileNavToggle');
+ if(!b){
+  b=document.createElement('button');b.id='fiMobileNavToggle';b.type='button';
+  b.setAttribute('aria-label','Abrir abas de navegação');b.setAttribute('aria-controls','sidebar');
+  b.innerHTML='<span aria-hidden="true">☰</span><span style="font-size:11px">Abas</span>';
+  const legacy=topLeft.querySelector('.mobile');
+  if(legacy)legacy.style.display='none';
+  b.addEventListener('click',()=>{
+   const isOpen=sidebar.classList.contains('open');
+   if(typeof window.toggleMobile==='function')window.toggleMobile(!isOpen);
+   else{sidebar.classList.toggle('open',!isOpen);overlay.classList.toggle('open',!isOpen)}
+   b.setAttribute('aria-expanded',String(!isOpen));
+  });
+  topLeft.insertBefore(b,topLeft.firstChild);
+ }
+}
+
 function init(){
  addStyle();
+ installMobileNavToggle();
  const role=window.profile?.role||$('#userRole')?.textContent||'';
  document.body.classList.add('fi-premium');
  document.body.classList.toggle('fi-teacher-mode',/teacher|admin/i.test(role));
