@@ -69,7 +69,7 @@ function trackStudentClicks(){
 function wrapSemanticStudentActions(){
  const wrap=(name,eventType,label,entityType)=> {
   const base=window[name];
-  if(typeof base!=='function'||base.__ticSemanticTrackingWrapped)return;
+  if(typeof base!=='function'||base.__ticSemanticTrackingWrapped||base.__ticStudentActionWrapped)return;
   const wrapped=function(id){
    if(isStudent()&&typeof session!=='undefined'&&session&&session.user){
     const entityId=(typeof id==='string'||typeof id==='number')?String(id):null;
@@ -80,7 +80,7 @@ function wrapSemanticStudentActions(){
   wrapped.__ticSemanticTrackingWrapped=true;
   window[name]=wrapped;
  };
- wrap('openStudentTask','task_opened','Abriu uma tarefa atribuída','task_assignment');
+ // openStudentTask is already tracked by installActionTracking; avoid duplicate events.
  wrap('ticImmOpenViewer','immersion_lesson_opened','Abriu uma aula do Immersion Planner','immersion_activity');
 }
 function wrapStudentNavigation(){
