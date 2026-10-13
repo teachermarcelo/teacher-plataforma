@@ -730,8 +730,8 @@ window.ticBoardDragOver=function(e){e.preventDefault();e.stopPropagation();try{e
 window.ticBoardDrop=async function(e,status){e.preventDefault();e.stopPropagation();e.currentTarget.classList.remove('drag-over');const raw=e.dataTransfer?.getData('text/plain')||window.__ticDraggedBoardId;if(!raw)return;const dbStatus=({planned:'planned',doing:'doing',in_progress:'doing',review:'review',done:'done'})[String(status||'').toLowerCase()];if(!dbStatus)return toast('Status de Board inválido.','error');const s=window.__ticClassCenter||{};const t=(s.tasks||[]).find(x=>x.id===raw);if(!t)return;let existing=(s.boardItems||[]).find(x=>x.source_id===raw);let r;if(existing)r=await sb.from('tic_class_board_items').update({status:dbStatus,updated_at:new Date().toISOString()}).eq('id',existing.id).eq('teacher_id',session.user.id);else r=await sb.from('tic_class_board_items').insert({teacher_id:session.user.id,class_id:s.classId,title:t.title,description:t.instructions||null,item_type:t.assignment_type||'task',status:dbStatus,position:Date.now(),source_type:'assignment',source_id:raw});if(r?.error)return toast('Não foi possível salvar o novo status: '+r.error.message,'error');const item=existing||{source_id:raw,status:dbStatus};item.status=dbStatus;if(!existing)s.boardItems=[...(s.boardItems||[]),item];else existing.status=dbStatus;window.__ticDraggedBoardId=null;toast('Status atualizado.','success');await classCenterTab(s.classId,'board');};
 document.addEventListener('dragend',()=>document.querySelectorAll('.dragging,.drag-over').forEach(x=>x.classList.remove('dragging','drag-over')));
 async function openClassFormById(classId){const {data,error}=await sb.from('tic_classes').select('*').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle();if(error||!data)return toast(error?.message||'Turma não encontrada.','error');closeModal();setTimeout(()=>openClassForm(data),0)}
-async function openClassLessonForm(classId){const {data:cls}=await sb.from('tic_classes').select('id,name,level').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle();if(!cls)return toast('Turma não encontrada.','error');openModal(`📚 Registrar aula · ${cls.name}`,`<form class="form" onsubmit="saveClassLessonV35(event,'${classId}')"><div class="form-grid"><div class="field"><label>Data e hora</label><input id="clDate" type="datetime-local" value="${new Date().toISOString().slice(0,16)}" required></div><div class="field"><label>Duração (min)</label><input id="clDuration" type="number" min="1" value="60"></div></div><div class="field"><label>Tipo</label><select id="clType"><option value="lesson">Aula ministrada</option><option value="next">Próxima aula</option><option value="review">Revisão</option></select></div><div class="field"><label>Título / assunto</label><input id="clTitle" required placeholder="Ex.: Present Simple — Daily routines"></div><div class="field"><label>Resumo / observação</label><textarea id="clNotes" rows="5" placeholder="O que foi trabalhado? O que precisa ser retomado?"></textarea></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">💾 Salvar aula</button></div></form>`)}
-async function saveClassLessonV35(e,classId){e.preventDefault();const start=new Date($('clDate').value),mins=Number($('clDuration').value||60),type=$('clType').value;const r=await sb.from('tic_events').insert({teacher_id:session.user.id,class_id:classId,title:$('clTitle').value.trim(),event_type:type==='next'?'next_class':'lesson',starts_at:start.toISOString(),ends_at:new Date(start.getTime()+mins*60000).toISOString(),notes:$('clNotes').value.trim()||null,status:type==='next'?'scheduled':'completed'});if(r.error)return toast(r.error.message,'error');closeModal();toast(type==='next'?'Próxima aula salva.':'Aula registrada com sucesso.','success');setTimeout(()=>openClassCenter(classId,'lessons'),250)}
+async function openClassLessonForm(classId){const {data:cls}=await sb.from('tic_classes').select('id,name,level').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle();if(!cls)return toast('Turma não encontrada.','error');openModal(`📚 Registrar aula · ${cls.name}`,`<form class="form" onsubmit="saveClassLessonV35(event,'${classId}')"><div class="form-grid"><div class="field"><label>Data e hora</label><input id="clDate" type="datetime-local" value="${new Date().toISOString().slice(0,16)}" required></div><div class="field"><label>Duração (min)</label><input id="clDuration" type="number" min="1" value="60"></div></div><div class="field"><label>Tipo</label><select id="clType"><option value="lesson">Aula ministrada</option><option value="next">Próxima aula</option><option value="review">Revisão</option></select></div><div class="field"><label>Título / assunto</label><input id="clTitle" placeholder="Opcional — ex.: Present Simple / Daily routines"></div><div class="field"><label>Resumo / observação</label><textarea id="clNotes" rows="5" placeholder="O que foi trabalhado? O que precisa ser retomado?"></textarea></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">💾 Salvar aula</button></div></form>`)}
+async function saveClassLessonV35(e,classId){e.preventDefault();const start=new Date($('clDate').value),mins=Number($('clDuration').value||60),type=$('clType').value;const r=await sb.from('tic_events').insert({teacher_id:session.user.id,class_id:classId,title:$('clTitle').value.trim()||((type==='next'?'Próxima aula':type==='review'?'Revisão':'Aula')+' · '+start.toLocaleDateString('pt-BR')),event_type:type==='next'?'next_class':'lesson',starts_at:start.toISOString(),ends_at:new Date(start.getTime()+mins*60000).toISOString(),notes:$('clNotes').value.trim()||null,status:type==='next'?'scheduled':'completed'});if(r.error)return toast(r.error.message,'error');closeModal();toast(type==='next'?'Próxima aula salva.':'Aula registrada com sucesso.','success');setTimeout(()=>openClassCenter(classId,'lessons'),250)}
 
 async function openClassProgress(classId){
  const {data:cls}=await sb.from('tic_classes').select('id,name,level').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle();
@@ -7023,7 +7023,7 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
             <option value="review" ${e.event_type==='review'?'selected':''}>Revisão</option>
           </select>
         </div>
-        <div class="field"><label>Título / assunto</label><input id="v61Title" value="${esc(e.title||'')}" required></div>
+        <div class="field"><label>Título / assunto</label><input id="v61Title" value="${esc(e.title||'')}" placeholder="Opcional — será criado um título automático"></div>
         <div class="field"><label>Resumo / observação</label><textarea id="v61Notes" rows="5">${esc(e.notes||'')}</textarea></div>
         <div class="field"><label>Link da aula</label><input id="v61Url" value="${esc(e.meeting_url||'')}" placeholder="https://..."></div>
         <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">💾 Salvar alterações</button></div>
@@ -7035,7 +7035,7 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
     const start=new Date($('v61Date').value),mins=Number($('v61Duration').value||60),type=$('v61Type').value;
     if(Number.isNaN(start.getTime()))return toast('Data inválida.','error');
     const payload={
-      title:$('v61Title').value.trim(),
+      title:$('v61Title').value.trim()||((type==='next_class'?'Próxima aula':type==='review'?'Revisão':'Aula')+' · '+start.toLocaleDateString('pt-BR')),
       event_type:type,
       starts_at:start.toISOString(),
       ends_at:new Date(start.getTime()+mins*60000).toISOString(),
@@ -7064,7 +7064,7 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
     if(error||!t)return toast(error?.message||'Conteúdo não encontrado.','error');
     openModal('✏️ Editar conteúdo',`
       <form class="form" onsubmit="ticV61SaveTask(event,'${id}','${classId}')">
-        <div class="field"><label>Título</label><input id="v61TaskTitle" value="${esc(t.title||'')}" required></div>
+        <div class="field"><label>Título</label><input id="v61TaskTitle" value="${esc(t.title||'')}" placeholder="Opcional — ex.: Grammar practice"></div>
         <div class="field"><label>Instruções</label><textarea id="v61TaskInst" rows="4">${esc(t.instructions||'')}</textarea></div>
         <div class="form-grid">
           <div class="field"><label>Tipo</label><input id="v61TaskType" value="${esc(t.assignment_type||'task')}"></div>
@@ -7080,7 +7080,7 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
   window.ticV61SaveTask = async function(ev,id,classId){
     ev.preventDefault();
     const payload={
-      title:$('v61TaskTitle').value.trim(),
+      title:$('v61TaskTitle').value.trim()||('Conteúdo · '+new Date().toLocaleDateString('pt-BR')),
       instructions:$('v61TaskInst').value.trim(),
       assignment_type:$('v61TaskType').value.trim()||'task',
       points:Number($('v61TaskPoints').value||0),
@@ -7133,7 +7133,7 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
     openModal('✏️ Editar material exclusivo',`
       <form class="form" onsubmit="ticV61SavePrivateMaterial(event,'${id}','${classId}','${studentId||''}')">
         <div class="field"><label>Aluno destinatário</label><select id="v61PmStudent">${(students||[]).map(s=>`<option value="${s.id}" ${s.id===studentId?'selected':''}>${esc(s.display_name)} · ${esc(s.current_level||'')}</option>`).join('')}</select></div>
-        <div class="field"><label>Nome do material</label><input id="v61PmTitle" value="${esc(a.title||'')}" required></div>
+        <div class="field"><label>Nome do material</label><input id="v61PmTitle" value="${esc(a.title||'')}" placeholder="Opcional — ex.: Material complementar"></div>
         <div class="field"><label>Mensagem / instrução</label><textarea id="v61PmNote" rows="3">${esc(a.instructions||'')}</textarea></div>
         <div class="resource-box"><div class="resource-head"><b>🔗 Links e arquivos</b><button type="button" class="btn secondary" onclick="addResourceRow('v61PmRows')">＋ Adicionar item</button></div><div id="v61PmRows"></div></div>
         <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">💾 Salvar alterações</button></div>
@@ -7148,7 +7148,7 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
     if(!studentId)return toast('Selecione o aluno.','error');
     if(!items.length)return toast('Adicione pelo menos um link/arquivo.','error');
     const r=await sb.from('tic_assignments').update({
-      title:$('v61PmTitle').value.trim(),
+      title:$('v61PmTitle').value.trim()||('Material · '+new Date().toLocaleDateString('pt-BR')),
       instructions:$('v61PmNote').value.trim()||'',
       resource_items:items,
       assignment_type:'material'
