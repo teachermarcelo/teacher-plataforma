@@ -394,6 +394,13 @@ function setTeacherOnlyUI(show){ const f=$('float'); if(f) f.classList.toggle('h
 const levels=['A0','A1','A2','B1','B2','C1','C2'];
 const skills=['grammar','vocabulary','listening','reading','writing','speaking','pronunciation','overall'];
 const $=id=>document.getElementById(id);
+// Compatibility bridge for legacy feature scripts that execute in isolated scopes.
+// Expose live auth-state accessors and the DOM helper without duplicating stored state.
+try{
+ Object.defineProperty(window,'session',{configurable:true,get:()=>session,set:value=>{session=value;}});
+ Object.defineProperty(window,'profile',{configurable:true,get:()=>profile,set:value=>{profile=value;}});
+ window.$=$;
+}catch(bridgeError){ console.error('[Teacher Platform] compatibility bridge failed',bridgeError); }
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 const money=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const fmtDate=d=>d?new Date(d).toLocaleDateString('pt-BR'):'—';
