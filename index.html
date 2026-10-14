@@ -882,7 +882,7 @@ async function teacherMaterialsPageV53(){
  if(error){$('content').innerHTML=`<div class="card attention"><b>Teacher Materials ainda não está disponível.</b><p>${esc(error.message)}</p><small>Execute o SQL V53 no Supabase para criar a biblioteca privada.</small></div>`;return}
  window.__teacherMaterialsV53=data||[];
  $('content').innerHTML=`<section class="fi-media-library">
- <div class="fi-media-hero"><div><span class="fi-media-eyebrow">FLUENT IMMERSION · TEACHER SPACE</span><h2>🎬 Media Library</h2><p>Sua biblioteca de materiais, links e atividades — organizada por nível, tema e categoria.</p></div><button class="btn primary" onclick="openTeacherMaterialFormV53()">＋ Adicionar material</button></div>
+ <div class="fi-media-hero"><div><span class="fi-media-eyebrow">FLUENT IMMERSION · TEACHER SPACE</span><h2>🎬 Media Library</h2><p>Sua biblioteca de materiais, links e atividades — organizada por nível, tema e categoria.</p></div><button class="btn primary" onclick="window.__tm53Tab===\'drive\'?openTeacherDrivePdfFormV54():openTeacherMaterialFormV53()">＋ Adicionar material</button></div>
  <nav class="fi-teacher-material-tabs" aria-label="Área de materiais do Teacher">
  <button type="button" class="active" data-tm53-tab="library" onclick="teacherMaterialsTabV54('library')">📚 Minha biblioteca</button>
  <button type="button" data-tm53-tab="models" onclick="teacherMaterialsTabV54('models')">✨ Modelos seus</button>
