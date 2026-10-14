@@ -444,11 +444,22 @@ $('loginForm').onsubmit=async e=>{
  const btn=$('loginBtn'); btn.disabled=true; btn.textContent='Verificando...';
  startDiag(); diag('Tentativa de autenticação',true,'enviando e-mail e senha ao Supabase Auth');
  msg('Verificando suas credenciais...');
- const {data,error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
- if(error){ const authMessage=error.code==='invalid_credentials'?'E-mail ou senha incorretos. Confira o e-mail da conta do aluno ou use “Esqueci minha senha” para criar uma nova senha.':error.message; diag('Autenticação',false,authMessage+' | código: '+(error.code||'sem código')); msg(authMessage,true); btn.disabled=false;btn.textContent='Entrar'; $('diagModal').classList.remove('hidden'); return; }
- diag('Autenticação',true,'Sessão criada. ID: '+data.user.id);
- 
- btn.disabled=false;btn.textContent='Entrar';
+ try{
+  const {data,error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
+  if(error){ const authMessage=error.code==='invalid_credentials'?'E-mail ou senha incorretos. Confira o e-mail da conta ou use “Esqueci minha senha”.':error.message; diag('Autenticação',false,authMessage+' | código: '+(error.code||'sem código')); msg(authMessage,true); $('diagModal').classList.remove('hidden'); return; }
+  if(!data?.session||!data?.user)throw new Error('O Supabase não retornou uma sessão válida após o login.');
+  session=data.session;
+  diag('Autenticação',true,'Sessão criada. ID: '+data.user.id);
+  msg('Login confirmado. Abrindo seu painel...');
+  await boot();
+ }catch(err){
+  const detail=err?.message||'Falha inesperada ao iniciar a sessão.';
+  diag('Inicialização do painel',false,detail);
+  msg('O login foi iniciado, mas não foi possível abrir o painel: '+detail,true);
+  $('diagModal').classList.remove('hidden');
+ }finally{
+  btn.disabled=false;btn.textContent='Entrar';
+ }
 };
 $('forgotForm').onsubmit=async e=>{
  e.preventDefault(); const btn=$('forgotBtn');btn.disabled=true;btn.textContent='Enviando...';
