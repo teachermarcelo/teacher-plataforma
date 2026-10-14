@@ -547,7 +547,7 @@ async function loadView(v){
  assignments:['Assignments','Atividades, prazos e correções.','<button class="btn primary" onclick="openAssignmentForm()">+ Nova tarefa</button>'],
  feedback:['Feedback & Corrections','Veja as entregas dos alunos, dê nota e envie feedback.',''],
  materials:['Materials','PDF, links, vídeo, áudio e arquivos.','<button class="btn primary" onclick="openMaterialForm()">+ Novo material</button>'],
- teacherMaterials:['Media Library','Sua biblioteca privada de materiais por link, nível CEFR, tema e categoria.','<button class="btn primary" onclick="openTeacherMaterialFormV53()">＋ Adicionar material</button>'],
+ teacherMaterials:['Media Library','Sua biblioteca privada de materiais por link, nível CEFR, tema e categoria.','<button class="btn primary" onclick="window.__tm53Tab==='drive'?openTeacherDrivePdfFormV54():openTeacherMaterialFormV53()">＋ Adicionar material</button>'],
  calendar:['Calendar','Agenda de aulas e compromissos.','<button class="btn primary" onclick="openEventForm()">+ Novo evento</button>'],
  progress:['Progress','Acompanhe o desenvolvimento por habilidade.',''],
  messages:['Messages','Comunicação individual com alunos.',''],
@@ -882,7 +882,13 @@ async function teacherMaterialsPageV53(){
  if(error){$('content').innerHTML=`<div class="card attention"><b>Teacher Materials ainda não está disponível.</b><p>${esc(error.message)}</p><small>Execute o SQL V53 no Supabase para criar a biblioteca privada.</small></div>`;return}
  window.__teacherMaterialsV53=data||[];
  $('content').innerHTML=`<section class="fi-media-library">
- <div class="fi-media-hero"><div><span class="fi-media-eyebrow">FLUENT IMMERSION · TEACHER SPACE</span><h2>🎬 Media Library</h2><p>Sua biblioteca de materiais, links e atividades — organizada por nível, tema e categoria.</p></div><button class="btn primary" onclick="openTeacherMaterialFormV53()">＋ Adicionar material</button></div>
+ <div class="fi-media-hero"><div><span class="fi-media-eyebrow">FLUENT IMMERSION · TEACHER SPACE</span><h2>🎬 Media Library</h2><p>Sua biblioteca de materiais, links e atividades — organizada por nível, tema e categoria.</p></div><button class="btn primary" onclick="window.__tm53Tab===\'drive\'?openTeacherDrivePdfFormV54():openTeacherMaterialFormV53()">＋ Adicionar material</button></div>
+ <nav class="fi-teacher-material-tabs" aria-label="Área de materiais do Teacher">
+ <button type="button" class="active" data-tm53-tab="library" onclick="teacherMaterialsTabV54('library')">📚 Minha biblioteca</button>
+ <button type="button" data-tm53-tab="models" onclick="teacherMaterialsTabV54('models')">✨ Modelos seus</button>
+ <button type="button" data-tm53-tab="drive" onclick="teacherMaterialsTabV54('drive')">📄 PDFs e links do Drive</button>
+ </nav>
+ <div class="fi-teacher-material-tip" id="tm53TabTip">Seus materiais privados ficam organizados aqui. Abra um cartão para pré-visualizar os links antes de atribuir ao aluno.</div>
  <div class="fi-media-stats" id="tm53Stats"></div>
  <div class="fi-media-filterbar"><label class="fi-media-search">⌕ <input id="tm53Search" placeholder="Buscar título, tema, tag ou link..." oninput="renderTeacherMaterialsV53()"></label>
  <select id="tm53Level" onchange="renderTeacherMaterialsV53()" aria-label="Filtrar por nível"><option value="">Todos os níveis</option>${levels.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('')}</select>
@@ -894,12 +900,33 @@ async function teacherMaterialsPageV53(){
  </section>`;
  renderTeacherMaterialsV53();
 }
+function teacherMaterialsTabV54(tab){
+ window.__tm53Tab=['library','models','drive'].includes(tab)?tab:'library';
+ teacherMaterialsPageV53();
+}
+function openTeacherDrivePdfFormV54(){
+ openTeacherMaterialFormV53();
+ const cat=document.getElementById('tm2');if(cat)cat.value='pdf';
+ const title=document.getElementById('tm1');if(title&&!title.value)title.value='PDF do Google Drive';
+ const desc=document.getElementById('tm4');if(desc&&!desc.value)desc.value='Material PDF para visualizar ou compartilhar com a turma.';
+ const help=document.querySelector('#tmResources')?.parentElement?.querySelector('.resource-help');
+ if(help)help.textContent='Cole o link compartilhável do PDF do Google Drive. Você pode adicionar outros recursos ao mesmo material.';
+}
 function renderTeacherMaterialsV53(){
  const q=($('tm53Search')?.value||'').toLowerCase().trim(),cat=$('tm53Cat')?.value||'',level=$('tm53Level')?.value||'',theme=($('tm53Theme')?.value||'').toLowerCase().trim(),group=$('tm53Group')?.value||'all';
  const all=window.__teacherMaterialsV53||[];
- const data=all.filter(x=>!cat||x.category===cat).filter(x=>!level||String(x.level||'')===level).filter(x=>!theme||tm53Theme(x).toLowerCase().includes(theme)||String(x.tags||'').toLowerCase().includes(theme)).filter(x=>!q||[x.title,x.description,x.notes,x.tags,...(Array.isArray(x.resource_items)?x.resource_items.map(r=>[r.title,r.url,r.description].join(' ')):[])].join(' ').toLowerCase().includes(q));
+ const tab=window.__tm53Tab||'library';
+ const data=all.filter(x=>{
+  if(tab==='drive'){
+   const rs=Array.isArray(x.resource_items)?x.resource_items:[];
+   return x.category==='pdf'||rs.some(r=>/drive\.google\.com|docs\.google\.com/i.test(String(r?.url||r?.value||'')));
+  }
+  return true;
+ }).filter(x=>!cat||x.category===cat).filter(x=>!level||String(x.level||'')===level).filter(x=>!theme||tm53Theme(x).toLowerCase().includes(theme)||String(x.tags||'').toLowerCase().includes(theme)).filter(x=>!q||[x.title,x.description,x.notes,x.tags,...(Array.isArray(x.resource_items)?x.resource_items.map(r=>[r.title,r.url,r.description].join(' ')):[])].join(' ').toLowerCase().includes(q));
  const stat=$('tm53Stats');if(stat)stat.innerHTML=[['Materiais',all.length],['Com links',all.filter(x=>(x.resource_items||[]).some(r=>r?.url)).length],['Níveis',new Set(all.map(x=>x.level).filter(Boolean)).size],['Favoritos de organização','CEFR A0–C2']].map((z,i)=>`<div class="fi-media-stat"><span>${['📚','🔗','🎓','✨'][i]} ${z[0]}</span><b>${z[1]}</b></div>`).join('');
- const sum=$('tm53FilterSummary');if(sum)sum.textContent=`${data.length} de ${all.length} materiais · ${group==='level'?'agrupados por nível':group==='category'?'agrupados por categoria':'visualização em cartões'}`;
+ const sum=$('tm53FilterSummary');if(sum)sum.textContent=tab==='models'?`Modelos seus: ${data.length} · abra um cartão para pré-visualizar antes de reutilizar`:tab==='drive'?`PDFs/links do Drive: ${data.length} · links privados até você atribuir`:`${data.length} de ${all.length} materiais · ${group==='level'?'agrupados por nível':group==='category'?'agrupados por categoria':'visualização em cartões'}`;
+ document.querySelectorAll('[data-tm53-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tm53Tab===tab));
+ const tip=$('tm53TabTip');if(tip)tip.textContent=tab==='models'?'Veja todos os modelos que você salvou. Abra cada cartão para conferir os links e a descrição antes de atribuir.':tab==='drive'?'Adicione PDFs e links compartilháveis do Google Drive. Os materiais permanecem na sua biblioteca privada até serem atribuídos.':'Sua biblioteca de materiais, links e atividades — organizada por nível, tema e categoria.';
  const grid=$('tm53Grid');if(!grid)return;
  if(!data.length){grid.innerHTML='<div class="fi-media-empty"><b>📭 Nenhum material encontrado</b><p>Altere os filtros ou adicione seu primeiro material por link.</p><button class="btn primary" onclick="openTeacherMaterialFormV53()">＋ Adicionar material</button></div>';return}
  const groups={};
@@ -934,7 +961,7 @@ function openTeacherMaterialFormV53(x=null){
  <div class="field"><label>Tema principal</label><input id="tmTheme" value="${esc(theme)}" placeholder="Ex.: Daily Routines, Food, Travel, Present Simple"></div>
  <div class="field"><label>Descrição</label><textarea id="tm4" rows="3" placeholder="Objetivo, habilidade trabalhada e como usar o material.">${esc(x?.description||'')}</textarea></div>
  <div class="field"><label>Tags / palavras-chave</label><input id="tm5" value="${esc(tags)}" placeholder="grammar, listening, speaking, interactive..."></div>
- <div class="resource-box"><div class="resource-head"><b>🔗 Link do material e recursos extras</b><button type="button" class="btn secondary" onclick="addResourceRow('tmResources')">＋ Adicionar recurso</button></div><div id="tmResources"></div><div class="resource-help">Cole o link compartilhável do Meta AI, Canva, HTML, YouTube, Drive ou outra plataforma. Você pode guardar vários recursos no mesmo cartão.</div></div>
+ <div class="resource-box"><div class="resource-head"><b>🔗 Link do material e recursos extras</b><button type="button" class="btn secondary" onclick="addResourceRow('tmResources')">＋ Adicionar recurso</button></div><div id="tmResources"></div><div class="resource-help">Para PDF do Google Drive: compartilhe como “qualquer pessoa com o link” (ou conforme a política da sua escola) e cole o link. O cartão fica privado nesta biblioteca até você escolher atribuir. Você pode adicionar vários links.</div></div>
  <div class="field"><label>Notas privadas do Teacher</label><textarea id="tm6" rows="3" placeholder="Observações e ideias de uso (não coloque senhas).">${esc(x?.notes||'')}</textarea></div>
  <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">💾 Guardar na biblioteca</button></div></form>`);
  renderResourceRows('tmResources',x?.resource_items||[]);
@@ -2914,6 +2941,7 @@ async function sendStudentMessageV18(e){
       <button class="material-tab ${materialState.tab==='overview'?'active':''}" onclick="ticMaterialTab('overview')">📊 Overview</button>
       <button class="material-tab ${materialState.tab==='all'?'active':''}" onclick="ticMaterialTab('all')">📚 Todos os materiais</button>
       <button class="material-tab ${materialState.tab==='folders'?'active':''}" onclick="ticMaterialTab('folders')">📁 Pastas</button>
+      <button class="material-tab" onclick="loadView(\'teacherMaterials\')">✨ Modelos seus · PDFs/Drive</button>
     </div>`;
     $('content').innerHTML=`<div class="materials-workspace">
       ${tabs}
@@ -7712,7 +7740,7 @@ td,th{padding-top:12px;padding-bottom:12px}
 <script src="./teacher-ia.js?v=1" defer></script>
 <script src="./games.js?v=2" defer></script>
 <script src="./teacher-games.js?v=2" defer></script>
-<script src="./dashboard-theme.js?v=13" defer></script>
+<script src="./dashboard-theme.js?v=15" defer></script>
 <script src="./fluent-dashboard-redesign.js?v=5" defer></script>
 <script src="./pwa.js?v=1" defer></script>
 <script src="./class-center-crud-v63.js?v=2"></script>
