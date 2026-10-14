@@ -2941,6 +2941,7 @@ async function sendStudentMessageV18(e){
       <button class="material-tab ${materialState.tab==='overview'?'active':''}" onclick="ticMaterialTab('overview')">📊 Overview</button>
       <button class="material-tab ${materialState.tab==='all'?'active':''}" onclick="ticMaterialTab('all')">📚 Todos os materiais</button>
       <button class="material-tab ${materialState.tab==='folders'?'active':''}" onclick="ticMaterialTab('folders')">📁 Pastas</button>
+      <button class="material-tab" onclick="loadView(\'teacherMaterials\')">✨ Modelos seus · PDFs/Drive</button>
     </div>`;
     $('content').innerHTML=`<div class="materials-workspace">
       ${tabs}
