@@ -28,6 +28,73 @@ window.fiProspectStatus=id=>{let p=(window.__fiProspects||[]).find(x=>x.id===id)
 window.fiProspectSetStatus=async id=>{let status=$('fiProspectQuickStatus')?.value;if(!status)return;let r=await db().from('tic_prospects').update({status,updated_at:new Date().toISOString()}).eq('id',id).eq('teacher_id',tid());if(r.error)return say('Falha ao atualizar: '+r.error.message,'error');window.closeModal();say('Status atualizado.','success');await contacts()};
 window.fiProspectDelete=async id=>{let p=(window.__fiProspects||[]).find(x=>x.id===id);if(!p||!confirm('Excluir '+p.full_name+' do CRM? Isso não afeta os alunos cadastrados.'))return;let r=await db().from('tic_prospects').delete().eq('id',id).eq('teacher_id',tid());if(r.error)return say('Não foi possível excluir: '+r.error.message,'error');say('Prospect excluído.','success');await contacts()};
 function nav(){let n=$('teacherNav');if(!n||n.querySelector('[data-view="contacts"]'))return;let b=document.createElement('button');b.dataset.view='contacts';b.innerHTML='📇 <span>Contatos</span>';let s=n.querySelector('[data-view="students"]');if(s&&s.nextSibling)n.insertBefore(b,s.nextSibling);else n.appendChild(b)}
-function install(){nav();installBoard();let base=window.loadView;if(typeof base==='function'&&!base.__fiContacts){let w=function(v){if(v==='contacts'){window.currentView='contacts';document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='contacts'));if(typeof window.setPage==='function')window.setPage('Contatos','Prospects, potenciais alunos e próximos contatos.','<button class="btn primary" onclick="fiProspectForm()">＋ Novo prospect</button>');return contacts()}return base.apply(this,arguments)};w.__fiContacts=true;window.loadView=w}}
+
+/* Cross-view assignment sync: keep the canonical task assignment, student deliveries,
+   Class Center board and material links in sync without deleting existing records. */
+async function ensureBoardEntries(classId, assignmentRows){
+ if(!classId||!tid()||!Array.isArray(assignmentRows)||!assignmentRows.length)return;
+ const ids=assignmentRows.map(x=>x.id).filter(Boolean);if(!ids.length)return;
+ const old=await db().from('tic_class_board_items').select('id,source_id,status').eq('class_id',classId).eq('teacher_id',tid()).eq('source_type','assignment').in('source_id',ids);
+ if(old.error){console.warn('Assignment board sync:',old.error.message);return}
+ const byId=new Map((old.data||[]).map(x=>[x.source_id,x]));
+ const inserts=assignmentRows.filter(a=>!byId.has(a.id)).map((a,i)=>({teacher_id:tid(),class_id:classId,title:a.title||'Conteúdo',description:a.instructions||null,item_type:/material/i.test(a.assignment_type||'')?'material':/lesson/i.test(a.assignment_type||'')?'lesson':'assignment',status:'planned',position:Date.now()+i,source_type:'assignment',source_id:a.id}));
+ if(inserts.length){const r=await db().from('tic_class_board_items').insert(inserts);if(r.error)console.warn('Assignment board insert:',r.error.message)}
+}
+async function hydrateMaterialResources(rows){
+ const mats=(rows||[]).filter(a=>a.source_type==='material'&&a.source_id&&(!Array.isArray(a.resource_items)||!a.resource_items.length));
+ if(!mats.length)return;
+ const ids=[...new Set(mats.map(a=>a.source_id))];
+ const r=await db().from('tic_materials').select('id,title,description,material_type,file_url,external_url,resource_items,cover_image_url').in('id',ids).eq('teacher_id',tid());
+ if(r.error){console.warn('Material assignment hydration:',r.error.message);return}
+ const map=new Map((r.data||[]).map(m=>[m.id,m]));
+ for(const a of mats){const m=map.get(a.source_id);if(!m)continue;
+   const items=Array.isArray(m.resource_items)?m.resource_items.slice():[];
+   if(m.file_url)items.push({title:m.title||a.title,type:'file',url:m.file_url});
+   if(m.external_url&&m.external_url!==m.file_url)items.push({title:m.title||a.title,type:m.material_type||'link',url:m.external_url});
+   if(items.length){const u=await db().from('tic_assignments').update({resource_items:items,cover_image_url:a.cover_image_url||m.cover_image_url||null}).eq('id',a.id).eq('teacher_id',tid());if(u.error)console.warn('Material resource update:',u.error.message)}
+ }
+}
+function installAssignmentSync(){
+ if(window.__fiAssignmentSyncInstalled)return;window.__fiAssignmentSyncInstalled=true;
+ const wrap=(name,after)=>{const base=window[name];if(typeof base!=='function'||base.__fiAssignmentSync)return;const w=async function(){const args=arguments;const result=await base.apply(this,args);try{await after(args,result)}catch(e){console.warn(name+' sync:',e)}return result};w.__fiAssignmentSync=true;window[name]=w};
+ wrap('assignClassContent',async args=>{
+   const classId=args[0];if(!classId)return;
+   const r=await db().from('tic_assignments').select('id,title,instructions,assignment_type,source_type,source_id,resource_items,cover_image_url').eq('teacher_id',tid()).eq('class_id',classId).order('created_at',{ascending:false}).limit(100);
+   if(r.error){console.warn(r.error.message);return}
+   await hydrateMaterialResources(r.data||[]);await ensureBoardEntries(classId,r.data||[]);
+   if(typeof window.openClassCenterV41==='function')await window.openClassCenterV41(classId,'board');
+ });
+ wrap('assignExistingTaskToClass',async args=>{
+   const classId=args[0],assignmentId=$('caSource')?.value;if(!classId||!assignmentId)return;
+   let a=await db().from('tic_assignments').select('*').eq('id',assignmentId).eq('teacher_id',tid()).maybeSingle();
+   if(a.error||!a.data)return;
+   let targetId=assignmentId;
+   if(a.data.class_id&&a.data.class_id!==classId){
+     /* An assignment belongs to a different class already: create a class-scoped copy
+        so the original and its existing student work remain unchanged. */
+     const copy={...a.data};delete copy.id;delete copy.created_at;delete copy.updated_at;
+     copy.class_id=classId;copy.teacher_id=tid();copy.active=a.data.active!==false;
+     const created=await db().from('tic_assignments').insert(copy).select('id,title,instructions,assignment_type,source_type,source_id,resource_items,cover_image_url,class_id').single();
+     if(created.error){say('A tarefa original foi preservada, mas não foi possível criar a versão desta turma: '+created.error.message,'error');return}
+     targetId=created.data.id;
+     const m=await db().from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active');
+     const studentIds=[...new Set((m.data||[]).map(x=>x.student_id))];
+     if(studentIds.length){const existing=await db().from('tic_task_assignments').select('student_id').eq('assignment_id',targetId).in('student_id',studentIds);const have=new Set((existing.data||[]).map(x=>x.student_id));const missing=studentIds.filter(id=>!have.has(id)).map(student_id=>({assignment_id:targetId,student_id,status:'pending'}));if(missing.length){const ins=await db().from('tic_task_assignments').insert(missing);if(ins.error)say('A versão da turma foi criada, mas houve erro ao distribuir: '+ins.error.message,'error')}}
+   } else if(!a.data.class_id){
+     const upd=await db().from('tic_assignments').update({class_id:classId}).eq('id',assignmentId).eq('teacher_id',tid());
+     if(upd.error){say('Não foi possível vincular a tarefa à turma: '+upd.error.message,'error');return}
+   }
+   const final=await db().from('tic_assignments').select('id,title,instructions,assignment_type,source_type,source_id,resource_items,cover_image_url,class_id').eq('id',targetId).eq('teacher_id',tid()).maybeSingle();
+   if(final.data){await hydrateMaterialResources([final.data]);await ensureBoardEntries(classId,[final.data]);if(typeof window.openClassCenterV41==='function')await window.openClassCenterV41(classId,'board')}
+ });
+ wrap('saveAssignment',async args=>{
+   const title=$('a1')?.value?.trim(),destType=$('a7type')?.value,classId=destType==='class'?$('a7class')?.value:null;
+   if(!classId)return;
+   const r=await db().from('tic_assignments').select('id,title,instructions,assignment_type,source_type,source_id,resource_items,cover_image_url,class_id').eq('teacher_id',tid()).eq('class_id',classId).eq('title',title||'').order('created_at',{ascending:false}).limit(10);
+   if(!r.error){const exact=(r.data||[]).find(x=>x.title===title);if(exact)await ensureBoardEntries(classId,[exact])}
+ });
+}
+
+function install(){nav();installBoard();installAssignmentSync();let base=window.loadView;if(typeof base==='function'&&!base.__fiContacts){let w=function(v){if(v==='contacts'){window.currentView='contacts';document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='contacts'));if(typeof window.setPage==='function')window.setPage('Contatos','Prospects, potenciais alunos e próximos contatos.','<button class="btn primary" onclick="fiProspectForm()">＋ Novo prospect</button>');return contacts()}return base.apply(this,arguments)};w.__fiContacts=true;window.loadView=w}}
 window.contactsPageV1=contacts;if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();setTimeout(install,400);setTimeout(install,1200);
 })();
