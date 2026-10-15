@@ -56,16 +56,15 @@ async function hydrateMaterialResources(rows){
 }
 function installAssignmentSync(){
  if(window.__fiAssignmentSyncInstalled)return;window.__fiAssignmentSyncInstalled=true;
- const wrap=(name,after)=>{const base=window[name];if(typeof base!=='function'||base.__fiAssignmentSync)return;const w=async function(){const args=arguments;const result=await base.apply(this,args);try{await after(args,result)}catch(e){console.warn(name+' sync:',e)}return result};w.__fiAssignmentSync=true;window[name]=w};
+ const wrap=(name,after)=>{const base=window[name];if(typeof base!=='function'||base.__fiAssignmentSync)return;const w=async function(){const args=arguments;const ctx={caSource:$('caSource')?.value,title:$('a1')?.value?.trim(),destType:$('a7type')?.value,classId:$('a7type')?.value==='class'?$('a7class')?.value:null};const result=await base.apply(this,args);try{await after(args,result,ctx)}catch(e){console.warn(name+' sync:',e)}return result};w.__fiAssignmentSync=true;window[name]=w};
  wrap('assignClassContent',async args=>{
    const classId=args[0];if(!classId)return;
    const r=await db().from('tic_assignments').select('id,title,instructions,assignment_type,source_type,source_id,resource_items,cover_image_url').eq('teacher_id',tid()).eq('class_id',classId).order('created_at',{ascending:false}).limit(100);
    if(r.error){console.warn(r.error.message);return}
    await hydrateMaterialResources(r.data||[]);await ensureBoardEntries(classId,r.data||[]);
-   if(typeof window.openClassCenterV41==='function')await window.openClassCenterV41(classId,'board');
  });
- wrap('assignExistingTaskToClass',async args=>{
-   const classId=args[0],assignmentId=$('caSource')?.value;if(!classId||!assignmentId)return;
+ wrap('assignExistingTaskToClass',async (args,result,ctx)=>{
+   const classId=args[0],assignmentId=ctx.caSource;if(!classId||!assignmentId)return;
    let a=await db().from('tic_assignments').select('*').eq('id',assignmentId).eq('teacher_id',tid()).maybeSingle();
    if(a.error||!a.data)return;
    let targetId=assignmentId;
@@ -87,8 +86,8 @@ function installAssignmentSync(){
    const final=await db().from('tic_assignments').select('id,title,instructions,assignment_type,source_type,source_id,resource_items,cover_image_url,class_id').eq('id',targetId).eq('teacher_id',tid()).maybeSingle();
    if(final.data){await hydrateMaterialResources([final.data]);await ensureBoardEntries(classId,[final.data]);if(typeof window.openClassCenterV41==='function')await window.openClassCenterV41(classId,'board')}
  });
- wrap('saveAssignment',async args=>{
-   const title=$('a1')?.value?.trim(),destType=$('a7type')?.value,classId=destType==='class'?$('a7class')?.value:null;
+ wrap('saveAssignment',async (args,result,ctx)=>{
+   const title=ctx.title,classId=ctx.classId;
    if(!classId)return;
    const r=await db().from('tic_assignments').select('id,title,instructions,assignment_type,source_type,source_id,resource_items,cover_image_url,class_id').eq('teacher_id',tid()).eq('class_id',classId).eq('title',title||'').order('created_at',{ascending:false}).limit(10);
    if(!r.error){const exact=(r.data||[]).find(x=>x.title===title);if(exact)await ensureBoardEntries(classId,[exact])}
