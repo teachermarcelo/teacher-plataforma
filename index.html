@@ -2189,8 +2189,7 @@ function ticResponsiveSrcdoc(content){
  if(!c)return '';
  const meta='<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">';
  if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}`);
-  return '<!doctype html><html><head>'+meta+'</head><body>'+c+'<script src="./class-board-contacts-v1.js?v=1" defer></script>
-</body></html>';
+  return '<!doctype html><html><head>'+meta+'</head><body>'+c+'</body></html>';
 }
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
@@ -8254,5 +8253,6 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
 <script src="./teacher-file-management-ux.js?v=2" defer></script>
 <script src="./class-center-card-tools.js?v=1" defer></script>
 <script src="./class-center-tab-routing-fix.js?v=2" defer></script>
+<script src="./class-board-contacts-v1.js?v=1" defer></script>
 </body>
 </html>
