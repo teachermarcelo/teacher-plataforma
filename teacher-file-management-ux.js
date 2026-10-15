@@ -40,7 +40,7 @@ function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':
 function enhance(){
  addStyle();
  document.querySelectorAll('.fi-media-card,.material-card,.teacher-material-card,[data-material-card]').forEach(menuFor);
- const center=document.querySelector('.class-center,.class-center-wrap,#classCenter,.class-center-page');
+ const center=document.querySelector('.materials-workspace')||document.querySelector('.class-center,.class-center-wrap,#classCenter,.class-center-page');
  if(center&&!center.querySelector('.fi-file-commandbar')){
  const bar=document.createElement('div');bar.className='fi-file-commandbar';bar.innerHTML='<div class="fi-fc-left"><div><strong>Gerenciador de materiais da turma</strong><small>Organize arquivos, links, PDFs e vídeos sem sair do Class Center.</small></div></div><div class="fi-fc-left"><button class="fi-fc-btn" data-tool="search">⌕ Buscar</button><button class="fi-fc-btn" data-tool="folders">▣ Pastas</button><button class="fi-fc-btn fi-fc-primary" data-tool="add">＋ Adicionar material</button></div>';
  const tabs=center.querySelector('.class-center-tabs');(tabs||center.firstElementChild)?.after(bar);
