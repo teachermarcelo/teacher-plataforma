@@ -8254,5 +8254,67 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
 <script src="./class-center-card-tools.js?v=1" defer></script>
 <script src="./class-center-tab-routing-fix.js?v=2" defer></script>
 <script src="./class-board-contacts-v1.js?v=3" defer></script>
+<script id="tic-assignment-destination-router-v1">
+/* Additive routing layer: keeps the existing Class Center publishing workflow and adds teacher-only planning records. */
+(function(){
+ if(window.__ticAssignmentDestinationRouterV1)return;
+ window.__ticAssignmentDestinationRouterV1=true;
+ const originalOpenClassStudentContent=window.openClassStudentContent;
+ window.openClassStudentContent=async function(classId,studentId){
+  if(!studentId)return toast('Selecione um aluno antes de continuar.','info');
+  const results=await Promise.all([
+   sb.from('tic_classes').select('id,name,level').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle(),
+   sb.from('tic_students').select('id,display_name,current_level').eq('id',studentId).eq('teacher_id',session.user.id).maybeSingle()
+  ]);
+  const cls=results[0].data, student=results[1].data;
+  if(!cls||!student)return toast('Aluno ou Class não encontrado.','error');
+  const html='<div class="form"><div class="notice"><b>'+esc(student.display_name)+'</b> · '+esc(cls.name)+'<br>Escolha onde registrar. Somente Class Center publica conteúdo para o aluno; as outras opções ficam no acompanhamento do Teacher.</div>'+
+   '<div class="field"><label>Onde atribuir?</label><select id="ticAssignmentDestination" onchange="ticAssignmentDestinationHelp()">'+
+   '<option value="class_center">🏫 Class Center — visível ao aluno</option><option value="material">📂 Material — acompanhamento do Teacher</option><option value="resource">🔗 Resource — acompanhamento do Teacher</option><option value="lesson">📚 Aula / Lesson — acompanhamento do Teacher</option><option value="agenda">🗓️ Agenda — planejamento do Teacher</option></select></div>'+
+   '<div id="ticAssignmentDestinationHelp" class="notice">O conteúdo será atribuído dentro da Class e ficará disponível para este aluno.</div>'+
+   '<div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button type="button" class="btn primary" onclick="ticContinueAssignmentDestination(\''+classId+'\',\''+studentId+'\')">Continuar →</button></div></div>';
+  openModal('📍 Onde deseja atribuir?',html);
+ };
+ window.ticAssignmentDestinationHelp=function(){
+  const v=document.getElementById('ticAssignmentDestination')?.value||'class_center';
+  const el=document.getElementById('ticAssignmentDestinationHelp');if(!el)return;
+  el.textContent=v==='class_center'?'O conteúdo será publicado na Class Center e ficará visível ao aluno.':'Este registro ficará somente no acompanhamento do Teacher. Não será criado vínculo de tarefa para o aluno.';
+ };
+ window.ticContinueAssignmentDestination=async function(classId,studentId){
+  const destination=document.getElementById('ticAssignmentDestination')?.value||'class_center';
+  if(destination==='class_center'){
+   closeModal();
+   if(typeof originalOpenClassStudentContent==='function')return originalOpenClassStudentContent(classId,studentId);
+   return toast('Fluxo do Class Center indisponível. Atualize a página e tente novamente.','error');
+  }
+  const results=await Promise.all([
+   sb.from('tic_classes').select('id,name,level').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle(),
+   sb.from('tic_students').select('id,display_name,current_level').eq('id',studentId).eq('teacher_id',session.user.id).maybeSingle()
+  ]);
+  const cls=results[0].data,student=results[1].data;if(!cls||!student)return toast('Aluno ou Class não encontrado.','error');
+  const labels={material:'Material',resource:'Resource',lesson:'Aula / Lesson',agenda:'Agenda'},label=labels[destination]||'Planejamento';
+  const html='<form class="form" onsubmit="ticSaveTeacherTracking(event,\''+classId+'\',\''+studentId+'\',\''+destination+'\')">'+
+   '<div class="notice">📌 <b>'+label+'</b> para '+esc(student.display_name)+'. Fica no controle do Teacher para preparar/ministar depois; não será publicado no dashboard do aluno.</div>'+
+   '<div class="field"><label>Título</label><input id="ticTrackTitle" required maxlength="180" placeholder="Ex.: Present Simple — revisão guiada"></div>'+
+   '<div class="field"><label>Orientações / notas do Teacher</label><textarea id="ticTrackNotes" rows="3" placeholder="O que preparar, ensinar ou acompanhar..."></textarea></div>'+
+   '<div class="field"><label>Link ou referência (opcional)</label><input id="ticTrackUrl" type="url" placeholder="https://..."></div>'+
+   '<div class="form-grid"><div class="field"><label>Data de acompanhamento</label><input id="ticTrackDate" type="datetime-local"></div>'+
+   '<div class="field"><label>Status</label><select id="ticTrackStatus"><option value="planned">Planejado</option><option value="in_progress">Em preparação</option><option value="done">Ministrado / concluído</option></select></div></div>'+
+   '<div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary" id="ticTrackSave">💾 Salvar acompanhamento</button></div></form>';
+  openModal('🗂️ Registrar no acompanhamento do Teacher',html);
+ };
+ window.ticSaveTeacherTracking=async function(e,classId,studentId,destination){
+  e.preventDefault();const btn=document.getElementById('ticTrackSave');if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  const title=document.getElementById('ticTrackTitle')?.value.trim(),notes=document.getElementById('ticTrackNotes')?.value.trim()||'',url=document.getElementById('ticTrackUrl')?.value.trim()||'',date=document.getElementById('ticTrackDate')?.value||'',status=document.getElementById('ticTrackStatus')?.value||'planned';
+  if(!title){if(btn){btn.disabled=false;btn.textContent='💾 Salvar acompanhamento';}return toast('Informe um título.','error');}
+  const labels={material:'Material',resource:'Resource',lesson:'Aula / Lesson',agenda:'Agenda'},label=labels[destination]||'Planejamento';
+  const record={teacher_id:session.user.id,class_id:classId,title:'['+label+' · '+status+'] '+title,instructions:['Aluno ID: '+studentId,'Categoria: '+label,'Status: '+status,notes,url?'Link: '+url:'',date?'Data planejada: '+new Date(date).toISOString():''].filter(Boolean).join('\n'),assignment_type:'teacher_'+destination+'_tracking',priority:'normal',due_at:date?new Date(date).toISOString():null,points:0,active:true,source_type:'teacher_tracking',source_id:null,resource_items:url?[{title:title,url:url,type:'link'}]:[]};
+  const {error}=await sb.from('tic_assignments').insert(record);
+  if(error){if(btn){btn.disabled=false;btn.textContent='💾 Salvar acompanhamento';}return toast('Não foi possível salvar no acompanhamento do Teacher: '+error.message,'error');}
+  closeModal();toast(label+' salvo no acompanhamento do Teacher. O aluno não recebeu tarefa nem notificação.','success');
+  if(typeof loadView==='function')loadView('assignments');
+ };
+})();
+</script>
 </body>
 </html>
