@@ -7187,36 +7187,23 @@ setTimeout(()=>{if(window.profile?.role==='student'&&window.session?.user?.id)wi
 
   async function renderResourcesV61(classId){
     const body=document.getElementById('ticV41ClassBody');if(!body)return;
-    const k=window.__ticClassCenterV41||{};
-    const tasks=k.tasks||[],evs=k.evs||[],students=k.students||[],cls=k.cls||{};
-    const kpis=`<div class="v41-kpis">
-      <div class="v41-kpi"><span>👥 Alunos</span><b>${students.length}</b></div>
-      <div class="v41-kpi"><span>📝 Conteúdos</span><b>${tasks.length}</b></div>
-      <div class="v41-kpi"><span>📚 Aulas</span><b>${evs.length}</b></div>
-      <div class="v41-kpi"><span>🧰 Resources</span><b>${tasks.reduce((n,t)=>n+(Array.isArray(t.resource_items)?t.resource_items.length:0),0)}</b></div>
-      <div class="v41-kpi"><span>📅 Nível</span><b>${esc(cls.level||'—')}</b></div>
-    </div>`;
-    const {data,error}=await sb.from('tic_assignments').select('id,title,instructions,assignment_type,resource_items,created_at,source_id,active').eq('class_id',classId).eq('teacher_id',window.session.user.id).order('created_at',{ascending:false});
+    const k=window.__ticClassCenterV41||{},tasks=k.tasks||[],evs=k.evs||[],students=k.students||[],cls=k.cls||{};
+    const kpis=`<div class="v41-kpis"><div class="v41-kpi"><span>👥 Alunos</span><b>${students.length}</b></div><div class="v41-kpi"><span>📝 Conteúdos</span><b>${tasks.length}</b></div><div class="v41-kpi"><span>📚 Aulas</span><b>${evs.length}</b></div><div class="v41-kpi"><span>🧰 Resources</span><b>${tasks.reduce((n,t)=>n+(Array.isArray(t.resource_items)?t.resource_items.length:0),0)}</b></div><div class="v41-kpi"><span>📅 Nível</span><b>${esc(cls.level||'—')}</b></div></div>`;
+    const {data,error}=await sb.from('tic_assignments').select('id,title,instructions,assignment_type,resource_items,created_at,source_id,active,due_at,skill,cefr_level').eq('class_id',classId).eq('teacher_id',window.session.user.id).order('created_at',{ascending:false});
     if(error)return body.innerHTML=kpis+`<div class="v41-panel"><div class="v41-empty">${esc(error.message)}</div></div>`;
     const rows=(data||[]).filter(a=>Array.isArray(a.resource_items)&&a.resource_items.length);
-    body.innerHTML=kpis+`<div class="v41-panel">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
-        <div><h3>🧰 Resources</h3><p>Resources publicados na Class. Cada registro possui editar e remover.</p></div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap">
-          <button class="btn primary" onclick="openResourceFormV39('${classId}')">＋ Novo resource</button>
-          <button class="btn secondary" onclick="openResourcePickerV39('${classId}')">📚 Inserir existente</button>
-        </div>
-      </div>
-      <div class="v41-list" style="margin-top:14px">
-      ${rows.map(a=>`<div class="v41-list-row v61-record-row">
-        <div class="v61-record-main"><b>${esc(a.title||'Resource')}</b><small>${esc(a.assignment_type||'resource')} · ${(a.resource_items||[]).length} recurso(s) · ${fmt(a.created_at)}</small></div>
-        <div class="v61-row-actions">
-          <button class="btn sm ghost" onclick="ticV61EditTask('${a.id}','${classId}')">✏️ Editar</button>
-          <button class="btn sm ghost v61-danger" onclick="ticV61DeleteAssignment('${a.id}','${classId}','resource')">🗑 Remover</button>
-        </div>
-      </div>`).join('')||'<div class="v41-empty">Nenhum resource inserido nesta Class ainda.</div>'}
-      </div>
-    </div>`;
+    const safeUrl=value=>{try{const u=new URL(String(value||'').trim());return ['http:','https:'].includes(u.protocol)?u.href:''}catch(_){return ''}};
+    body.innerHTML=kpis+`<style>
+      .v61-resource-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:16px}
+      .v61-resource-card{border:1px solid #e5def2;border-radius:16px;background:var(--card,#fff);overflow:hidden;box-shadow:0 5px 18px #24124b0a;min-width:0}
+      .v61-resource-head{padding:15px;background:linear-gradient(125deg,#f4efff,#fff);border-bottom:1px solid #eee8f7;display:flex;gap:10px}
+      .v61-resource-icon{width:40px;height:40px;border-radius:12px;background:#e8ddff;color:#6337d6;display:grid;place-items:center;font-size:20px;flex-shrink:0}
+      .v61-resource-head b{font-size:14px;overflow-wrap:anywhere}.v61-resource-head small,.v61-resource-meta{font-size:11px;color:var(--muted,#766d82)}
+      .v61-resource-body{padding:14px}.v61-resource-body p{font-size:12px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+      .v61-resource-links{display:grid;gap:7px;margin:10px 0}.v61-resource-link{padding:9px 11px;border-radius:10px;background:#673de0;color:#fff!important;text-decoration:none;font-size:12px;font-weight:800;overflow-wrap:anywhere}
+      .v61-resource-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+      @media(max-width:600px){.v61-resource-grid{grid-template-columns:1fr}}
+    </style><div class="v41-panel"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3>🧰 Resources da turma</h3><p>Links e arquivos ficam expostos em cards clicáveis para acesso rápido.</p></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn primary" onclick="openResourceFormV39('${classId}')">＋ Novo resource</button><button class="btn secondary" onclick="openResourcePickerV39('${classId}')">📚 Inserir existente</button></div></div><div class="v61-resource-grid">${rows.map(a=>{const items=a.resource_items||[];const links=items.map((r,i)=>{const url=safeUrl(r?.url||r?.value||r?.link);return url?`<a class="v61-resource-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">↗ ${esc(r.title||r.name||('Abrir recurso '+(i+1)))}</a>`:''}).filter(Boolean).join('');return `<article class="v61-resource-card"><div class="v61-resource-head"><div class="v61-resource-icon">🔗</div><div><b>${esc(a.title||'Resource')}</b><br><small>${esc(a.assignment_type||'resource')} · ${items.length} item(ns) · ${esc(fmt(a.created_at))}</small></div></div><div class="v61-resource-body"><p>${esc(a.instructions||'Sem descrição adicional.')}</p><div class="v61-resource-meta">📅 ${a.due_at?'Prazo: '+esc(fmt(a.due_at)):'Sem prazo'} ${a.cefr_level?' · Nível '+esc(a.cefr_level):''}</div><div class="v61-resource-links">${links||'<span class="v61-resource-meta">Nenhum link web válido encontrado. Edite o resource para conferir os endereços.</span>'}</div><div class="v61-resource-actions"><button class="btn sm ghost" onclick="ticV61EditTask('${a.id}','${classId}')">✏️ Editar</button><button class="btn sm ghost v61-danger" onclick="ticV61DeleteAssignment('${a.id}','${classId}','resource')">🗑 Remover</button></div></div></article>`}).join('')||'<div class="v41-empty" style="grid-column:1/-1">Nenhum resource inserido nesta Class ainda.</div>'}</div></div>`;
   }
 
   window.ticV61EditPrivateMaterial = async function(id,classId,studentId){
@@ -7338,14 +7325,25 @@ setTimeout(()=>{if(window.profile?.role==='student'&&window.session?.user?.id)wi
   async function renderTasksV61(classId){
     const s=window.__ticClassCenterV41||{},tasks=s.tasks||[],evs=s.evs||[],students=s.students||[],cls=s.cls||{};
     const body=document.getElementById('ticV41ClassBody');if(!body)return;
+    const safeUrl61=value=>{try{const u=new URL(String(value||'').trim());return ['http:','https:'].includes(u.protocol)?u.href:''}catch(_){return ''}};
     const kpis=`<div class="v41-kpis"><div class="v41-kpi"><span>👥 Alunos</span><b>${students.length}</b></div><div class="v41-kpi"><span>📝 Conteúdos</span><b>${tasks.length}</b></div><div class="v41-kpi"><span>📚 Aulas</span><b>${evs.length}</b></div><div class="v41-kpi"><span>🧰 Resources</span><b>${tasks.reduce((n,t)=>n+(Array.isArray(t.resource_items)?t.resource_items.length:0),0)}</b></div><div class="v41-kpi"><span>📅 Nível</span><b>${esc(cls.level||'—')}</b></div></div>`;
-    body.innerHTML=kpis+`<div class="v41-panel">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3>📝 Tasks / Conteúdos</h3><p>Crie, edite e remova registros sem sair da Class.</p></div><button class="btn primary" onclick="openClassAssign('${classId}')">📤 Atribuir conteúdo</button></div>
-      <div class="v41-list" style="margin-top:14px">${tasks.map(t=>`<div class="v41-list-row v61-record-row">
-        <div class="v61-record-main"><b>${esc(t.title||'Conteúdo')}</b><small>${esc(t.assignment_type||'task')}${t.skill?' · '+esc(t.skill):''}${t.cefr_level?' · '+esc(t.cefr_level):''}</small></div>
-        <small>${t.due_at?'Prazo '+fmt(t.due_at):'Sem prazo'}</small>
-        <div class="v61-row-actions"><button class="btn sm ghost" onclick="ticV61EditTask('${t.id}','${classId}')">✏️ Editar</button><button class="btn sm ghost v61-danger" onclick="ticV61DeleteAssignment('${t.id}','${classId}','conteúdo')">🗑 Remover</button></div>
-      </div>`).join('')||'<div class="v41-empty">Nenhum conteúdo registrado nesta Class.</div>'}</div>
+    body.innerHTML=kpis+`<style>
+      .v61-task-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:16px}
+      .v61-task-card{border:1px solid #e5def2;border-radius:16px;background:var(--card,#fff);overflow:hidden;box-shadow:0 5px 18px #24124b0a;min-width:0}
+      .v61-task-head{padding:15px;background:linear-gradient(125deg,#f4efff,#fff);border-bottom:1px solid #eee8f7;display:flex;gap:10px}
+      .v61-task-icon{width:40px;height:40px;border-radius:12px;background:#e8ddff;color:#6337d6;display:grid;place-items:center;font-size:20px;flex-shrink:0}
+      .v61-task-head b{font-size:14px;overflow-wrap:anywhere}.v61-task-head small,.v61-task-meta{font-size:11px;color:var(--muted,#766d82)}
+      .v61-task-body{padding:14px}.v61-task-body p{font-size:12px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+      .v61-task-links{display:grid;gap:7px;margin:10px 0}.v61-task-link{padding:9px 11px;border-radius:10px;background:#673de0;color:#fff!important;text-decoration:none;font-size:12px;font-weight:800;overflow-wrap:anywhere}
+      .v61-task-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+      @media(max-width:600px){.v61-task-grid{grid-template-columns:1fr}}
+    </style>
+    <div class="v41-panel"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3>📝 Tasks e conteúdos</h3><p>Cards rápidos com instruções, links, prazos e ações.</p></div><button class="btn primary" onclick="openClassAssign('${classId}')">＋ Atribuir conteúdo</button></div>
+      <div class="v61-task-grid">${tasks.map(t=>{
+        const items=Array.isArray(t.resource_items)?t.resource_items:[];
+        const links=items.map((r,i)=>{const url=safeUrl61(r?.url||r?.value||r?.link);return url?`<a class="v61-task-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">↗ ${esc(r.title||r.name||('Abrir recurso '+(i+1)))}</a>`:''}).filter(Boolean).join('');
+        return `<article class="v61-task-card"><div class="v61-task-head"><div class="v61-task-icon">${items.length?'🔗':'📝'}</div><div><b>${esc(t.title||'Conteúdo')}</b><br><small>${esc(t.assignment_type||'task')}${t.skill?' · '+esc(t.skill):''}${t.cefr_level?' · '+esc(t.cefr_level):''}</small></div></div><div class="v61-task-body"><p>${esc(t.instructions||'Sem instruções adicionais.')}</p><div class="v61-task-meta">📅 ${t.due_at?'Prazo: '+esc(fmt(t.due_at)):'Sem prazo'} · 🔗 ${items.length} recurso(s)</div>${links|| (items.length?'<p class="v61-task-meta">Não há links web válidos neste registro.</p>':'')}<div class="v61-task-actions"><button class="btn sm ghost" onclick="ticV61EditTask('${t.id}','${classId}')">✏️ Editar</button><button class="btn sm ghost v61-danger" onclick="ticV61DeleteAssignment('${t.id}','${classId}','conteúdo')">🗑 Remover</button></div></div></article>`;
+      }).join('')||'<div class="v41-empty" style="grid-column:1/-1">Nenhum conteúdo registrado nesta Class.</div>'}</div>
     </div>`;
   }
 
