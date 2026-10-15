@@ -347,6 +347,7 @@ body{overflow:hidden;}
   <button data-view="materials">📂 <span>Materials</span></button>
   <button data-view="teacherMaterials">🎬 <span>Media Library</span></button>
   <button data-view="resources">🧰 <span>Resources</span></button>
+  <button data-view="teacherPlanning">🗂️ <span>Teacher Planning</span></button>
   <button data-view="calendar">📅 <span>Calendar</span></button>
   <button data-view="progress">📊 <span>Progress</span></button>
   <button data-view="studentRegistration">🔗 <span>Student Registration</span></button>
@@ -8355,7 +8356,19 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
   const {error}=await sb.from('tic_teacher_planning_items').delete().eq('id',id).eq('teacher_id',session.user.id);
   if(error)return toast('Não foi possível excluir: '+error.message,'error');
   toast('Registro excluído.','success');window.loadTeacherPlanningItems();
- };})();
+ };
+ /* Persistent sidebar route for teacher-only planning records. */
+ const previousLoadView=window.loadView;
+ if(typeof previousLoadView==='function'){
+   window.loadView=function(view,...args){
+     if(view==='teacherPlanning'){
+       document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='teacherPlanning'));
+       return window.loadTeacherPlanningItems();
+     }
+     return previousLoadView.call(this,view,...args);
+   };
+ }
+})();
 </script>
 </body>
 </html>
