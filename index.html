@@ -7291,14 +7291,47 @@ setTimeout(()=>{if(window.profile?.role==='student'&&window.session?.user?.id)wi
     const old=window.__ticClassCenterV41||{};
     const evs=old.evs||[],tasks=old.tasks||[],students=old.students||[],cls=old.cls||{};
     const body=document.getElementById('ticV41ClassBody');if(!body)return;
+    const safeUrl=(value)=>{
+      const raw=String(value||'').trim();
+      if(!raw)return '';
+      try{const u=new URL(raw);return ['http:','https:'].includes(u.protocol)?u.href:'';}catch(_){return '';}
+    };
+    const details=(e)=>{
+      const note=String(e.notes||'').trim();
+      const match=note.match(/https?:\/\/[^\s<>"']+/i);
+      const url=safeUrl(e.meeting_url)||safeUrl(match?.[0]);
+      const cleanNote=match?note.replace(match[0],'').trim():note;
+      return {url,note:cleanNote};
+    };
     const kpis=`<div class="v41-kpis"><div class="v41-kpi"><span>👥 Alunos</span><b>${students.length}</b></div><div class="v41-kpi"><span>📝 Conteúdos</span><b>${tasks.length}</b></div><div class="v41-kpi"><span>📚 Aulas</span><b>${evs.length}</b></div><div class="v41-kpi"><span>🧰 Resources</span><b>${tasks.reduce((n,t)=>n+(Array.isArray(t.resource_items)?t.resource_items.length:0),0)}</b></div><div class="v41-kpi"><span>📅 Nível</span><b>${esc(cls.level||'—')}</b></div></div>`;
-    body.innerHTML=kpis+`<div class="v41-panel">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3>📚 Aulas</h3><p>Registre, edite e remova aulas sem sair do Class Center.</p></div><button class="btn primary" onclick="openClassLessonForm('${classId}')">＋ Registrar aula</button></div>
-      <div class="v41-list" style="margin-top:14px">${evs.map(e=>`<div class="v41-list-row v61-record-row">
-        <div class="v61-record-main"><b>${esc(e.title||'Aula')}</b><small>${esc(e.event_type||'aula')} · ${esc(e.notes||'')}</small></div>
-        <small>${fmt(e.starts_at||e.created_at)}</small>
-        <div class="v61-row-actions"><button class="btn sm ghost" onclick="ticV61EditEvent('${e.id}','${classId}')">✏️ Editar</button><button class="btn sm ghost v61-danger" onclick="ticV61DeleteEvent('${e.id}','${classId}')">🗑 Remover</button></div>
-      </div>`).join('')||'<div class="v41-empty">Nenhuma aula registrada.</div>'}</div>
+    body.innerHTML=kpis+`<style>
+      .v61-lesson-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:16px}
+      .v61-lesson-card{border:1px solid #e5def2;border-radius:16px;background:var(--card,#fff);overflow:hidden;box-shadow:0 5px 18px #24124b0a;min-width:0}
+      .v61-lesson-card-top{padding:15px;background:linear-gradient(125deg,#f4efff,#fff);border-bottom:1px solid #eee8f7;display:flex;align-items:flex-start;gap:11px}
+      .v61-lesson-icon{width:42px;height:42px;border-radius:12px;background:#e8ddff;color:#6337d6;display:grid;place-items:center;font-size:21px;flex-shrink:0}
+      .v61-lesson-card h4{margin:0;font-size:14px;overflow-wrap:anywhere}.v61-lesson-card small{color:var(--muted,#766d82);font-size:11px}
+      .v61-lesson-card-body{padding:14px}.v61-lesson-note{font-size:12px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text,#251b40);margin:0 0 12px}
+      .v61-lesson-link{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 12px;border-radius:10px;background:#673de0;color:#fff!important;text-decoration:none;font-size:12px;font-weight:800;margin:10px 0}
+      .v61-lesson-link:hover{filter:brightness(1.06)}.v61-lesson-no-link{font-size:11px;color:var(--muted,#766d82);background:#faf8ff;border:1px dashed #ddd2f3;padding:10px;border-radius:10px;margin:10px 0}
+      .v61-lesson-card-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+      @media(max-width:600px){.v61-lesson-grid{grid-template-columns:1fr}}
+    </style>
+    <div class="v41-panel">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
+        <div><h3>📚 Aulas e links</h3><p>Todo registro aparece em um card. Links e reuniões ficam destacados para abrir rapidamente.</p></div>
+        <button class="btn primary" onclick="openClassLessonForm('${classId}')">＋ Registrar aula</button>
+      </div>
+      <div class="v61-lesson-grid">${evs.map(e=>{
+        const d=details(e),date=fmt(e.starts_at||e.created_at);
+        return `<article class="v61-lesson-card">
+          <div class="v61-lesson-card-top"><div class="v61-lesson-icon">${d.url?'↗':'📚'}</div><div style="min-width:0;flex:1"><h4>${esc(e.title||'Aula')}</h4><small>${esc(e.event_type||'aula')} · ${esc(date)}</small></div></div>
+          <div class="v61-lesson-card-body">
+            ${d.note?`<p class="v61-lesson-note">${esc(d.note)}</p>`:'<p class="v61-lesson-note" style="color:var(--muted,#766d82)">Sem descrição adicional.</p>'}
+            ${d.url?`<a class="v61-lesson-link" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">↗ Abrir link da aula</a>`:'<div class="v61-lesson-no-link">🔗 Nenhum link encontrado neste registro. Clique em Editar para adicioná-lo.</div>'}
+            <div class="v61-lesson-card-actions"><button class="btn sm ghost" onclick="ticV61EditEvent('${e.id}','${classId}')">✏️ Editar</button><button class="btn sm ghost v61-danger" onclick="ticV61DeleteEvent('${e.id}','${classId}')">🗑 Remover</button></div>
+          </div>
+        </article>`;
+      }).join('')||'<div class="v41-empty" style="grid-column:1/-1">Nenhuma aula registrada. Clique em “Registrar aula” para adicionar uma aula ou link.</div>'}</div>
     </div>`;
   }
 
