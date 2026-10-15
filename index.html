@@ -4349,7 +4349,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   };
 
   /* Start/restart tracker when Teacher/student session changes. */
-  window.addEventListener('focus',()=>{if(profile?.role==='student'&&!activityRowV41)startActivityV41();});
+  window.addEventListener('focus',()=>{if(window.profile?.role==='student'&&!activityRowV41)startActivityV41();});
 })();
 </script>
 
@@ -5909,7 +5909,7 @@ document.addEventListener('visibilitychange',async()=>{
   }
 });
 window.addEventListener('pagehide',()=>{try{flush58(true)}catch(_){}});
-window.addEventListener('focus',()=>{if(session?.user?.id&&!act58.row)start58()});
+window.addEventListener('focus',()=>{if(window.session?.user?.id&&!act58.row)start58()});
 window.ticStartStudentActivityV58=start58;
 window.ticStopStudentActivityV58=stop58;
 
@@ -5923,7 +5923,7 @@ if(window.sb?.auth){
     }
   });
 }
-setTimeout(()=>{if(session?.user?.id)start58()},1800);
+setTimeout(()=>{if(window.session?.user?.id)start58()},1800);
 
 /* ---------------- Teacher Student Activity page ---------------- */
 async function studentActivityPageV58(){
@@ -7050,7 +7050,7 @@ window.ticStartStudentActivityV60=async function(){
       await window.ticStartStudentActivityV58();
       return;
     }
-    const uid=session?.user?.id;if(!uid)return;
+    const uid=window.session?.user?.id;if(!uid)return;
     const {data:st}=await sb.from('tic_students').select('id,auth_user_id').eq('auth_user_id',uid).maybeSingle();
     if(!st)return;
     const now=new Date().toISOString();
@@ -7393,7 +7393,7 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
 
   /* ---------- NAVIGATION: Student Activity + Planning ---------- */
   function ensureV62Nav(){
-    const nav=$('teacherNav'); if(!nav || !(profile?.role==='teacher'||profile?.role==='admin')) return;
+    const nav=window.$('teacherNav'); if(!nav || !(window.profile?.role==='teacher'||window.profile?.role==='admin')) return;
     if(!nav.querySelector('[data-view="studentActivity"]')){
       const ref=nav.querySelector('[data-view="students"]');
       const b=document.createElement('button');
