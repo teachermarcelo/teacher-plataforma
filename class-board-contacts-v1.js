@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const $=id=>document.getElementById(id), esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const db=()=>window.sb, tid=()=>window.session&&window.session.user&&window.session.user.id, st=()=>window.__ticClassCenterV41||window.__ticClassCenter||{};
+const db=()=>typeof sb!=='undefined'?sb:window.sb, tid=()=>((typeof session!=='undefined'&&session&&session.user&&session.user.id)||(window.session&&window.session.user&&window.session.user.id)||null), st=()=>window.__ticClassCenterV41||window.__ticClassCenter||{};
 const say=(m,t)=>typeof window.toast==='function'?window.toast(m,t||'info'):alert(m);
 const statuses=[['planned','Planejado','#4779E8'],['doing','Em andamento','#D97706'],['review','Revisão','#8B5CF6'],['done','Concluído','#15945A']];
 const kinds={assignment:['Tarefa','#D97706','#FFF1D6','📝'],lesson:['Aula','#2563EB','#E7EFFF','📚'],material:['Material','#15803D','#DDF7E8','📄'],resource:['Resource','#BE185D','#FCE7F3','🧰']};
