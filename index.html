@@ -347,6 +347,7 @@ body{overflow:hidden;}
   <button data-view="materials">📂 <span>Materials</span></button>
   <button data-view="teacherMaterials">🎬 <span>Media Library</span></button>
   <button data-view="resources">🧰 <span>Resources</span></button>
+  <button data-view="teacherPlanning">🗂️ <span>Teacher Planning</span></button>
   <button data-view="calendar">📅 <span>Calendar</span></button>
   <button data-view="progress">📊 <span>Progress</span></button>
   <button data-view="studentRegistration">🔗 <span>Student Registration</span></button>
@@ -8254,5 +8255,120 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
 <script src="./class-center-card-tools.js?v=1" defer></script>
 <script src="./class-center-tab-routing-fix.js?v=2" defer></script>
 <script src="./class-board-contacts-v1.js?v=3" defer></script>
+<script id="tic-assignment-destination-router-v1">
+/* Additive routing layer: keeps the existing Class Center publishing workflow and adds teacher-only planning records. */
+(function(){
+ if(window.__ticAssignmentDestinationRouterV1)return;
+ window.__ticAssignmentDestinationRouterV1=true;
+ const originalOpenClassStudentContent=window.openClassStudentContent;
+ window.openClassStudentContent=async function(classId,studentId){
+  if(!studentId)return toast('Selecione um aluno antes de continuar.','info');
+  const results=await Promise.all([
+   sb.from('tic_classes').select('id,name,level').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle(),
+   sb.from('tic_students').select('id,display_name,current_level').eq('id',studentId).eq('teacher_id',session.user.id).maybeSingle()
+  ]);
+  const cls=results[0].data, student=results[1].data;
+  if(!cls||!student)return toast('Aluno ou Class não encontrado.','error');
+  const html='<div class="form"><div class="notice"><b>'+esc(student.display_name)+'</b> · '+esc(cls.name)+'<br>Escolha onde registrar. Somente Class Center publica conteúdo para o aluno; as outras opções ficam no acompanhamento do Teacher.</div>'+
+   '<div class="field"><label>Onde atribuir?</label><select id="ticAssignmentDestination" onchange="ticAssignmentDestinationHelp()">'+
+   '<option value="class_center">🏫 Class Center — visível ao aluno</option><option value="material">📂 Material — acompanhamento do Teacher</option><option value="resource">🔗 Resource — acompanhamento do Teacher</option><option value="lesson">📚 Aula / Lesson — acompanhamento do Teacher</option><option value="agenda">🗓️ Agenda — planejamento do Teacher</option></select></div>'+
+   '<div id="ticAssignmentDestinationHelp" class="notice">O conteúdo será atribuído dentro da Class e ficará disponível para este aluno.</div>'+
+   '<div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button type="button" class="btn primary" onclick="ticContinueAssignmentDestination(\''+classId+'\',\''+studentId+'\')">Continuar →</button></div></div>';
+  openModal('📍 Onde deseja atribuir?',html);
+ };
+ window.ticAssignmentDestinationHelp=function(){
+  const v=document.getElementById('ticAssignmentDestination')?.value||'class_center';
+  const el=document.getElementById('ticAssignmentDestinationHelp');if(!el)return;
+  el.textContent=v==='class_center'?'O conteúdo será publicado na Class Center e ficará visível ao aluno.':'Este registro ficará somente no acompanhamento do Teacher. Não será criado vínculo de tarefa para o aluno.';
+ };
+ window.ticContinueAssignmentDestination=async function(classId,studentId){
+  const destination=document.getElementById('ticAssignmentDestination')?.value||'class_center';
+  if(destination==='class_center'){
+   closeModal();
+   if(typeof originalOpenClassStudentContent==='function')return originalOpenClassStudentContent(classId,studentId);
+   return toast('Fluxo do Class Center indisponível. Atualize a página e tente novamente.','error');
+  }
+  const results=await Promise.all([
+   sb.from('tic_classes').select('id,name,level').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle(),
+   sb.from('tic_students').select('id,display_name,current_level').eq('id',studentId).eq('teacher_id',session.user.id).maybeSingle()
+  ]);
+  const cls=results[0].data,student=results[1].data;if(!cls||!student)return toast('Aluno ou Class não encontrado.','error');
+  const labels={material:'Material',resource:'Resource',lesson:'Aula / Lesson',agenda:'Agenda'},label=labels[destination]||'Planejamento';
+  const html='<form class="form" onsubmit="ticSaveTeacherTracking(event,\''+classId+'\',\''+studentId+'\',\''+destination+'\')">'+
+   '<div class="notice">📌 <b>'+label+'</b> para '+esc(student.display_name)+'. Fica no controle do Teacher para preparar/ministar depois; não será publicado no dashboard do aluno.</div>'+
+   '<div class="field"><label>Título</label><input id="ticTrackTitle" required maxlength="180" placeholder="Ex.: Present Simple — revisão guiada"></div>'+
+   '<div class="field"><label>Orientações / notas do Teacher</label><textarea id="ticTrackNotes" rows="3" placeholder="O que preparar, ensinar ou acompanhar..."></textarea></div>'+
+   '<div class="field"><label>Link ou referência (opcional)</label><input id="ticTrackUrl" type="url" placeholder="https://..."></div>'+
+   '<div class="form-grid"><div class="field"><label>Data de acompanhamento</label><input id="ticTrackDate" type="datetime-local"></div>'+
+   '<div class="field"><label>Status</label><select id="ticTrackStatus"><option value="planned">Planejado</option><option value="in_progress">Em preparação</option><option value="done">Ministrado / concluído</option></select></div></div>'+
+   '<div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary" id="ticTrackSave">💾 Salvar acompanhamento</button></div></form>';
+  openModal('🗂️ Registrar no acompanhamento do Teacher',html);
+ };
+ window.ticSaveTeacherTracking=async function(e,classId,studentId,destination){
+  e.preventDefault();const btn=document.getElementById('ticTrackSave');if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  const title=document.getElementById('ticTrackTitle')?.value.trim(),notes=document.getElementById('ticTrackNotes')?.value.trim()||'',url=document.getElementById('ticTrackUrl')?.value.trim()||'',date=document.getElementById('ticTrackDate')?.value||'',status=document.getElementById('ticTrackStatus')?.value||'planned';
+  if(!title){if(btn){btn.disabled=false;btn.textContent='💾 Salvar acompanhamento';}return toast('Informe um título.','error');}
+  const payload={teacher_id:session.user.id,class_id:classId||null,student_id:studentId,category:destination,title,notes,resource_url:url||null,scheduled_at:date?new Date(date).toISOString():null,status};
+  const {error}=await sb.from('tic_teacher_planning_items').insert(payload);
+  if(error){if(btn){btn.disabled=false;btn.textContent='💾 Salvar acompanhamento';}return toast('Não foi possível salvar no acompanhamento do Teacher: '+error.message,'error');}
+  closeModal();toast('Acompanhamento salvo. O aluno não recebeu tarefa nem notificação.','success');
+  if(typeof window.loadTeacherPlanningItems==='function')window.loadTeacherPlanningItems();
+ };
+ window.loadTeacherPlanningItems=async function(){
+  if(typeof setPage==='function')setPage('Teacher Planning','Materiais, recursos, aulas e agenda para preparar e acompanhar — área exclusiva do Teacher.','<button class="btn primary" onclick="window.openTeacherPlanningForm()">＋ Novo acompanhamento</button>');
+  const root=document.getElementById('content');if(!root)return;
+  root.innerHTML='<div class="card"><div class="loading">Carregando acompanhamento...</div></div>';
+  const {data:rows,error}=await sb.from('tic_teacher_planning_items').select('*,tic_students(display_name,current_level),tic_classes(name)').eq('teacher_id',session.user.id).order('scheduled_at',{ascending:true,nullsFirst:false}).order('created_at',{ascending:false});
+  if(error){root.innerHTML='<div class="card attention"><b>Não foi possível carregar os registros.</b><p>'+esc(error.message)+'</p><button class="btn secondary" onclick="window.loadTeacherPlanningItems()">Tentar novamente</button></div>';return;}
+  const labels={material:'📂 Material',resource:'🔗 Resource',lesson:'📚 Aula / Lesson',agenda:'🗓️ Agenda'},statuses={planned:'Planejado',in_progress:'Em preparação',done:'Ministrado / concluído'};
+  root.innerHTML='<div class="grid cols3 section"><div class="card"><small>Total de registros</small><h2>'+rows.length+'</h2></div><div class="card"><small>Em preparação</small><h2>'+rows.filter(x=>x.status==='in_progress').length+'</h2></div><div class="card"><small>Planejados</small><h2>'+rows.filter(x=>x.status==='planned').length+'</h2></div></div><div class="card section"><div class="section-head"><div><h2>🗂️ Acompanhamento do Teacher</h2><p>Estes registros não são publicados no dashboard do aluno.</p></div><button class="btn primary" onclick="window.openTeacherPlanningForm()">＋ Novo</button></div><div class="grid cols2">'+(rows||[]).map(x=>'<article class="card" style="border:1px solid var(--line);border-radius:14px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><span class="badge">'+esc(labels[x.category]||x.category)+'</span><select aria-label="Status" onchange="window.updateTeacherPlanningStatus(\''+x.id+'\',this.value)" style="max-width:180px"><option value="planned" '+(x.status==='planned'?'selected':'')+'>Planejado</option><option value="in_progress" '+(x.status==='in_progress'?'selected':'')+'>Em preparação</option><option value="done" '+(x.status==='done'?'selected':'')+'>Ministrado / concluído</option></select></div><h3>'+esc(x.title)+'</h3><p><b>Aluno:</b> '+esc(x.tic_students?.display_name||'Aluno')+' · '+esc(x.tic_students?.current_level||'')+'</p><p><b>Class:</b> '+esc(x.tic_classes?.name||'Sem Class vinculada')+'</p>'+(x.scheduled_at?'<p><b>Data:</b> '+new Date(x.scheduled_at).toLocaleString('pt-BR')+'</p>':'')+(x.notes?'<p>'+esc(x.notes)+'</p>':'')+(x.resource_url?'<p><a href="'+esc(x.resource_url)+'" target="_blank" rel="noopener">Abrir link ↗</a></p>':'')+'<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm secondary" onclick="window.editTeacherPlanningItem(\''+x.id+'\')">✏️ Editar</button><button class="btn sm ghost" onclick="window.deleteTeacherPlanningItem(\''+x.id+'\')">🗑️ Excluir</button></div></article>').join('')+'</div>'+(rows.length?'':'<div class="empty">Nenhum acompanhamento cadastrado ainda. Use “Novo acompanhamento” para começar.</div>')+'</div>';
+ };
+ window.openTeacherPlanningForm=async function(itemId=null){
+  let item=null;
+  if(itemId){const r=await sb.from('tic_teacher_planning_items').select('*').eq('id',itemId).eq('teacher_id',session.user.id).maybeSingle();if(r.error||!r.data)return toast('Registro não encontrado.','error');item=r.data;}
+  const [{data:students},{data:classes}]=await Promise.all([
+   sb.from('tic_students').select('id,display_name,current_level').eq('teacher_id',session.user.id).eq('status','active').order('display_name'),
+   sb.from('tic_classes').select('id,name,level').eq('teacher_id',session.user.id).eq('status','active').order('name')
+  ]);
+  const studentOptions=(students||[]).map(s=>'<option value="'+s.id+'" '+(item?.student_id===s.id?'selected':'')+'>'+esc(s.display_name)+' · '+esc(s.current_level||'')+'</option>').join('');
+  const classOptions='<option value="">Sem Class</option>'+(classes||[]).map(c=>'<option value="'+c.id+'" '+(item?.class_id===c.id?'selected':'')+'>'+esc(c.name)+' · '+esc(c.level||'')+'</option>').join('');
+  const date=item?.scheduled_at?new Date(item.scheduled_at).toISOString().slice(0,16):'';
+  const html='<form class="form" onsubmit="window.saveTeacherPlanningItem(event,\''+(item?.id||'')+'\')"><div class="notice">🔒 Área exclusiva do Teacher. Não publica tarefa para o aluno.</div><div class="field"><label>Aluno</label><select id="tpStudent" required>'+studentOptions+'</select></div><div class="field"><label>Class (opcional)</label><select id="tpClass">'+classOptions+'</select></div><div class="form-grid"><div class="field"><label>Categoria</label><select id="tpCategory">'+[['material','📂 Material'],['resource','🔗 Resource'],['lesson','📚 Aula / Lesson'],['agenda','🗓️ Agenda']].map(o=>'<option value="'+o[0]+'" '+(item?.category===o[0]?'selected':'')+'>'+o[1]+'</option>').join('')+'</select></div><div class="field"><label>Status</label><select id="tpStatus">'+[['planned','Planejado'],['in_progress','Em preparação'],['done','Ministrado / concluído']].map(o=>'<option value="'+o[0]+'" '+((item?.status||'planned')===o[0]?'selected':'')+'>'+o[1]+'</option>').join('')+'</select></div></div><div class="field"><label>Título</label><input id="tpTitle" required maxlength="180" value="'+esc(item?.title||'')+'"></div><div class="field"><label>Orientações / notas</label><textarea id="tpNotes" rows="3">'+esc(item?.notes||'')+'</textarea></div><div class="field"><label>Link (opcional)</label><input id="tpUrl" type="url" value="'+esc(item?.resource_url||'')+'" placeholder="https://..."></div><div class="field"><label>Data prevista</label><input id="tpDate" type="datetime-local" value="'+date+'"></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary" id="tpSave">💾 Salvar</button></div></form>';
+  openModal(item?'✏️ Editar acompanhamento':'＋ Novo acompanhamento',html);
+ };
+ window.saveTeacherPlanningItem=async function(e,itemId){
+  e.preventDefault();const btn=document.getElementById('tpSave');if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  const studentId=document.getElementById('tpStudent')?.value,classId=document.getElementById('tpClass')?.value||null,category=document.getElementById('tpCategory')?.value,title=document.getElementById('tpTitle')?.value.trim(),notes=document.getElementById('tpNotes')?.value.trim()||'',url=document.getElementById('tpUrl')?.value.trim()||'',date=document.getElementById('tpDate')?.value||'',status=document.getElementById('tpStatus')?.value||'planned';
+  const payload={teacher_id:session.user.id,student_id:studentId,class_id:classId,category,title,notes,resource_url:url||null,scheduled_at:date?new Date(date).toISOString():null,status};
+  const query=itemId?sb.from('tic_teacher_planning_items').update(payload).eq('id',itemId).eq('teacher_id',session.user.id):sb.from('tic_teacher_planning_items').insert(payload);
+  const {error}=await query;
+  if(error){if(btn){btn.disabled=false;btn.textContent='💾 Salvar';}return toast('Falha ao salvar: '+error.message,'error');}
+  closeModal();toast('Acompanhamento salvo.','success');window.loadTeacherPlanningItems();
+ };
+ window.editTeacherPlanningItem=function(id){return window.openTeacherPlanningForm(id);};
+ window.updateTeacherPlanningStatus=async function(id,status){
+  const {error}=await sb.from('tic_teacher_planning_items').update({status}).eq('id',id).eq('teacher_id',session.user.id);
+  if(error)return toast('Não foi possível atualizar o status: '+error.message,'error');
+  toast('Status atualizado.','success');
+ };
+ window.deleteTeacherPlanningItem=async function(id){
+  if(!confirm('Excluir este registro de acompanhamento? Esta ação não pode ser desfeita.'))return;
+  const {error}=await sb.from('tic_teacher_planning_items').delete().eq('id',id).eq('teacher_id',session.user.id);
+  if(error)return toast('Não foi possível excluir: '+error.message,'error');
+  toast('Registro excluído.','success');window.loadTeacherPlanningItems();
+ };
+ /* Persistent sidebar route for teacher-only planning records. */
+ const previousLoadView=window.loadView;
+ if(typeof previousLoadView==='function'){
+   window.loadView=function(view,...args){
+     if(view==='teacherPlanning'){
+       document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='teacherPlanning'));
+       return window.loadTeacherPlanningItems();
+     }
+     return previousLoadView.call(this,view,...args);
+   };
+ }
+})();
+</script>
 </body>
 </html>
