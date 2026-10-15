@@ -3043,10 +3043,10 @@ window.openMaterialAssignV52=async function(material){
   const [{data:students,error:se},{data:classes,error:ce}]=await Promise.all([
     sb.from('tic_students')
       .select('id,display_name,current_level,email,status')
-      .eq('teacher_id',session.user.id).eq('status','active').order('display_name'),
+      .eq('teacher_id',window.session.user.id).eq('status','active').order('display_name'),
     sb.from('tic_classes')
       .select('id,name,level,status')
-      .eq('teacher_id',session.user.id).eq('status','active').order('name')
+      .eq('teacher_id',window.session.user.id).eq('status','active').order('name')
   ]);
   if(se)return toast('Não foi possível carregar os alunos: '+se.message,'error');
   if(ce)return toast('Não foi possível carregar as turmas: '+ce.message,'error');
@@ -3105,8 +3105,8 @@ window.openMaterialAssignV52=async function(material){
 };
 
 window.loadStudentClassesV52=async function(){
-  const studentId=$('v52Student')?.value;
-  const select=$('v52Class'),help=$('v52ClassHelp');
+  const studentId=window.$('v52Student')?.value;
+  const select=window.$('v52Class'),help=window.$('v52ClassHelp');
   if(!select)return;
   select.innerHTML='<option value="">Carregando Classes...</option>';
   if(!studentId){select.innerHTML='<option value="">Selecione primeiro o aluno...</option>';return;}
@@ -3124,7 +3124,7 @@ window.loadStudentClassesV52=async function(){
   }
 
   const {data:classes,error:ce}=await sb.from('tic_classes')
-    .select('id,name,level,status').in('id',ids).eq('teacher_id',session.user.id).eq('status','active').order('name');
+    .select('id,name,level,status').in('id',ids).eq('teacher_id',window.session.user.id).eq('status','active').order('name');
   if(ce){select.innerHTML='<option value="">Erro ao carregar</option>';if(help)help.textContent=ce.message;return;}
 
   select.innerHTML=(classes||[]).map(c=>`<option value="${e52(c.id)}">${e52(c.name)} · ${e52(c.level||'')}</option>`).join('');
@@ -3133,12 +3133,12 @@ window.loadStudentClassesV52=async function(){
 
 window.saveMaterialAssignV52=async function(ev,sourceId){
   ev.preventDefault();
-  const btn=$('v52Save');if(btn){btn.disabled=true;btn.textContent='Atribuindo...';}
+  const btn=window.$('v52Save');if(btn){btn.disabled=true;btn.textContent='Atribuindo...';}
   try{
-    const studentId=$('v52Student')?.value;
-    const classId=$('v52Class')?.value;
-    const message=$('v52Message')?.value.trim()||'';
-    const due=$('v52Due')?.value;
+    const studentId=window.$('v52Student')?.value;
+    const classId=window.$('v52Class')?.value;
+    const message=window.$('v52Message')?.value.trim()||'';
+    const due=window.$('v52Due')?.value;
 
     if(!studentId)throw new Error('Selecione o aluno.');
     if(!classId)throw new Error('Selecione a Class onde o material aparecerá.');
@@ -3152,7 +3152,7 @@ window.saveMaterialAssignV52=async function(ev,sourceId){
 
     // Read the source material from the teacher's library.
     const {data:source,error:se}=await sb.from('tic_materials')
-      .select('*').eq('id',sourceId).eq('teacher_id',session.user.id).maybeSingle();
+      .select('*').eq('id',sourceId).eq('teacher_id',window.session.user.id).maybeSingle();
     if(se)throw se;
     if(!source)throw new Error('Material não encontrado na biblioteca.');
 
@@ -3166,7 +3166,7 @@ window.saveMaterialAssignV52=async function(ev,sourceId){
     let assignment=null;
     const {data:existing,error:ee}=await sb.from('tic_assignments')
       .select('id')
-      .eq('teacher_id',session.user.id)
+      .eq('teacher_id',window.session.user.id)
       .eq('class_id',classId)
       .eq('source_type','material')
       .eq('source_id',sourceId)
@@ -3184,12 +3184,12 @@ window.saveMaterialAssignV52=async function(ev,sourceId){
           due_at:due?new Date(due).toISOString():null,
           active:true
         })
-        .eq('id',existing.id).eq('teacher_id',session.user.id).select().single();
+        .eq('id',existing.id).eq('teacher_id',window.session.user.id).select().single();
       if(ae)throw ae;
       assignment=a;
     }else{
       const {data:a,error:ae}=await sb.from('tic_assignments').insert({
-        teacher_id:session.user.id,
+        teacher_id:window.session.user.id,
         lesson_id:null,
         class_id:classId,
         title:source.title,
@@ -3232,7 +3232,7 @@ window.saveMaterialAssignV52=async function(ev,sourceId){
     }
 
     closeModal();
-    toast(`“${source.title}” foi atribuído somente a ${$('v52Student')?.selectedOptions?.[0]?.textContent?.split(' · ')[0]||'este aluno'}.`,'success');
+    toast(`“${source.title}” foi atribuído somente a ${window.$('v52Student')?.selectedOptions?.[0]?.textContent?.split(' · ')[0]||'este aluno'}.`,'success');
     if(typeof materialsPage==='function' && currentView==='materials')await materialsPage();
   }catch(err){
     toast(err?.message||'Não foi possível atribuir o Material.','error');
@@ -3420,7 +3420,7 @@ window.markLessonCompleted=async function(lessonId){
 
 /* My Lessons: course order comes only from the Teacher's Track; lesson order from position. */
 window.studentLessons=async function(){
-  const s=await studentRecord();if(!s){$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}
+  const s=await studentRecord();if(!s){window.$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}
   try{
     const courses=await ticGetStudentOrderedCoursesV19(s.id),ids=courses.map(c=>c.id);
     const [{data:ms,error:me},{data:ls,error:le},{data:lp,error:pe},{data:direct,error:de}]=await Promise.all([
@@ -3441,40 +3441,40 @@ window.studentLessons=async function(){
     }).join('');
     const courseLessonIds=new Set((ls||[]).map(l=>l.id));const extra=(direct||[]).map(x=>x.tic_lessons).filter(Boolean).filter(l=>!courseLessonIds.has(l.id));
     const directHtml=extra.length?`<article class="card section"><div class="section-head"><div><h2>📌 Lessons atribuídas diretamente</h2><span>Enviadas pelo Teacher fora do currículo.</span></div><span class="badge blue">${extra.length}</span></div>${extra.sort((a,b)=>(Number(a.position)||999999)-(Number(b.position)||999999)).map(item).join('')}</article>`:'';
-    setPage('My Lessons','Aulas na mesma ordem definida pelo Teacher.');$('content').innerHTML=`<div class="notice success">🛤️ <b>Ordem pedagógica:</b> os cursos seguem a sequência definida pelo Teacher. As Lessons seguem a posição definida dentro de cada curso/módulo.</div>${courseHtml||'<div class="card empty">Nenhum curso ativo.</div>'}${directHtml}`;
-  }catch(e){$('content').innerHTML=`<div class="card attention">${esc(e.message||e)}</div>`}
+    setPage('My Lessons','Aulas na mesma ordem definida pelo Teacher.');window.$('content').innerHTML=`<div class="notice success">🛤️ <b>Ordem pedagógica:</b> os cursos seguem a sequência definida pelo Teacher. As Lessons seguem a posição definida dentro de cada curso/módulo.</div>${courseHtml||'<div class="card empty">Nenhum curso ativo.</div>'}${directHtml}`;
+  }catch(e){window.$('content').innerHTML=`<div class="card attention">${esc(e.message||e)}</div>`}
 };
 
 /* Dashboard uses the same source of truth as My Lessons: completed lessons. */
 window.studentDashboard=async function(){
-  const s=await studentRecord();if(!s){$('content').innerHTML='<div class="card empty">Sua conta não está vinculada a um cadastro de aluno.</div>';return}
+  const s=await studentRecord();if(!s){window.$('content').innerHTML='<div class="card empty">Sua conta não está vinculada a um cadastro de aluno.</div>';return}
   const snap=await ticRecalculateStudentProgressV19(s.id);
   const [{data:ta},{data:pay}]=await Promise.all([sb.from('tic_task_assignments').select('*,tic_assignments(title,due_at)').eq('student_id',s.id).eq('active',true).limit(8),sb.from('tic_monthly_payments').select('*').eq('student_id',s.id).order('reference_month',{ascending:false}).limit(3)]);
   const overall=Number(snap?.overall||0);
   setPage(`Hello, ${s.display_name?.split(' ')[0]||'Student'} 👋`,'Seu espaço de aprendizagem.');
-  $('content').innerHTML=`<div class="student-banner"><div style="font-size:11px;letter-spacing:1.5px;color:#aaa1bd">CURRENT LEVEL</div><h2>${esc(s.current_level)} → ${esc(s.target_level||'—')}</h2><p>Progresso geral: <b>${overall}%</b> · ${snap?.done||0}/${snap?.total||0} Lessons concluídas</p><div class="progress" style="margin-top:10px;background:#ffffff22"><i style="width:${overall}%;background:#fff"></i></div></div><div class="grid cols2 section"><div class="card"><div class="section-head"><h2>✅ My Tasks</h2></div>${(ta||[]).map(x=>`<div class="row task-row" style="cursor:pointer" onclick="openStudentTask('${x.id}')"><div><b>${esc(x.tic_assignments?.title||'Task')}</b><small>${x.tic_assignments?.due_at?'Prazo '+fmtDate(x.tic_assignments.due_at):'Sem prazo'}</small></div><div style="display:flex;align-items:center;gap:8px"><span onclick="event.stopPropagation()">${badge(x.status)}</span><button class="btn sm secondary" onclick="event.stopPropagation();openStudentTask('${x.id}')">Abrir</button></div></div>`).join('')||'<div class="empty">Nenhuma tarefa.</div>'}</div><div class="card"><div class="section-head"><h2>📊 My Progress</h2><span>${overall}% do currículo</span></div><div class="metric"><span>Lessons concluídas</span><b>${snap?.done||0} / ${snap?.total||0}</b></div><div class="progress" style="margin:8px 0 16px"><i style="width:${overall}%"></i></div>${['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'].map(k=>`<div class="mini"><span>${k}</span><b>nível ${esc(s.current_level)}</b></div>`).join('')}</div></div><div class="card section"><div class="section-head"><h2>💰 My Payments</h2></div>${(pay||[]).map(x=>`<div class="row"><div><b>${monthLabel(x.reference_month)}</b><small>${x.payment_date?'Pago em '+fmtDate(x.payment_date):'Vencimento '+fmtDate(x.due_date)}</small></div><b>${money(x.amount)} ${badge(x.status)}</b></div>`).join('')||'<div class="empty">Nenhum registro.</div>'}</div>`;
+  window.$('content').innerHTML=`<div class="student-banner"><div style="font-size:11px;letter-spacing:1.5px;color:#aaa1bd">CURRENT LEVEL</div><h2>${esc(s.current_level)} → ${esc(s.target_level||'—')}</h2><p>Progresso geral: <b>${overall}%</b> · ${snap?.done||0}/${snap?.total||0} Lessons concluídas</p><div class="progress" style="margin-top:10px;background:#ffffff22"><i style="width:${overall}%;background:#fff"></i></div></div><div class="grid cols2 section"><div class="card"><div class="section-head"><h2>✅ My Tasks</h2></div>${(ta||[]).map(x=>`<div class="row task-row" style="cursor:pointer" onclick="openStudentTask('${x.id}')"><div><b>${esc(x.tic_assignments?.title||'Task')}</b><small>${x.tic_assignments?.due_at?'Prazo '+fmtDate(x.tic_assignments.due_at):'Sem prazo'}</small></div><div style="display:flex;align-items:center;gap:8px"><span onclick="event.stopPropagation()">${badge(x.status)}</span><button class="btn sm secondary" onclick="event.stopPropagation();openStudentTask('${x.id}')">Abrir</button></div></div>`).join('')||'<div class="empty">Nenhuma tarefa.</div>'}</div><div class="card"><div class="section-head"><h2>📊 My Progress</h2><span>${overall}% do currículo</span></div><div class="metric"><span>Lessons concluídas</span><b>${snap?.done||0} / ${snap?.total||0}</b></div><div class="progress" style="margin:8px 0 16px"><i style="width:${overall}%"></i></div>${['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'].map(k=>`<div class="mini"><span>${k}</span><b>nível ${esc(s.current_level)}</b></div>`).join('')}</div></div><div class="card section"><div class="section-head"><h2>💰 My Payments</h2></div>${(pay||[]).map(x=>`<div class="row"><div><b>${monthLabel(x.reference_month)}</b><small>${x.payment_date?'Pago em '+fmtDate(x.payment_date):'Vencimento '+fmtDate(x.due_date)}</small></div><b>${money(x.amount)} ${badge(x.status)}</b></div>`).join('')||'<div class="empty">Nenhum registro.</div>'}</div>`;
 };
 
 /* My Courses also uses the teacher-defined order through V19 resolver. */
 window.studentCoursesPage=async function(){
-  const s=await studentRecord();if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um aluno.</div>';return}
+  const s=await studentRecord();if(!s){window.$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um aluno.</div>';return}
   try{
     const courses=await ticGetStudentOrderedCoursesV19(s.id);setPage('My Courses','Seus cursos em ordem pedagógica.');
-    if(!courses.length){$('content').innerHTML='<div class="card empty">Você ainda não está matriculado em nenhum curso.</div>';return}
+    if(!courses.length){window.$('content').innerHTML='<div class="card empty">Você ainda não está matriculado em nenhum curso.</div>';return}
     const ids=courses.map(c=>c.id);const [{data:mods},{data:lessons},{data:lp}]=await Promise.all([sb.from('tic_modules').select('*').in('course_id',ids).order('position'),sb.from('tic_lessons').select('*').in('course_id',ids).eq('active',true).order('position').order('created_at'),sb.from('tic_lesson_progress').select('lesson_id,first_completed_at').eq('student_id',s.id)]);const doneSet=new Set((lp||[]).filter(x=>x.first_completed_at).map(x=>x.lesson_id));
     const cards=courses.map((c,ci)=>{const ms=(mods||[]).filter(m=>m.course_id===c.id).sort((a,b)=>(a.position||0)-(b.position||0));const ls=(lessons||[]).filter(l=>l.course_id===c.id).sort((a,b)=>(a.position||0)-(b.position||0));const done=ls.filter(l=>doneSet.has(l.id)).length;return `<article class="student-course-hero card"><div class="student-course-head"><div><span class="badge blue">${ci+1}. ${esc(c.level||'')}</span><h2>📚 ${esc(c.title)}</h2><p>${esc(c.description||'Curso de inglês')}</p></div><span class="badge green">Acesso ativo</span></div><div class="student-course-metrics"><span><b>${ms.length}</b> módulos</span><span><b>${ls.length}</b> lessons</span><span><b>${done}</b> concluídas</span></div><button class="btn primary" onclick="openStudentCourse('${c.id}')">Abrir currículo →</button></article>`}).join('');
-    $('content').innerHTML=`<div class="notice success">🛤️ <b>Sequência pedagógica:</b> os cursos aparecem na ordem definida pelo Teacher.</div><div class="tic-student-course-order section">${cards}</div>`;
-  }catch(e){$('content').innerHTML=`<div class="card attention">${esc(e.message||e)}</div>`}
+    window.$('content').innerHTML=`<div class="notice success">🛤️ <b>Sequência pedagógica:</b> os cursos aparecem na ordem definida pelo Teacher.</div><div class="tic-student-course-order section">${cards}</div>`;
+  }catch(e){window.$('content').innerHTML=`<div class="card attention">${esc(e.message||e)}</div>`}
 };
 
 /* Teacher progress cards read the recalculated data; student view remains consistent. */
 window.progressPage=async function(student=false){
   let students=[];
-  if(student){const {data:s}=await sb.from('tic_students').select('*').eq('auth_user_id',session.user.id).maybeSingle();if(!s){$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}students=[s]}
-  else{const {data:s}=await sb.from('tic_students').select('*').eq('teacher_id',session.user.id).eq('status','active');students=s||[]}
+  if(student){const {data:s}=await sb.from('tic_students').select('*').eq('auth_user_id',window.session.user.id).maybeSingle();if(!s){window.$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}students=[s]}
+  else{const {data:s}=await sb.from('tic_students').select('*').eq('teacher_id',window.session.user.id).eq('status','active');students=s||[]}
   for(const s of students)await ticRecalculateStudentProgressV19(s.id);
   const ids=students.map(s=>s.id);const {data:p}=ids.length?await sb.from('tic_progress').select('*').in('student_id',ids):{data:[]};
-  $('content').innerHTML=`<div class="grid cols3">${students.map(s=>{const overall=Number(p?.find(x=>x.student_id===s.id&&x.skill==='overall'&&x.level===s.current_level)?.progress||0);return `<div class="card"><div class="section-head"><h2>${esc(s.display_name)}</h2><span>${esc(s.current_level)}</span></div><div style="font:800 30px 'Plus Jakarta Sans'">${overall}%</div><div class="progress"><i style="width:${overall}%"></i></div><div style="margin-top:15px">${['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'].map(k=>{const v=Number(p?.find(x=>x.student_id===s.id&&x.skill===k&&x.level===s.current_level)?.progress||0);return `<div class="mini"><span>${k}</span><b>${v}%</b></div><div class="progress" style="height:6px;margin-bottom:9px"><i style="width:${v}%"></i></div>`}).join('')}</div></div>`}).join('')||'<div class="card empty">Nenhum aluno.</div>'}</div>`;
+  window.$('content').innerHTML=`<div class="grid cols3">${students.map(s=>{const overall=Number(p?.find(x=>x.student_id===s.id&&x.skill==='overall'&&x.level===s.current_level)?.progress||0);return `<div class="card"><div class="section-head"><h2>${esc(s.display_name)}</h2><span>${esc(s.current_level)}</span></div><div style="font:800 30px 'Plus Jakarta Sans'">${overall}%</div><div class="progress"><i style="width:${overall}%"></i></div><div style="margin-top:15px">${['grammar','vocabulary','listening','reading','writing','speaking','pronunciation'].map(k=>{const v=Number(p?.find(x=>x.student_id===s.id&&x.skill===k&&x.level===s.current_level)?.progress||0);return `<div class="mini"><span>${k}</span><b>${v}%</b></div><div class="progress" style="height:6px;margin-bottom:9px"><i style="width:${v}%"></i></div>`}).join('')}</div></div>`}).join('')||'<div class="card empty">Nenhum aluno.</div>'}</div>`;
 };
 </script>
 <!-- V33 SAFE ADDITIVE PATCH: Student Tasks navigation/viewer. No existing function removed. -->
@@ -3605,10 +3605,10 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
 
   window.resourcesPageV39=async function(){
     const [{data:materials,error:me},{data:folders,error:fe}]=await Promise.all([
-      sb.from('tic_materials').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false}),
-      sb.from('tic_material_folders').select('*').eq('teacher_id',session.user.id).order('name')
+      sb.from('tic_materials').select('*').eq('teacher_id',window.session.user.id).order('created_at',{ascending:false}),
+      sb.from('tic_material_folders').select('*').eq('teacher_id',window.session.user.id).order('name')
     ]);
-    if(me)return $('content').innerHTML=`<div class="card attention">${escR(me.message)}</div>`;
+    if(me)return window.$('content').innerHTML=`<div class="card attention">${escR(me.message)}</div>`;
     const mats=materials||[], fs=folders||[];
     const resources=[];
     mats.forEach(m=>{
@@ -3618,7 +3618,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
     const q=(window.__ticResourceSearchV39||'').toLowerCase();
     const filtered=resources.filter(r=>`${r.title||''} ${r.description||''} ${r.type||''} ${r._material.title||''}`.toLowerCase().includes(q));
     setPage('Resources','Biblioteca do Teacher: links, PDFs, vídeos, áudios, Drive, Docs e vários recursos.','<button class="btn primary" onclick="openResourceFormV39()">+ Novo resource</button>');
-    $('content').innerHTML=`<div class="resource-library-v39">
+    window.$('content').innerHTML=`<div class="resource-library-v39">
       <div class="resource-overview-v39">
         <div class="resource-stat-v39"><span>🧰 Resources</span><b>${resources.length}</b><small>recursos cadastrados</small></div>
         <div class="resource-stat-v39"><span>📂 Materials</span><b>${mats.length}</b><small>materiais preservados</small></div>
@@ -3646,10 +3646,10 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
 
   window.saveResourceV39=async function(e,classId=''){
     e.preventDefault();
-    const title=$('r39Title')?.value.trim(); const rows=typeof collectResources==='function'?collectResources('r39Rows'):[];
+    const title=window.$('r39Title')?.value.trim(); const rows=typeof collectResources==='function'?collectResources('r39Rows'):[];
     if(!title)return toast('Informe o nome do resource.','error');
     if(!rows.length)return toast('Adicione pelo menos um link ou recurso.','error');
-    const o={teacher_id:session.user.id,title,material_type:rows[0]?.type||'link',level:$('r39Level')?.value||null,description:$('r39Desc')?.value.trim()||null,resource_items:rows,color:$('r39Color')?.value||'#6d4aff'};
+    const o={teacher_id:window.session.user.id,title,material_type:rows[0]?.type||'link',level:window.$('r39Level')?.value||null,description:window.$('r39Desc')?.value.trim()||null,resource_items:rows,color:window.$('r39Color')?.value||'#6d4aff'};
     const {data:mat,error}=await sb.from('tic_materials').insert(o).select().single();
     if(error)return toast('Não foi possível salvar o resource: '+error.message,'error');
     closeModal();toast('Resource criado e preservado em Materials.','success');
@@ -3658,9 +3658,9 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   };
 
   window.openResourceTargetV39=async function(materialId){
-    const {data:classes}=await sb.from('tic_classes').select('id,name,level').eq('teacher_id',session.user.id).eq('status','active').order('name');
+    const {data:classes}=await sb.from('tic_classes').select('id,name,level').eq('teacher_id',window.session.user.id).eq('status','active').order('name');
     if(!classes?.length)return toast('Crie uma Class antes de inserir o resource.','info');
-    openModal('📤 Inserir Resource na Class',`<div class="form"><div class="field"><label>Class</label><select id="r39Class">${classes.map(c=>`<option value="${c.id}">${escR(c.name)} · ${escR(c.level||'')}</option>`).join('')}</select></div><div class="notice">Depois de escolher a Class, você poderá disponibilizar para <b>todos os alunos</b> ou somente para um aluno.</div><div class="modal-actions"><button class="btn primary" onclick="const cid=$('r39Class').value;closeModal();openResourceAudienceV39(cid,'${materialId}')">Continuar →</button></div></div>`);
+    openModal('📤 Inserir Resource na Class',`<div class="form"><div class="field"><label>Class</label><select id="r39Class">${classes.map(c=>`<option value="${c.id}">${escR(c.name)} · ${escR(c.level||'')}</option>`).join('')}</select></div><div class="notice">Depois de escolher a Class, você poderá disponibilizar para <b>todos os alunos</b> ou somente para um aluno.</div><div class="modal-actions"><button class="btn primary" onclick="const cid=window.$('r39Class').value;closeModal();openResourceAudienceV39(cid,'${materialId}')">Continuar →</button></div></div>`);
   };
 
   window.openResourceAudienceV39=async function(classId,materialId){
@@ -3670,9 +3670,9 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   };
 
   window.assignResourceAudienceV39=async function(classId,materialId){
-    const mode=$('r39Audience')?.value||'class'; let studentIds=null;
+    const mode=window.$('r39Audience')?.value||'class'; let studentIds=null;
     if(mode==='students'){
-      studentIds=[...($('r39Students')?.selectedOptions||[])].map(x=>x.value).filter(Boolean);
+      studentIds=[...(window.$('r39Students')?.selectedOptions||[])].map(x=>x.value).filter(Boolean);
       if(!studentIds.length)return toast('Selecione pelo menos um aluno.','error');
     }
     /* 'class' means publish to the Class itself. It must work even when the Class has zero active students. */
@@ -3680,9 +3680,9 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   };
 
   async function assignResourceMaterialToClassV39(classId,materialId,studentIds=null){
-    const {data:source,error:se}=await sb.from('tic_materials').select('*').eq('id',materialId).eq('teacher_id',session.user.id).maybeSingle();
+    const {data:source,error:se}=await sb.from('tic_materials').select('*').eq('id',materialId).eq('teacher_id',window.session.user.id).maybeSingle();
     if(se||!source)return toast('Resource não encontrado.','error');
-    const payload={teacher_id:session.user.id,class_id:classId,title:source.title,instructions:source.description||'',assignment_type:'material',due_at:null,points:0,priority:'normal',resource_items:Array.isArray(source.resource_items)?source.resource_items:[],cover_image_url:source.cover_image_url||null,source_type:'material',source_id:source.id};
+    const payload={teacher_id:window.session.user.id,class_id:classId,title:source.title,instructions:source.description||'',assignment_type:'material',due_at:null,points:0,priority:'normal',resource_items:Array.isArray(source.resource_items)?source.resource_items:[],cover_image_url:source.cover_image_url||null,source_type:'material',source_id:source.id};
     const {data:a,error:ae}=await sb.from('tic_assignments').insert(payload).select().single();
     if(ae)return toast('Não foi possível inserir na Class: '+ae.message,'error');
 
@@ -3699,26 +3699,26 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   window.assignResourceMaterialToClassV39=assignResourceMaterialToClassV39;
 
   window.openResourcePickerV39=async function(classId){
-    const {data,error}=await sb.from('tic_materials').select('id,title,level,material_type,resource_items,description').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+    const {data,error}=await sb.from('tic_materials').select('id,title,level,material_type,resource_items,description').eq('teacher_id',window.session.user.id).order('created_at',{ascending:false});
     if(error)return toast(error.message,'error');
     openModal('📚 Inserir Resources existentes',`<div class="form"><div class="field"><label>Resources / Materials <span style="font-weight:500;color:var(--muted)">— selecione vários</span></label><select id="r39Pick" multiple size="10" style="min-height:230px">${(data||[]).map(x=>`<option value="${x.id}">${escR(x.title)} · ${escR(x.level||'')} · ${escR(x.material_type||'resource')}</option>`).join('')||'<option value="">Nenhum resource cadastrado</option>'}</select><small style="color:var(--muted)">Ctrl/Cmd para selecionar vários.</small></div><div class="field"><label>Destino</label><select id="r39PickAudience"><option value="class">👥 Todos os alunos da Class</option><option value="student">👤 Um aluno específico</option></select></div><div id="r39PickStudentBox"></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="insertPickedResourcesV39('${classId}')">📤 Inserir selecionados</button></div></div>`);
-    $('r39PickAudience').addEventListener('change',async()=>{
-      if($('r39PickAudience').value!=='student'){ $('r39PickStudentBox').innerHTML=''; return; }
+    window.$('r39PickAudience').addEventListener('change',async()=>{
+      if(window.$('r39PickAudience').value!=='student'){ window.$('r39PickStudentBox').innerHTML=''; return; }
       const {data:m}=await sb.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active'); const ids=(m||[]).map(x=>x.student_id); const {data:st}=ids.length?await sb.from('tic_students').select('id,display_name,current_level').in('id',ids).order('display_name'):({data:[]});
-      $('r39PickStudentBox').innerHTML=`<div class="field"><label>Aluno</label><select id="r39PickStudent">${(st||[]).map(x=>`<option value="${x.id}">${escR(x.display_name)} · ${escR(x.current_level||'')}</option>`).join('')}</select></div>`;
+      window.$('r39PickStudentBox').innerHTML=`<div class="field"><label>Aluno</label><select id="r39PickStudent">${(st||[]).map(x=>`<option value="${x.id}">${escR(x.display_name)} · ${escR(x.current_level||'')}</option>`).join('')}</select></div>`;
     });
   };
   window.insertPickedResourcesV39=async function(classId){
-    const ids=[...($('r39Pick')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);if(!ids.length)return toast('Selecione pelo menos um resource.','error');
-    const target=$('r39PickAudience')?.value||'class';let studentIds=null;
-    if(target==='student')studentIds=[$('r39PickStudent')?.value].filter(Boolean);
+    const ids=[...(window.$('r39Pick')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);if(!ids.length)return toast('Selecione pelo menos um resource.','error');
+    const target=window.$('r39PickAudience')?.value||'class';let studentIds=null;
+    if(target==='student')studentIds=[window.$('r39PickStudent')?.value].filter(Boolean);
     for(const id of ids)await assignResourceMaterialToClassV39(classId,id,studentIds);
     closeModal();setTimeout(()=>openClassCenter(classId,'resources'),250);
   };
 
   window.loadClassResourcesV39=async function(classId){
-    const box=$('classResourceListV39');if(!box)return;
-    const {data,error}=await sb.from('tic_assignments').select('id,title,assignment_type,resource_items,created_at,source_id').eq('class_id',classId).eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+    const box=window.$('classResourceListV39');if(!box)return;
+    const {data,error}=await sb.from('tic_assignments').select('id,title,assignment_type,resource_items,created_at,source_id').eq('class_id',classId).eq('teacher_id',window.session.user.id).order('created_at',{ascending:false});
     if(error){box.innerHTML=`<div class="class-center-empty">${escR(error.message)}</div>`;return;}
     const rows=[];(data||[]).forEach(a=>(Array.isArray(a.resource_items)?a.resource_items:[]).forEach(r=>rows.push({...r,assignment:a})));
     box.innerHTML=rows.map(r=>`<article class="class-resource-card-v39"><div class="resource-big-icon-v39">${iconR(r.type)}</div><div style="flex:1"><b>${escR(r.title||r.assignment.title)}</b><small>${escR(typeLabelR(r.type))} · inserido em ${new Date(r.assignment.created_at).toLocaleDateString('pt-BR')}</small>${r.description?`<p>${escR(r.description)}</p>`:''}</div><a class="btn sm secondary" href="${escR(r.url||r.link||'#')}" target="_blank" rel="noopener">Abrir ↗</a></article>`).join('')||'<div class="class-center-empty">Nenhum resource inserido nesta Class ainda.</div>';
@@ -3847,10 +3847,10 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   let activityStartingV41=false;
 
   async function findStudentForSessionV41(){
-    if(!session?.user?.id) return null;
+    if(!window.session?.user?.id) return null;
     const {data,error}=await sb.from('tic_students')
       .select('id,teacher_id,auth_user_id,display_name,status')
-      .eq('auth_user_id',session.user.id)
+      .eq('auth_user_id',window.session.user.id)
       .maybeSingle();
     if(error){ console.warn('[V41 activity]',error.message); return null; }
     return data||null;
@@ -3885,7 +3885,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   }
 
   async function startActivityV41(){
-    if(activityStartingV41 || activityRowV41 || !session?.user?.id) return;
+    if(activityStartingV41 || activityRowV41 || !window.session?.user?.id) return;
     activityStartingV41=true;
     try{
       const st=await findStudentForSessionV41();
@@ -3894,7 +3894,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
       const now=new Date().toISOString();
       const {data,error}=await sb.from('tic_student_activity').insert({
         student_id:st.id,
-        auth_user_id:session.user.id,
+        auth_user_id:window.session.user.id,
         started_at:now,
         last_seen_at:now,
         duration_seconds:0,
@@ -3931,14 +3931,14 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
     sb.auth.onAuthStateChange((event,s)=>{
       if(s && s.user){
         setTimeout(()=>{
-          if(profile?.role==='student') startActivityV41();
+          if(window.profile?.role==='student') startActivityV41();
         },400);
       }else{
         stopActivityV41();
       }
     });
   }
-  setTimeout(()=>{ if(profile?.role==='student' && session?.user?.id) startActivityV41(); },700);
+  setTimeout(()=>{ if(window.profile?.role==='student' && window.session?.user?.id) startActivityV41(); },700);
 
   /* ---------- Activity aggregation for Teacher ---------- */
   async function getActivityMapV41(studentIds){
@@ -4011,9 +4011,9 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
     currentView='classCenter';
     document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='classCenter'));
     if(typeof setPage==='function') setPage('Class Center','Gerencie turmas, alunos, conteúdo, Board e atividade em um único workspace.','<button class="btn primary" onclick="openClassForm()">+ Nova Class</button>');
-    const content=$('content');
+    const content=window.$('content');
     content.innerHTML='<div class="class-center-v41"><div class="v41-loading">Carregando Class Center...</div></div>';
-    const {data:classes,error}=await sb.from('tic_classes').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+    const {data:classes,error}=await sb.from('tic_classes').select('*').eq('teacher_id',window.session.user.id).order('created_at',{ascending:false});
     if(error){
       content.innerHTML=`<div class="card attention"><b>Não foi possível carregar o Class Center.</b><p>${escV41(error.message)}</p><button class="btn primary" onclick="window.classCenterHomeV41()">Tentar novamente</button></div>`;
       return;
@@ -4060,7 +4060,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   }
 
   async function openClassCenterV41(classId,initialTab='overview'){
-    const {data:cls,error}=await sb.from('tic_classes').select('*').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle();
+    const {data:cls,error}=await sb.from('tic_classes').select('*').eq('id',classId).eq('teacher_id',window.session.user.id).maybeSingle();
     if(error||!cls)return toast(error?.message||'Class não encontrada.','error');
 
     const {data:members,error:memberError}=await sb.from('tic_class_students')
@@ -4070,8 +4070,8 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
     const activeIds=(members||[]).filter(x=>x.status==='active').map(x=>x.student_id);
     const [{data:students,error:se},{data:assignments,error:ae},{data:events,error:ee}]=await Promise.all([
       activeIds.length?sb.from('tic_students').select('id,display_name,current_level,email,status').in('id',activeIds).order('display_name'):Promise.resolve({data:[],error:null}),
-      sb.from('tic_assignments').select('id,title,instructions,due_at,points,assignment_type,active,created_at,task_level,cefr_level,skill,resource_items,class_id').eq('class_id',classId).eq('teacher_id',session.user.id).order('created_at',{ascending:false}),
-      sb.from('tic_events').select('id,title,event_type,starts_at,ends_at,notes,meeting_url,status,created_at').eq('class_id',classId).eq('teacher_id',session.user.id).order('starts_at',{ascending:false})
+      sb.from('tic_assignments').select('id,title,instructions,due_at,points,assignment_type,active,created_at,task_level,cefr_level,skill,resource_items,class_id').eq('class_id',classId).eq('teacher_id',window.session.user.id).order('created_at',{ascending:false}),
+      sb.from('tic_events').select('id,title,event_type,starts_at,ends_at,notes,meeting_url,status,created_at').eq('class_id',classId).eq('teacher_id',window.session.user.id).order('starts_at',{ascending:false})
     ]);
     if(se)return toast('Erro ao carregar alunos: '+se.message,'error');
     if(ae)return toast('Erro ao carregar conteúdo da Class: '+ae.message,'error');
@@ -4079,7 +4079,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
 
     /* Board is optional here: if the table/policy has an issue, the rest of Class Center still opens. */
     let boardItems=[];
-    const br=await sb.from('tic_class_board_items').select('id,title,description,item_type,status,position,source_type,source_id,created_at,updated_at').eq('class_id',classId).eq('teacher_id',session.user.id).order('position').order('created_at');
+    const br=await sb.from('tic_class_board_items').select('id,title,description,item_type,status,position,source_type,source_id,created_at,updated_at').eq('class_id',classId).eq('teacher_id',window.session.user.id).order('position').order('created_at');
     if(!br.error) boardItems=br.data||[];
 
     window.__ticClassCenterV41={classId,cls,students:students||[],tasks:assignments||[],evs:events||[],boardItems};
@@ -4088,7 +4088,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
       ['students','👥 Alunos'],['tasks','📝 Tasks'],['materials','🔗 Materiais'],
       ['resources','🧰 Resources'],['notes','💬 Observações'],['progress','📈 Progresso']
     ];
-    $('content').innerHTML=`<div class="v41-class-shell" data-v41-class="${escV41(classId)}">
+    window.$('content').innerHTML=`<div class="v41-class-shell" data-v41-class="${escV41(classId)}">
       <header class="v41-class-head">
         <div class="v41-class-head-main">
           <div><span class="badge blue">${escV41(cls.level||'A1')}</span><h2>🎯 ${escV41(cls.name||'Class')}</h2><small>${escV41(cls.schedule_text||'Horário não definido')} · ${cls.meeting_url?'Aula online configurada':'Aula online não definida'}</small></div>
@@ -4133,9 +4133,9 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
     const existing=(s.boardItems||[]).find(x=>x.source_id===id);
     let r;
     if(existing){
-      r=await sb.from('tic_class_board_items').update({status:newStatus,updated_at:new Date().toISOString()}).eq('id',existing.id).eq('teacher_id',session.user.id);
+      r=await sb.from('tic_class_board_items').update({status:newStatus,updated_at:new Date().toISOString()}).eq('id',existing.id).eq('teacher_id',window.session.user.id);
     }else{
-      r=await sb.from('tic_class_board_items').insert({teacher_id:session.user.id,class_id:s.classId,title:task.title,description:task.instructions||null,item_type:task.assignment_type||'task',status:newStatus,position:Date.now(),source_type:'assignment',source_id:id});
+      r=await sb.from('tic_class_board_items').insert({teacher_id:window.session.user.id,class_id:s.classId,title:task.title,description:task.instructions||null,item_type:task.assignment_type||'task',status:newStatus,position:Date.now(),source_type:'assignment',source_id:id});
     }
     if(r.error)return toast('Não foi possível salvar o Board: '+r.error.message,'error');
     await openClassCenterV41(s.classId,'board');
@@ -4229,8 +4229,8 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
 
   /* ---------- Fix: Class-level assignment must work with ZERO active students ---------- */
   window.assignClassContentV41=async function(classId,type){
-    const selected=[...($('caSource')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
-    const sourceIds=selected.length?selected:($('caSource')?.value?[ $('caSource').value ]:[]);
+    const selected=[...(window.$('caSource')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
+    const sourceIds=selected.length?selected:(window.$('caSource')?.value?[ window.$('caSource').value ]:[]);
     if(!sourceIds.length)return toast(type==='material'?'Selecione pelo menos um material.':'Selecione um conteúdo.','error');
 
     const sourceType=type==='plan'?'lesson':type;
@@ -4242,18 +4242,18 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
     const studentIds=[...new Set((members||[]).map(x=>x.student_id).filter(Boolean))];
 
     for(const sourceId of sourceIds){
-      const {data:source,error:se}=await sb.from(table).select('*').eq('id',sourceId).eq('teacher_id',session.user.id).maybeSingle();
+      const {data:source,error:se}=await sb.from(table).select('*').eq('id',sourceId).eq('teacher_id',window.session.user.id).maybeSingle();
       if(se||!source){toast(`Conteúdo não encontrado: ${sourceId}`,'error');continue;}
 
       const payload={
-        teacher_id:session.user.id,
+        teacher_id:window.session.user.id,
         lesson_id:sourceType==='lesson'?source.id:null,
         class_id:classId,
         title:source.title,
-        instructions:$('caMessage')?.value.trim()||source.description||source.content||'',
+        instructions:window.$('caMessage')?.value.trim()||source.description||source.content||'',
         assignment_type:type==='plan'?'lesson_plan':sourceType==='lesson'?'lesson':'material',
-        due_at:$('caDue')?.value?new Date($('caDue').value).toISOString():null,
-        points:Number($('caPoints')?.value||0),
+        due_at:window.$('caDue')?.value?new Date(window.$('caDue').value).toISOString():null,
+        points:Number(window.$('caPoints')?.value||0),
         priority:'normal',
         resource_items:Array.isArray(source.resource_items)?source.resource_items:[],
         cover_image_url:source.cover_image_url||null,
@@ -4285,16 +4285,16 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   };
 
   window.assignExistingTaskToClassV41=async function(classId){
-    const assignmentId=$('caSource')?.value;
+    const assignmentId=window.$('caSource')?.value;
     if(!assignmentId)return toast('Selecione uma tarefa.','error');
-    const {data:task,error:te}=await sb.from('tic_assignments').select('id,title,class_id').eq('id',assignmentId).eq('teacher_id',session.user.id).maybeSingle();
+    const {data:task,error:te}=await sb.from('tic_assignments').select('id,title,class_id').eq('id',assignmentId).eq('teacher_id',window.session.user.id).maybeSingle();
     if(te||!task)return toast('Tarefa não encontrada.','error');
 
     const {data:members,error:me}=await sb.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active');
     if(me)return toast(me.message,'error');
     const ids=[...new Set((members||[]).map(x=>x.student_id).filter(Boolean))];
     if(!ids.length){
-      const r=await sb.from('tic_assignments').update({class_id:classId}).eq('id',assignmentId).eq('teacher_id',session.user.id);
+      const r=await sb.from('tic_assignments').update({class_id:classId}).eq('id',assignmentId).eq('teacher_id',window.session.user.id);
       if(r.error)return toast('Não foi possível registrar a tarefa na Class: '+r.error.message,'error');
       closeModal();toast('Tarefa registrada na Class, mesmo sem alunos ativos.','success');
       setTimeout(()=>openClassCenterV41(classId,'tasks'),250);
@@ -4307,7 +4307,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
       const r=await sb.from('tic_task_assignments').insert(rows);
       if(r.error)return toast(r.error.message,'error');
     }
-    await sb.from('tic_assignments').update({class_id:classId}).eq('id',assignmentId).eq('teacher_id',session.user.id);
+    await sb.from('tic_assignments').update({class_id:classId}).eq('id',assignmentId).eq('teacher_id',window.session.user.id);
     closeModal();toast(`Tarefa registrada na Class e vinculada a ${rows.length} aluno(s).`,'success');
     setTimeout(()=>openClassCenterV41(classId,'tasks'),250);
   };
@@ -4319,7 +4319,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   /* ---------- Fix: member management reactivates existing rows instead of inserting duplicates ---------- */
   window.saveClassMembers=async function(e,classId){
     e.preventDefault();
-    const ids=[...($('cmStudents')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
+    const ids=[...(window.$('cmStudents')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
     const {data:old,error:oe}=await sb.from('tic_class_students').select('id,student_id,status').eq('class_id',classId);
     if(oe)return toast('Não foi possível ler os vínculos: '+oe.message,'error');
     const wanted=new Set(ids);
@@ -4430,7 +4430,7 @@ right:-70px;top:-100px;background:rgba(255,255,255,.08);box-shadow:0 0 0 45px rg
   /* Dashboard: new visual shell, same underlying Supabase sources. */
   window.studentDashboardV42=async function(){
     const s=await studentRecord();
-    if(!s){$('content').innerHTML='<div class="card empty">Sua conta não está vinculada a um cadastro de aluno.</div>';return}
+    if(!s){window.$('content').innerHTML='<div class="card empty">Sua conta não está vinculada a um cadastro de aluno.</div>';return}
     let snap={overall:0,done:0,total:0};
     try{snap=await ticRecalculateStudentProgressV19(s.id)||snap}catch(_){}
     const [{data:ta},{data:pay},{data:members}]=await Promise.all([
@@ -4451,7 +4451,7 @@ right:-70px;top:-100px;background:rgba(255,255,255,.08);box-shadow:0 0 0 45px rg
     const upcoming=(ta||[]).filter(x=>x.status!=='graded'&&x.status!=='submitted').slice(0,6);
     const overall=Number(snap.overall||0);
     setPage(`Hello, ${s.display_name?.split(' ')[0]||'Student'} 👋`,'Seu espaço de aprendizagem.');
-    $('content').innerHTML=`<div class="student-v42">
+    window.$('content').innerHTML=`<div class="student-v42">
       <section class="student-v42-hero">
         <span class="student-v42-kicker">MY LEARNING</span>
         <h2>${esc42(s.display_name||'Student')} · ${esc42(s.current_level||'')}</h2>
@@ -4643,13 +4643,13 @@ const icon43=v=>{const x=String(v||'').toLowerCase();return x==='video'?'🎬':x
 
 window.studentDashboard=async function(){
   const s=await studentRecord();
-  if(!s){$('content').innerHTML='<div class="card empty">Sua conta não está vinculada a um cadastro de aluno.</div>';return}
+  if(!s){window.$('content').innerHTML='<div class="card empty">Sua conta não está vinculada a um cadastro de aluno.</div>';return}
 
   let snap={overall:0,done:0,total:0};
   try{snap=await ticRecalculateStudentProgressV19(s.id)||snap}catch(_){}
 
   const {data:members,error:me}=await sb.from('tic_class_students').select('class_id,status').eq('student_id',s.id).eq('status','active');
-  if(me){$('content').innerHTML=`<div class="card attention">Não foi possível carregar suas turmas: ${e43(me.message)}</div>`;return}
+  if(me){window.$('content').innerHTML=`<div class="card attention">Não foi possível carregar suas turmas: ${e43(me.message)}</div>`;return}
 
   const classIds=[...(members||[]).map(x=>x.class_id).filter(Boolean)];
 
@@ -4750,7 +4750,7 @@ window.studentDashboard=async function(){
     </div>`;
   };
 
-  $('content').innerHTML=`
+  window.$('content').innerHTML=`
   <div class="s43">
     <section class="s43-hero">
       <span class="s43-kicker">MY LEARNING</span>
@@ -4890,8 +4890,8 @@ window.openContentRouterV44=function(){
 
 /* Teacher Assignments: only real tasks. Materials/Lessons are no longer listed here. */
 window.assignmentsPage=async function(){
- const {data,error}=await sb.from('tic_assignments').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
- if(error){$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar Assignments.</b><p>${x44(error.message)}</p></div>`;return}
+ const {data,error}=await sb.from('tic_assignments').select('*').eq('teacher_id',window.session.user.id).order('created_at',{ascending:false});
+ if(error){window.$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar Assignments.</b><p>${x44(error.message)}</p></div>`;return}
  const real=(data||[]).filter(a=>!['material','lesson'].includes(String(a.assignment_type||'').toLowerCase()));
  const legacy=(data||[]).filter(a=>['material','lesson'].includes(String(a.assignment_type||'').toLowerCase()));
  let counts={};
@@ -4901,7 +4901,7 @@ window.assignmentsPage=async function(){
    (c||[]).forEach(r=>{counts[r.assignment_id]=(counts[r.assignment_id]||0)+1});
  }
  setPage('Assignments','Somente tarefas e atividades atribuídas aos alunos.');
- $('content').innerHTML=`
+ window.$('content').innerHTML=`
  <div class="v44-hub">
    <div class="v44-hub-head"><div><h2>📝 Assignments</h2><p>Aqui entram somente tarefas/atividades. Lessons, Materials e Resources ficam separados.</p></div><button class="btn primary" onclick="openContentRouterV44()">＋ Criar conteúdo</button></div>
    <div class="v44-filterbar"><input id="v44AsSearch" placeholder="🔎 Buscar tarefa..." oninput="v44FilterAssignments()"><select id="v44AsType" onchange="v44FilterAssignments()"><option value="">Todos os tipos de tarefa</option>${[...new Set(real.map(a=>a.assignment_type).filter(Boolean))].map(t=>`<option value="${x44(t)}">${x44(typ44(t))}</option>`).join('')}</select></div>
@@ -4912,7 +4912,7 @@ window.assignmentsPage=async function(){
  </tbody></table></div></div>`;
 };
 window.v44FilterAssignments=function(){
- const q=($('v44AsSearch')?.value||'').toLowerCase(),t=$('v44AsType')?.value||'';
+ const q=(window.$('v44AsSearch')?.value||'').toLowerCase(),t=window.$('v44AsType')?.value||'';
  document.querySelectorAll('[data-v44-assignment]').forEach(r=>{const ok=(!q||r.innerText.toLowerCase().includes(q))&&(!t||r.dataset.type===t);r.style.display=ok?'':'none'});
 };
 
@@ -4948,11 +4948,11 @@ window.studentClassPage=async function(){
  const __classReq=window.__fiStudentClassReq=(window.__fiStudentClassReq||0)+1;
    window.__fiStudentTasksReq=(window.__fiStudentTasksReq||0)+1;window.__fiStudentDashReq=(window.__fiStudentDashReq||0)+1;const __classRoute=currentView;
  const s=await studentRecord();if(__classReq!==window.__fiStudentClassReq||currentView!==__classRoute)return;
- if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno pelo Teacher.</div>';return}
+ if(!s){window.$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno pelo Teacher.</div>';return}
  const {data:members,error:me}=await sb.from('tic_class_students').select('class_id,status').eq('student_id',s.id).eq('status','active');if(__classReq!==window.__fiStudentClassReq||currentView!==__classRoute)return;
- if(me){$('content').innerHTML=`<div class="card attention">${x44(me.message)}</div>`;return}
+ if(me){window.$('content').innerHTML=`<div class="card attention">${x44(me.message)}</div>`;return}
  const ids=[...(members||[]).map(m=>m.class_id).filter(Boolean)];
- if(!ids.length){$('content').innerHTML='<div class="v44-empty">🏫 Você ainda não está em uma Class.</div>';return}
+ if(!ids.length){window.$('content').innerHTML='<div class="v44-empty">🏫 Você ainda não está em uma Class.</div>';return}
  const [{data:classes},{data:sessions},{data:links},{data:assignments},{data:tas},{data:boards}]=await Promise.all([
   sb.from('tic_classes').select('id,name,level,schedule_text,meeting_url,status').in('id',ids).eq('status','active').order('name'),
   sb.from('tic_class_sessions').select('id,class_id,session_date,duration_minutes,lesson_title,summary,status').in('class_id',ids).order('session_date',{ascending:false}).limit(100),
@@ -4963,7 +4963,7 @@ window.studentClassPage=async function(){
  ]);if(__classReq!==window.__fiStudentClassReq||currentView!==__classRoute)return;
  const cls=classes||[],map=new Map(cls.map(c=>[c.id,c])),taMap=new Map((tas||[]).map(t=>[t.assignment_id,t]));
  let selected=cls[0]?.id||'';
- const root=$('content');const go=name=>{root?.querySelectorAll('[data-v44cp]').forEach(btn=>btn.classList.toggle('active',btn.dataset.v44cp===name));root?.querySelectorAll('[data-v44pane]').forEach(p=>p.classList.toggle('active',p.dataset.v44pane===name))};
+ const root=window.$('content');const go=name=>{root?.querySelectorAll('[data-v44cp]').forEach(btn=>btn.classList.toggle('active',btn.dataset.v44cp===name));root?.querySelectorAll('[data-v44pane]').forEach(p=>p.classList.toggle('active',p.dataset.v44pane===name))};
  const render=()=>{
   const c=map.get(selected)||cls[0];if(!c)return;selected=c.id;
   const cs=(sessions||[]).filter(x=>x.class_id===c.id),now=new Date(),past=cs.filter(x=>new Date(x.session_date)<now).sort((a,b)=>new Date(b.session_date)-new Date(a.session_date)),next=cs.filter(x=>new Date(x.session_date)>=now).sort((a,b)=>new Date(a.session_date)-new Date(b.session_date))[0];
@@ -4975,7 +4975,7 @@ window.studentClassPage=async function(){
   const myTasks=tasks.filter(x=>taMap.has(x.id));
   const bi=(boards||[]).filter(x=>x.class_id===c.id);
   setPage('My Class',`${c.name} · conteúdo separado por categoria`);
-  $('content').innerHTML=`
+  window.$('content').innerHTML=`
   <div class="v44-class-page">
    <div class="v44-class-hero"><div><span class="eyebrow" style="color:#fff">MY CLASS</span><h2>🏫 ${x44(c.name)}</h2><p>${x44(c.level||'')} ${c.schedule_text?'· '+x44(c.schedule_text):''}</p></div><select id="v44ClassSelect" class="v44-class-select">${cls.map(z=>`<option value="${z.id}" ${z.id===c.id?'selected':''}>${x44(z.name)} · ${x44(z.level||'')}</option>`).join('')}</select></div>
    <div class="v44-kpis"><div class="v44-kpi"><span>📖 Aulas anteriores</span><b>${past.length}</b></div><div class="v44-kpi"><span>📚 Lessons da Class</span><b>${lessons.length}</b></div><div class="v44-kpi"><span>🔗 Resources</span><b>${rs.length}</b></div><div class="v44-kpi"><span>📝 Minhas tarefas</span><b>${myTasks.length}</b></div></div>
@@ -4994,7 +4994,7 @@ window.studentClassPage=async function(){
    <section class="v44-class-pane" data-v44pane="board"><div class="v44-card"><h3>📌 Board</h3><p class="desc">Somente avisos e itens publicados no Board desta Class.</p><div class="v44-list">${bi.map(b=>`<div class="v44-row"><div class="v44-row-icon">📌</div><div class="v44-row-main"><b>${x44(b.title)}</b><small>${x44(b.description||'')}${b.item_type?' · '+x44(b.item_type):''}</small></div><span class="badge ${b.status==='completed'?'green':b.status==='in_progress'?'yellow':'blue'}">${x44(b.status||'Publicado')}</span></div>`).join('')||'<div class="v44-empty">Nenhum item no Board.</div>'}</div></div></section>
   </div>`;
   root?.querySelectorAll('[data-v44cp]').forEach(btn=>btn.addEventListener('click',()=>go(btn.dataset.v44cp)));
-  $('v44ClassSelect')?.addEventListener('change',ev=>{selected=ev.target.value;render()});
+  window.$('v44ClassSelect')?.addEventListener('change',ev=>{selected=ev.target.value;render()});
  };
  render();
 };
@@ -5002,7 +5002,7 @@ window.studentClassPage=async function(){
 /* Student dashboard: concise cards, no duplicated content lists. */
 window.studentDashboard=async function(){
  const __dashReq=window.__fiStudentDashReq=(window.__fiStudentDashReq||0)+1;const __dashRoute=currentView;
- const s=await studentRecord();if(__dashReq!==window.__fiStudentDashReq||currentView!==__dashRoute)return;if(!s){$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}
+ const s=await studentRecord();if(__dashReq!==window.__fiStudentDashReq||currentView!==__dashRoute)return;if(!s){window.$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}
  let prog={overall:0,done:0,total:0};try{prog=await ticRecalculateStudentProgressV19(s.id)||prog}catch(_){}if(__dashReq!==window.__fiStudentDashReq||currentView!==__dashRoute)return;
  const {data:members}=await sb.from('tic_class_students').select('class_id').eq('student_id',s.id).eq('status','active');if(__dashReq!==window.__fiStudentDashReq||currentView!==__dashRoute)return;
  const ids=(members||[]).map(x=>x.class_id).filter(Boolean);
@@ -5016,7 +5016,7 @@ window.studentDashboard=async function(){
  const open=(tas||[]).filter(t=>!['submitted','graded'].includes(String(t.status||'').toLowerCase())).length;
  const now=new Date(),past=(sessions||[]).filter(x=>new Date(x.session_date)<now),next=(sessions||[]).filter(x=>new Date(x.session_date)>=now).sort((a,b)=>new Date(a.session_date)-new Date(b.session_date))[0];
  setPage('My Dashboard','Seu espaço de aprendizagem.');
- $('content').innerHTML=`<div class="s43">
+ window.$('content').innerHTML=`<div class="s43">
   <section class="s43-hero"><span class="s43-kicker">MY LEARNING</span><h2>Olá, ${x44(s.display_name?.split(' ')[0]||'Student')} 👋</h2><p>${x44(s.current_level||'—')} · Objetivo ${x44(s.target_level||'—')} · ${prog.done||0}/${prog.total||0} lessons concluídas</p><div class="s43-progress"><i style="width:${Math.max(0,Math.min(100,Number(prog.overall||0)))}%"></i></div><p class="s43-progress-label">${Number(prog.overall||0)}% de progresso geral</p></section>
   <div class="s43-stats">
    <button class="s43-stat" onclick="loadView('studentTasks')" style="text-align:left;cursor:pointer"><span>📝 Minhas tarefas</span><b>${open}</b><small>Ir para My Tasks →</small></button>
@@ -5153,14 +5153,14 @@ window.renderMaterialsTab45=async function renderMaterialsTab45(classId){
     <div id="v45MaterialGrid" class="v45-material-grid"><div class="loading">Carregando materiais...</div></div>
   </div>`;
   const {data,error}=await fetchClassMaterials45(classId);
-  if(error){$('v45MaterialGrid').innerHTML=`<div class="v45-material-empty">${e45(error.message)}</div>`;return}
+  if(error){window.$('v45MaterialGrid').innerHTML=`<div class="v45-material-empty">${e45(error.message)}</div>`;return}
   const rows=data||[];
   const types=new Set(rows.map(x=>String(x.material_type||'link').toLowerCase()));
-  $('v45MaterialCounts').innerHTML=`
+  window.$('v45MaterialCounts').innerHTML=`
     <div class="v45-material-count"><span>📂 Materiais</span><b>${new Set(rows.map(x=>`${x.title}|${x.note||''}`)).size}</b></div>
     <div class="v45-material-count"><span>🔗 Links/arquivos</span><b>${rows.length}</b></div>
     <div class="v45-material-count"><span>🧩 Tipos usados</span><b>${types.size}</b></div>`;
-  $('v45MaterialGrid').innerHTML=renderMaterialCards45(rows);
+  window.$('v45MaterialGrid').innerHTML=renderMaterialCards45(rows);
 }
 
 window.openClassMaterialFormV45=function(classId){
@@ -5182,8 +5182,8 @@ window.openClassMaterialFormV45=function(classId){
 
 window.saveClassMaterialV45=async function(ev,classId){
   ev.preventDefault();
-  const title=$('cm45Title')?.value.trim();
-  const note=$('cm45Note')?.value.trim()||null;
+  const title=window.$('cm45Title')?.value.trim();
+  const note=window.$('cm45Note')?.value.trim()||null;
   const resources=typeof collectResources==='function'?collectResources('cm45Rows'):[];
   if(!title)return toast('Informe o nome do material.','error');
   if(!resources.length)return toast('Adicione pelo menos um link/arquivo.','error');
@@ -5204,7 +5204,7 @@ window.saveClassMaterialV45=async function(ev,classId){
 };
 
 window.openClassMaterialLibraryV45=async function(classId){
-  const {data,error}=await sb.from('tic_materials').select('id,title,level,material_type,resource_items,description,external_url,file_url,created_at').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+  const {data,error}=await sb.from('tic_materials').select('id,title,level,material_type,resource_items,description,external_url,file_url,created_at').eq('teacher_id',window.session.user.id).order('created_at',{ascending:false});
   if(error)return toast(error.message,'error');
   openModal('📚 Inserir materiais da biblioteca',`
     <div class="form">
@@ -5221,11 +5221,11 @@ window.openClassMaterialLibraryV45=async function(classId){
 };
 
 window.insertClassLibraryMaterialsV45=async function(classId){
-  const ids=[...($('cm45Library')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
+  const ids=[...(window.$('cm45Library')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
   if(!ids.length)return toast('Selecione pelo menos um material.','error');
-  const {data:materials,error}=await sb.from('tic_materials').select('id,title,material_type,resource_items,description,external_url,file_url').in('id',ids).eq('teacher_id',session.user.id);
+  const {data:materials,error}=await sb.from('tic_materials').select('id,title,material_type,resource_items,description,external_url,file_url').in('id',ids).eq('teacher_id',window.session.user.id);
   if(error)return toast(error.message,'error');
-  const note=$('cm45LibraryNote')?.value.trim()||null;
+  const note=window.$('cm45LibraryNote')?.value.trim()||null;
   const rows=[];
   (materials||[]).forEach(m=>{
     let rs=Array.isArray(m.resource_items)?m.resource_items.filter(r=>r?.url):[];
@@ -5252,19 +5252,19 @@ window.openClassStudentContentChooserV45=async function(classId){
       <div class="field"><label>Material</label><select id="cm45StudentMaterial"></select></div>
       <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="insertIndividualMaterialV45('${classId}')">📤 Enviar para este aluno</button></div>
     </div>`);
-  const {data:mats}=await sb.from('tic_materials').select('id,title,level,material_type').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
-  $('cm45StudentMaterial').innerHTML=(mats||[]).map(m=>`<option value="${m.id}">${e45(m.title)} · ${e45(m.level||'')}</option>`).join('')||'<option value="">Nenhum material</option>';
+  const {data:mats}=await sb.from('tic_materials').select('id,title,level,material_type').eq('teacher_id',window.session.user.id).order('created_at',{ascending:false});
+  window.$('cm45StudentMaterial').innerHTML=(mats||[]).map(m=>`<option value="${m.id}">${e45(m.title)} · ${e45(m.level||'')}</option>`).join('')||'<option value="">Nenhum material</option>';
 };
 
 window.insertIndividualMaterialV45=async function(classId){
-  const studentId=$('cm45Student')?.value, materialId=$('cm45StudentMaterial')?.value;
+  const studentId=window.$('cm45Student')?.value, materialId=window.$('cm45StudentMaterial')?.value;
   if(!studentId||!materialId)return toast('Selecione aluno e material.','error');
   /* Use the existing individual attribution mechanism; it stays separate from
      class-wide tic_class_material_links. */
-  const {data:source,error}=await sb.from('tic_materials').select('*').eq('id',materialId).eq('teacher_id',session.user.id).maybeSingle();
+  const {data:source,error}=await sb.from('tic_materials').select('*').eq('id',materialId).eq('teacher_id',window.session.user.id).maybeSingle();
   if(error||!source)return toast('Material não encontrado.','error');
   const payload={
-    teacher_id:session.user.id,class_id:classId,title:source.title,
+    teacher_id:window.session.user.id,class_id:classId,title:source.title,
     instructions:source.description||'',assignment_type:'material',due_at:null,points:0,
     priority:'normal',resource_items:Array.isArray(source.resource_items)?source.resource_items:[],
     cover_image_url:source.cover_image_url||null,source_type:'material',source_id:source.id
@@ -5458,7 +5458,7 @@ window.renderPrivateMaterialsV49=async function(classId){
     .eq('status','pending');
 
   if(error){
-    $('v49PrivateGrid').innerHTML=`<div class="v49-private-empty">${e49(error.message)}</div>`;
+    window.$('v49PrivateGrid').innerHTML=`<div class="v49-private-empty">${e49(error.message)}</div>`;
     return;
   }
 
@@ -5469,11 +5469,11 @@ window.renderPrivateMaterialsV49=async function(classId){
 
   const students=new Set(rows.map(x=>x.student_id));
   const resources=rows.reduce((n,x)=>n+(Array.isArray(x.tic_assignments?.resource_items)?x.tic_assignments.resource_items.length:0),0);
-  $('v49PrivateKpis').innerHTML=`
+  window.$('v49PrivateKpis').innerHTML=`
     <div class="v49-private-kpi"><span>👤 Alunos com material</span><b>${students.size}</b></div>
     <div class="v49-private-kpi"><span>📂 Materiais individuais</span><b>${rows.length}</b></div>
     <div class="v49-private-kpi"><span>🔗 Links/arquivos</span><b>${resources}</b></div>`;
-  $('v49PrivateGrid').innerHTML=renderPrivateCards49(rows);
+  window.$('v49PrivateGrid').innerHTML=renderPrivateCards49(rows);
 };
 
 window.openPrivateMaterialFormV49=async function(classId){
@@ -5504,9 +5504,9 @@ window.openPrivateMaterialFormV49=async function(classId){
 
 window.savePrivateMaterialV49=async function(ev,classId){
   ev.preventDefault();
-  const studentId=$('v49PrivateStudent')?.value;
-  const title=$('v49PrivateTitle')?.value.trim();
-  const note=$('v49PrivateNote')?.value.trim()||'';
+  const studentId=window.$('v49PrivateStudent')?.value;
+  const title=window.$('v49PrivateTitle')?.value.trim();
+  const note=window.$('v49PrivateNote')?.value.trim()||'';
   const resources=typeof collectResources==='function'?collectResources('v49PrivateRows'):[];
   const items=resources.filter(r=>r?.url).map(r=>({type:r.type||'link',title:r.title||r.type||'Recurso',url:r.url,description:r.description||''}));
   if(!studentId)return toast('Selecione o aluno.','error');
@@ -5514,7 +5514,7 @@ window.savePrivateMaterialV49=async function(ev,classId){
   if(!items.length)return toast('Adicione pelo menos um link/arquivo.','error');
 
   const payload={
-    teacher_id:session.user.id,
+    teacher_id:window.session.user.id,
     lesson_id:null,
     class_id:classId,
     title,
@@ -5555,7 +5555,7 @@ window.openPrivateMaterialLibraryV49=async function(classId){
 
   const {data:mats,error}=await sb.from('tic_materials')
     .select('id,title,level,material_type,resource_items,description,external_url,file_url')
-    .eq('teacher_id',session.user.id)
+    .eq('teacher_id',window.session.user.id)
     .order('created_at',{ascending:false});
   if(error)return toast(error.message,'error');
 
@@ -5577,16 +5577,16 @@ window.openPrivateMaterialLibraryV49=async function(classId){
 };
 
 window.sendLibraryMaterialsV49=async function(classId){
-  const studentId=$('v49LibStudent')?.value;
-  const ids=[...($('v49LibMaterials')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
-  const note=$('v49LibNote')?.value.trim()||'';
+  const studentId=window.$('v49LibStudent')?.value;
+  const ids=[...(window.$('v49LibMaterials')?.selectedOptions||[])].map(o=>o.value).filter(Boolean);
+  const note=window.$('v49LibNote')?.value.trim()||'';
   if(!studentId)return toast('Selecione o aluno.','error');
   if(!ids.length)return toast('Selecione pelo menos um material.','error');
 
   const {data:mats,error}=await sb.from('tic_materials')
     .select('id,title,material_type,resource_items,description,external_url,file_url')
     .in('id',ids)
-    .eq('teacher_id',session.user.id);
+    .eq('teacher_id',window.session.user.id);
   if(error)return toast(error.message,'error');
 
   let sent=0;
@@ -5598,7 +5598,7 @@ window.sendLibraryMaterialsV49=async function(classId){
     if(!items.length)continue;
 
     const {data:a,error:ae}=await sb.from('tic_assignments').insert({
-      teacher_id:session.user.id,lesson_id:null,class_id:classId,
+      teacher_id:window.session.user.id,lesson_id:null,class_id:classId,
       title:m.title,instructions:note||m.description||'',
       assignment_type:'material',due_at:null,points:0,priority:'normal',
       resource_items:items,cover_image_url:null,
@@ -5688,11 +5688,11 @@ window.openStudentMaterialV51=async function(taskAssignmentId){
 
 window.studentClassPage=async function(){
  const s=await studentRecord();
- if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno pelo Teacher.</div>';return}
+ if(!s){window.$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno pelo Teacher.</div>';return}
  const {data:members,error:me}=await sb.from('tic_class_students').select('class_id,status').eq('student_id',s.id).eq('status','active');
- if(me){$('content').innerHTML=`<div class="card attention">${x51(me.message)}</div>`;return}
+ if(me){window.$('content').innerHTML=`<div class="card attention">${x51(me.message)}</div>`;return}
  const ids=[...(members||[]).map(m=>m.class_id).filter(Boolean)];
- if(!ids.length){$('content').innerHTML='<div class="v44-empty">🏫 Você ainda não está em uma Class.</div>';return}
+ if(!ids.length){window.$('content').innerHTML='<div class="v44-empty">🏫 Você ainda não está em uma Class.</div>';return}
  const [{data:classes},{data:sessions},{data:links},{data:allAssignments},{data:tas},{data:boards}]=await Promise.all([
    sb.from('tic_classes').select('id,name,level,schedule_text,meeting_url,status').in('id',ids).eq('status','active').order('name'),
    sb.from('tic_class_sessions').select('id,class_id,session_date,duration_minutes,lesson_title,summary,status').in('class_id',ids).order('session_date',{ascending:false}).limit(100),
@@ -5716,7 +5716,7 @@ window.studentClassPage=async function(){
   const myTasks=tasks.filter(x=>taMap.has(x.id));
   const bi=(boards||[]).filter(x=>x.class_id===c.id);
   setPage('My Class',`${c.name} · conteúdo separado por categoria`);
-  $('content').innerHTML=`<div class="v44-class-page">
+  window.$('content').innerHTML=`<div class="v44-class-page">
    <div class="v44-class-hero"><div><span class="eyebrow" style="color:#fff">MY CLASS</span><h2>🏫 ${x51(c.name)}</h2><p>${x51(c.level||'')} ${c.schedule_text?'· '+x51(c.schedule_text):''}</p></div><select id="v44ClassSelect" class="v44-class-select">${cls.map(z=>`<option value="${z.id}" ${z.id===c.id?'selected':''}>${x51(z.name)} · ${x51(z.level||'')}</option>`).join('')}</select></div>
    <div class="v44-kpis"><div class="v44-kpi"><span>📖 Aulas anteriores</span><b>${past.length}</b></div><div class="v44-kpi"><span>📚 Lessons da Class</span><b>${lessons.length}</b></div><div class="v44-kpi"><span>🔗 Resources</span><b>${rs.length}</b></div><div class="v44-kpi"><span>📂 Meus materiais</span><b>${materials.length}</b></div></div>
    <nav class="v44-class-nav"><button class="active" data-v44cp="home">🏠 Visão geral</button><button data-v44cp="lessons">📚 Lessons</button><button data-v44cp="materials">📂 Materials</button><button data-v44cp="resources">🔗 Resources</button><button data-v44cp="tasks">📝 Minhas tarefas</button><button data-v44cp="previous">📖 Aulas anteriores</button><button data-v44cp="board">📌 Board</button></nav>
@@ -5729,7 +5729,7 @@ window.studentClassPage=async function(){
    <section class="v44-class-pane" data-v44pane="board"><div class="v44-card"><h3>📌 Board</h3><p class="desc">Somente avisos e itens publicados no Board desta Class.</p><div class="v44-list">${bi.map(b=>`<div class="v44-row"><div class="v44-row-icon">📌</div><div class="v44-row-main"><b>${x51(b.title)}</b><small>${x51(b.description||'')}${b.item_type?' · '+x51(b.item_type):''}</small></div><span class="badge ${b.status==='completed'?'green':b.status==='in_progress'?'yellow':'blue'}">${x51(b.status||'Publicado')}</span></div>`).join('')||'<div class="v44-empty">Nenhum item no Board.</div>'}</div></div></section>
   </div>`;
   document.querySelectorAll('[data-v44cp]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.v44cp)));
-  $('v44ClassSelect')?.addEventListener('change',ev=>{selected=ev.target.value;render()});
+  window.$('v44ClassSelect')?.addEventListener('change',ev=>{selected=ev.target.value;render()});
  };
  render();
 };
@@ -5809,7 +5809,7 @@ const online58=v=>!!v && (Date.now()-new Date(v).getTime()<=120000);
 let act58={row:null,student:null,last:0,seconds:0,timer:null,starting:false};
 
 async function getStudent58(){
-  const uid=session?.user?.id;
+  const uid=window.session?.user?.id;
   if(!uid||!window.sb)return null;
   for(let i=0;i<8;i++){
     const {data,error}=await sb.from('tic_students')
@@ -5834,18 +5834,18 @@ async function flush58(force=false){
   const {error}=await sb.from('tic_student_activity').update({
     last_seen_at:new Date(now).toISOString(),
     duration_seconds:act58.seconds
-  }).eq('id',act58.row).eq('auth_user_id',session.user.id);
+  }).eq('id',act58.row).eq('auth_user_id',window.session.user.id);
   if(error)console.warn('[V58 activity update]',error.message);
 }
 
 async function event58(type,label='',view='',entityType='',entityId='',metadata={}){
-  if(!session?.user?.id||!window.sb)return;
+  if(!window.session?.user?.id||!window.sb)return;
   let student=act58.student;
   if(!student){student=await getStudent58();if(student)act58.student=student;}
   if(!student){console.warn('[V58 activity event] aluno não vinculado; evento não gravado:',type);return;}
   const {error}=await sb.from('tic_student_activity_events').insert({
     student_id:student.id,
-    auth_user_id:session.user.id,
+    auth_user_id:window.session.user.id,
     event_type:type,
     event_label:label||null,
     view_name:view||null,
@@ -5858,7 +5858,7 @@ async function event58(type,label='',view='',entityType='',entityId='',metadata=
 window.ticLogStudentEventV58=event58;
 
 async function start58(){
-  if(act58.starting||act58.row||!session?.user?.id)return;
+  if(act58.starting||act58.row||!window.session?.user?.id)return;
   act58.starting=true;
   try{
     const st=await getStudent58();
@@ -5867,7 +5867,7 @@ async function start58(){
     const now=new Date().toISOString();
     const {data,error}=await sb.from('tic_student_activity').insert({
       student_id:st.id,
-      auth_user_id:session.user.id,
+      auth_user_id:window.session.user.id,
       started_at:now,
       last_seen_at:now,
       duration_seconds:0,
@@ -5928,12 +5928,12 @@ setTimeout(()=>{if(window.session?.user?.id)start58()},1800);
 /* ---------------- Teacher Student Activity page ---------------- */
 async function studentActivityPageV58(){
   setPage('Student Activity','Acessos, sessões, tempo ativo e ações registradas pelos alunos.','<button class="btn secondary" onclick="studentActivityPageV58()">↻ Atualizar</button>');
-  const root=$('content');
+  const root=window.$('content');
   root.innerHTML='<div class="card"><div class="v58-empty">Carregando atividade dos alunos...</div></div>';
 
   const {data:students,error:se}=await sb.from('tic_students')
     .select('id,display_name,email,current_level,status,auth_user_id')
-    .eq('teacher_id',session.user.id)
+    .eq('teacher_id',window.session.user.id)
     .order('display_name');
   if(se){root.innerHTML=`<div class="card attention"><b>Erro ao carregar alunos.</b><p>${e58(se.message)}</p></div>`;return}
 
@@ -5993,9 +5993,9 @@ async function studentActivityPageV58(){
 window.studentActivityPageV58=studentActivityPageV58;
 
 window.renderStudentActivityV58=function(){
-  const grid=$('v58ActivityGrid');if(!grid)return;
-  const q=($('v58ActSearch')?.value||'').toLowerCase().trim();
-  const filter=$('v58ActFilter')?.value||'';
+  const grid=window.$('v58ActivityGrid');if(!grid)return;
+  const q=(window.$('v58ActSearch')?.value||'').toLowerCase().trim();
+  const filter=window.$('v58ActFilter')?.value||'';
   const rows=Object.values(window.__v58ActivityRows||{}).filter(x=>{
     const s=x.student;
     if(q&&!`${s.display_name||''} ${s.email||''}`.toLowerCase().includes(q))return false;
@@ -6045,7 +6045,7 @@ window.openStudentActivityDetailsV58=function(studentId){
 /* ---------------- Student Dashboard restoration ---------------- */
 window.studentDashboard=async function(){
   const s=await studentRecord();
-  if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno.</div>';return}
+  if(!s){window.$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno.</div>';return}
   let prog={overall:0,done:0,total:0};
   try{prog=await ticRecalculateStudentProgressV19(s.id)||prog}catch(_){}
 
@@ -6075,7 +6075,7 @@ window.studentDashboard=async function(){
     .filter(a=>!['material','lesson'].includes(String(a.assignment_type||'').toLowerCase()));
 
   setPage('My Dashboard','Seu espaço de aprendizagem.');
-  $('content').innerHTML=`
+  window.$('content').innerHTML=`
   <div class="s43">
     <section class="s43-hero">
       <span class="s43-kicker">MY LEARNING</span>
@@ -6110,11 +6110,11 @@ window.studentDashboard=async function(){
 /* ---------------- Student My Class restoration ---------------- */
 window.studentClassPage=async function(){
   const s=await studentRecord();
-  if(!s){$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}
+  if(!s){window.$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';return}
   const {data:members,error:me}=await sb.from('tic_class_students').select('class_id,status').eq('student_id',s.id).eq('status','active');
-  if(me){$('content').innerHTML=`<div class="card attention">${e58(me.message)}</div>`;return}
+  if(me){window.$('content').innerHTML=`<div class="card attention">${e58(me.message)}</div>`;return}
   const ids=[...(members||[]).map(x=>x.class_id).filter(Boolean)];
-  if(!ids.length){$('content').innerHTML='<div class="card empty">🏫 Você ainda não está vinculado a uma Class.</div>';return}
+  if(!ids.length){window.$('content').innerHTML='<div class="card empty">🏫 Você ainda não está vinculado a uma Class.</div>';return}
 
   const [cr,sr,rr,ar,tr,br]=await Promise.all([
     sb.from('tic_classes').select('id,name,level,schedule_text,meeting_url,status').in('id',ids).eq('status','active').order('name'),
@@ -6157,7 +6157,7 @@ window.studentClassPage=async function(){
     const bi=boards.filter(x=>x.class_id===c.id);
 
     setPage('My Class',`${c.name} · conteúdo separado por categoria`);
-    $('content').innerHTML=`
+    window.$('content').innerHTML=`
     <div class="v44-class-page">
       <div class="v44-class-hero"><div><span class="eyebrow" style="color:#fff">MY CLASS</span><h2>🏫 ${e58(c.name)}</h2><p>${e58(c.level||'')} ${c.schedule_text?'· '+e58(c.schedule_text):''}</p></div><select id="v58ClassSelect" class="v44-class-select">${cls.map(z=>`<option value="${z.id}" ${z.id===c.id?'selected':''}>${e58(z.name)} · ${e58(z.level||'')}</option>`).join('')}</select></div>
       <div class="v44-kpis"><div class="v44-kpi"><span>📖 Aulas anteriores</span><b>${past.length}</b></div><div class="v44-kpi"><span>📚 Lessons</span><b>${lessons.length}</b></div><div class="v44-kpi"><span>🔗 Resources</span><b>${rs.length}</b></div><div class="v44-kpi"><span>📂 Materials</span><b>${materials.length}</b></div></div>
@@ -6192,7 +6192,7 @@ window.studentClassPage=async function(){
     </div>`;
 
     document.querySelectorAll('[data-v58cp]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.v58cp)));
-    $('v58ClassSelect')?.addEventListener('change',ev=>{selected=ev.target.value;render()});
+    window.$('v58ClassSelect')?.addEventListener('change',ev=>{selected=ev.target.value;render()});
   };
   render();
 };
@@ -6208,8 +6208,8 @@ window.openClassMaterialStudentV58=async function(assignmentId){
 
 /* ---------------- Teacher routing / nav restoration ---------------- */
 function ensureTeacherActivityNavV58(){
-  const nav=$('teacherNav');if(!nav)return;
-  const teacherMode=profile?.role==='teacher'||profile?.role==='admin';
+  const nav=window.$('teacherNav');if(!nav)return;
+  const teacherMode=window.profile?.role==='teacher'||window.profile?.role==='admin';
   if(!teacherMode)return;
   if(nav.querySelector('[data-view="studentActivity"]'))return;
   const ref=nav.querySelector('[data-view="students"]');
@@ -6220,7 +6220,7 @@ function ensureTeacherActivityNavV58(){
   if(ref)ref.insertAdjacentElement('afterend',b);else nav.appendChild(b);
 }
 const navObserver58=new MutationObserver(()=>ensureTeacherActivityNavV58());
-if($('teacherNav'))navObserver58.observe($('teacherNav'),{childList:true,subtree:true});
+if(window.$('teacherNav'))navObserver58.observe(window.$('teacherNav'),{childList:true,subtree:true});
 setTimeout(ensureTeacherActivityNavV58,1000);
 setTimeout(ensureTeacherActivityNavV58,2500);
 
@@ -6234,7 +6234,7 @@ window.loadView=async function(v){
     await studentActivityPageV58();
     return;
   }
-  if(profile?.role==='student'&&String(v||'').startsWith('student')){
+  if(window.profile?.role==='student'&&String(v||'').startsWith('student')){
     setTimeout(()=>event58('view',v,v),0);
   }
   return loadViewBaseV58.apply(this,arguments);
@@ -6309,7 +6309,7 @@ async function v59StudentPrivateMaterials(studentId,classIds){
 window.studentClassPageV59=async function(){
   const s=await studentRecord();
   if(!s){
-    $('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';
+    window.$('content').innerHTML='<div class="card empty">Conta não vinculada.</div>';
     return;
   }
 
@@ -6319,13 +6319,13 @@ window.studentClassPageV59=async function(){
     .eq('status','active');
 
   if(me){
-    $('content').innerHTML=`<div class="card attention">${e58(me.message)}</div>`;
+    window.$('content').innerHTML=`<div class="card attention">${e58(me.message)}</div>`;
     return;
   }
 
   const ids=[...(members||[]).map(x=>x.class_id).filter(Boolean)];
   if(!ids.length){
-    $('content').innerHTML='<div class="card empty">🏫 Você ainda não está vinculado a uma Class.</div>';
+    window.$('content').innerHTML='<div class="card empty">🏫 Você ainda não está vinculado a uma Class.</div>';
     return;
   }
 
@@ -6388,7 +6388,7 @@ window.studentClassPageV59=async function(){
 
     setPage('My Class',`${c.name} · conteúdo separado por categoria`);
 
-    $('content').innerHTML=`
+    window.$('content').innerHTML=`
       <div class="v44-class-page">
         <div class="v44-class-hero">
           <div>
@@ -6562,7 +6562,7 @@ window.studentClassPageV59=async function(){
 
     document.querySelectorAll('[data-v59cp]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.v59cp)));
 
-    $('v59ClassSelect')?.addEventListener('change',ev=>{
+    window.$('v59ClassSelect')?.addEventListener('change',ev=>{
       window.__v59SelectedClass=ev.target.value;
       render();
     });
@@ -6583,7 +6583,7 @@ window.studentClassPage=window.studentClassPageV59;
 /* ---------- FINAL Student Dashboard repair ---------- */
 window.studentDashboardV59=async function(){
   const s=await studentRecord();
-  if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno.</div>';return}
+  if(!s){window.$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno.</div>';return}
 
   let prog={overall:0,done:0,total:0};
   try{prog=await ticRecalculateStudentProgressV19(s.id)||prog}catch(_){}
@@ -6615,7 +6615,7 @@ window.studentDashboardV59=async function(){
     .filter(a=>!['material','lesson'].includes(String(a.assignment_type||'').toLowerCase()));
 
   setPage('My Dashboard','Seu espaço de aprendizagem.');
-  $('content').innerHTML=`
+  window.$('content').innerHTML=`
     <div class="s43">
       <section class="s43-hero">
         <span class="s43-kicker">MY LEARNING</span>
@@ -6653,12 +6653,12 @@ window.studentDashboard=window.studentDashboardV59;
    rows directly and does not depend on older V40/V41 renderers. */
 window.studentActivityPageV59=async function(){
   setPage('Student Activity','Acessos, sessões, tempo ativo e ações registradas pelos alunos.','<button class="btn secondary" onclick="studentActivityPageV59()">↻ Atualizar</button>');
-  const root=$('content');
+  const root=window.$('content');
   root.innerHTML='<div class="card"><div class="v58-empty">Carregando atividade dos alunos...</div></div>';
 
   const {data:students,error:se}=await sb.from('tic_students')
     .select('id,display_name,email,current_level,status,auth_user_id')
-    .eq('teacher_id',session.user.id)
+    .eq('teacher_id',window.session.user.id)
     .order('display_name');
 
   if(se){
@@ -6715,8 +6715,8 @@ window.studentActivityPageV59=async function(){
     </div>`;
 
   const render=()=>{
-    const q=($('v59ActSearch')?.value||'').toLowerCase().trim();
-    const f=$('v59ActFilter')?.value||'';
+    const q=(window.$('v59ActSearch')?.value||'').toLowerCase().trim();
+    const f=window.$('v59ActFilter')?.value||'';
     const rows=students.filter(s=>{
       const x=by[s.id]||{};
       if(q&&!`${s.display_name||''} ${s.email||''}`.toLowerCase().includes(q))return false;
@@ -6725,7 +6725,7 @@ window.studentActivityPageV59=async function(){
       if(f==='none'&&x.count)return false;
       return true;
     });
-    $('v59ActivityGrid').innerHTML=rows.map(s=>{
+    window.$('v59ActivityGrid').innerHTML=rows.map(s=>{
       const x=by[s.id]||{};
       const os=online(x);
       return `<article class="v58-activity-card">
@@ -6747,8 +6747,8 @@ window.studentActivityPageV59=async function(){
     }).join('')||'<div class="v58-empty">Nenhum aluno encontrado.</div>';
   };
 
-  $('v59ActSearch').addEventListener('input',render);
-  $('v59ActFilter').addEventListener('change',render);
+  window.$('v59ActSearch').addEventListener('input',render);
+  window.$('v59ActFilter').addEventListener('change',render);
   window.__v59ActivityDetail={by,sessions,events};
   render();
 };
@@ -6872,7 +6872,7 @@ function v60MaterialCard(x){
 }
 
 window.studentClassPageV60=async function(){
-  const root=$('content');
+  const root=window.$('content');
   root.innerHTML='<div class="card"><div class="loading">Carregando sua Class...</div></div>';
   try{
     const data=await v60StudentData();
@@ -6953,7 +6953,7 @@ window.studentClassPageV60=async function(){
         <section class="v44-class-pane" data-v60pane="board"><div class="v44-card"><h3>📌 Board</h3><p class="desc">Visão informativa do Board da Class.</p><div id="v60StudentBoardBox" class="v44-empty">Carregando Board...</div></div></section>
       </div>`;
 
-      $('v60ClassSelect')?.addEventListener('change',e=>{window.__v60SelectedClass=e.target.value;render()});
+      window.$('v60ClassSelect')?.addEventListener('change',e=>{window.__v60SelectedClass=e.target.value;render()});
       document.querySelectorAll('[data-v60tab]').forEach(btn=>btn.addEventListener('click',async()=>{
         const tab=btn.dataset.v60tab;
         document.querySelectorAll('[data-v60tab]').forEach(x=>x.classList.toggle('active',x===btn));
@@ -6973,7 +6973,7 @@ window.studentClassPageV60=async function(){
 };
 
 window.v60RenderStudentBoard=async function(classId){
-  const box=$('v60StudentBoardBox');if(!box)return;
+  const box=window.$('v60StudentBoardBox');if(!box)return;
   const {data,error}=await sb.from('tic_class_board_items').select('id,title,description,item_type,status,position,created_at').eq('class_id',classId).order('position').order('created_at',{ascending:false}).limit(100);
   if(error){box.innerHTML=`<div class="notice error">${E(error.message)}</div>`;return}
   box.className='';
@@ -7004,7 +7004,7 @@ window.loadView=async function(v){
 /* Dashboard repair: Materials count comes ONLY from explicit student assignments. */
 window.studentDashboardV60=async function(){
   const s=await studentRecord();
-  if(!s){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno.</div>';return}
+  if(!s){window.$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno.</div>';return}
   let prog={overall:0,done:0,total:0};
   try{prog=await ticRecalculateStudentProgressV19(s.id)||prog}catch(_){}
   const {data:members}=await sb.from('tic_class_students').select('class_id,status').eq('student_id',s.id).eq('status','active');
@@ -7024,7 +7024,7 @@ window.studentDashboardV60=async function(){
   const next=(sessions||[]).filter(x=>String(x.event_type||'').toLowerCase()==='next_class'||new Date(x.starts_at||0)>=now).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at))[0];
 
   setPage('My Dashboard','Seu espaço de aprendizagem.');
-  $('content').innerHTML=`<div class="s43">
+  window.$('content').innerHTML=`<div class="s43">
     <section class="s43-hero"><span class="s43-kicker">MY LEARNING</span><h2>Olá, ${E(s.display_name?.split(' ')[0]||'Student')} 👋</h2><p>${E(s.current_level||'—')} · Objetivo ${E(s.target_level||'—')} · ${prog.done||0}/${prog.total||0} lessons concluídas</p><div class="s43-progress"><i style="width:${Math.max(0,Math.min(100,Number(prog.overall||0)))}%"></i></div><p class="s43-progress-label">${Number(prog.overall||0)}% de progresso geral</p></section>
     <div class="s43-stats">
       <button class="s43-stat" onclick="loadView('studentTasks')"><span>📝 Minhas tarefas</span><b>${myTasks.length}</b><small>Abrir My Tasks →</small></button>
@@ -7058,7 +7058,7 @@ window.ticStartStudentActivityV60=async function(){
     if(error)console.warn('[V60 activity]',error.message); else window.__ticV60ActivityId=data.id;
   }catch(e){console.warn('[V60 activity start]',e)}
 };
-setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartStudentActivityV60()},2500);
+setTimeout(()=>{if(window.profile?.role==='student'&&window.session?.user?.id)window.ticStartStudentActivityV60()},2500);
 
 })();
 </script>
@@ -7091,14 +7091,14 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
 
   window.ticV61DeleteEvent = async function(id,classId){
     if(!confirm('Remover esta aula/registro? Esta ação não pode ser desfeita.')) return;
-    const r=await sb.from('tic_events').delete().eq('id',id).eq('class_id',classId).eq('teacher_id',session.user.id);
+    const r=await sb.from('tic_events').delete().eq('id',id).eq('class_id',classId).eq('teacher_id',window.session.user.id);
     if(r.error)return toast('Não foi possível remover: '+r.error.message,'error');
     toast('Aula removida.','success');
     await window.classCenterTabV41(classId,'lessons');
   };
 
   window.ticV61EditEvent = async function(id,classId){
-    const {data:e,error}=await sb.from('tic_events').select('*').eq('id',id).eq('class_id',classId).eq('teacher_id',session.user.id).maybeSingle();
+    const {data:e,error}=await sb.from('tic_events').select('*').eq('id',id).eq('class_id',classId).eq('teacher_id',window.session.user.id).maybeSingle();
     if(error||!e)return toast(error?.message||'Aula não encontrada.','error');
     const local=e.starts_at?new Date(e.starts_at).toISOString().slice(0,16):'';
     const eventLinks=window.ticV63GetEventLinks(e);
@@ -7125,18 +7125,18 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
 
   window.ticV61SaveEvent = async function(ev,id,classId){
     ev.preventDefault();
-    const start=new Date($('v61Date').value),mins=Number($('v61Duration').value||60),type=$('v61Type').value;
+    const start=new Date(window.$('v61Date').value),mins=Number(window.$('v61Duration').value||60),type=window.$('v61Type').value;
     if(Number.isNaN(start.getTime()))return toast('Data inválida.','error');
     const payload={
-      title:$('v61Title').value.trim()||((type==='next_class'?'Próxima aula':type==='review'?'Revisão':'Aula')+' · '+start.toLocaleDateString('pt-BR')),
+      title:window.$('v61Title').value.trim()||((type==='next_class'?'Próxima aula':type==='review'?'Revisão':'Aula')+' · '+start.toLocaleDateString('pt-BR')),
       event_type:type,
       starts_at:start.toISOString(),
       ends_at:new Date(start.getTime()+mins*60000).toISOString(),
-      notes:window.ticV63PackEventNotes($('v61Notes').value.trim(),window.ticV63ParseLinks($('v61Url').value).slice(1))||null,
-      meeting_url:window.ticV63ParseLinks($('v61Url').value)[0]||null,
+      notes:window.ticV63PackEventNotes(window.$('v61Notes').value.trim(),window.ticV63ParseLinks(window.$('v61Url').value).slice(1))||null,
+      meeting_url:window.ticV63ParseLinks(window.$('v61Url').value)[0]||null,
       status:type==='next_class'?'scheduled':'completed'
     };
-    const r=await sb.from('tic_events').update(payload).eq('id',id).eq('class_id',classId).eq('teacher_id',session.user.id);
+    const r=await sb.from('tic_events').update(payload).eq('id',id).eq('class_id',classId).eq('teacher_id',window.session.user.id);
     if(r.error)return toast('Não foi possível atualizar: '+r.error.message,'error');
     await pageBack(classId,'lessons');
   };
@@ -7146,14 +7146,14 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
     /* Remove child assignment rows first so this works even without ON DELETE CASCADE. */
     const ch=await sb.from('tic_task_assignments').delete().eq('assignment_id',id);
     if(ch.error)return toast('Não foi possível remover os vínculos: '+ch.error.message,'error');
-    const r=await sb.from('tic_assignments').delete().eq('id',id).eq('class_id',classId).eq('teacher_id',session.user.id);
+    const r=await sb.from('tic_assignments').delete().eq('id',id).eq('class_id',classId).eq('teacher_id',window.session.user.id);
     if(r.error)return toast('Não foi possível remover: '+r.error.message,'error');
     toast(`${kind} removido.`,'success');
     await window.classCenterTabV41(classId,kind==='material'?'materials':kind==='resource'?'resources':'tasks');
   };
 
   window.ticV61EditTask = async function(id,classId){
-    const {data:t,error}=await sb.from('tic_assignments').select('*').eq('id',id).eq('class_id',classId).eq('teacher_id',session.user.id).maybeSingle();
+    const {data:t,error}=await sb.from('tic_assignments').select('*').eq('id',id).eq('class_id',classId).eq('teacher_id',window.session.user.id).maybeSingle();
     if(error||!t)return toast(error?.message||'Conteúdo não encontrado.','error');
     openModal('✏️ Editar conteúdo',`
       <form class="form" onsubmit="ticV61SaveTask(event,'${id}','${classId}')">
@@ -7173,14 +7173,14 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
   window.ticV61SaveTask = async function(ev,id,classId){
     ev.preventDefault();
     const payload={
-      title:$('v61TaskTitle').value.trim()||('Conteúdo · '+new Date().toLocaleDateString('pt-BR')),
-      instructions:$('v61TaskInst').value.trim(),
-      assignment_type:$('v61TaskType').value.trim()||'task',
-      points:Number($('v61TaskPoints').value||0),
-      due_at:$('v61TaskDue').value?new Date($('v61TaskDue').value).toISOString():null,
+      title:window.$('v61TaskTitle').value.trim()||('Conteúdo · '+new Date().toLocaleDateString('pt-BR')),
+      instructions:window.$('v61TaskInst').value.trim(),
+      assignment_type:window.$('v61TaskType').value.trim()||'task',
+      points:Number(window.$('v61TaskPoints').value||0),
+      due_at:window.$('v61TaskDue').value?new Date(window.$('v61TaskDue').value).toISOString():null,
       resource_items:typeof collectResources==='function'?collectResources('v61TaskRows'):[]
     };
-    const r=await sb.from('tic_assignments').update(payload).eq('id',id).eq('class_id',classId).eq('teacher_id',session.user.id);
+    const r=await sb.from('tic_assignments').update(payload).eq('id',id).eq('class_id',classId).eq('teacher_id',window.session.user.id);
     if(r.error)return toast('Não foi possível atualizar: '+r.error.message,'error');
     await pageBack(classId,'tasks');
   };
@@ -7196,7 +7196,7 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
       <div class="v41-kpi"><span>🧰 Resources</span><b>${tasks.reduce((n,t)=>n+(Array.isArray(t.resource_items)?t.resource_items.length:0),0)}</b></div>
       <div class="v41-kpi"><span>📅 Nível</span><b>${esc(cls.level||'—')}</b></div>
     </div>`;
-    const {data,error}=await sb.from('tic_assignments').select('id,title,instructions,assignment_type,resource_items,created_at,source_id,active').eq('class_id',classId).eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+    const {data,error}=await sb.from('tic_assignments').select('id,title,instructions,assignment_type,resource_items,created_at,source_id,active').eq('class_id',classId).eq('teacher_id',window.session.user.id).order('created_at',{ascending:false});
     if(error)return body.innerHTML=kpis+`<div class="v41-panel"><div class="v41-empty">${esc(error.message)}</div></div>`;
     const rows=(data||[]).filter(a=>Array.isArray(a.resource_items)&&a.resource_items.length);
     body.innerHTML=kpis+`<div class="v41-panel">
@@ -7220,7 +7220,7 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
   }
 
   window.ticV61EditPrivateMaterial = async function(id,classId,studentId){
-    const {data:a,error}=await sb.from('tic_assignments').select('*').eq('id',id).eq('class_id',classId).eq('teacher_id',session.user.id).maybeSingle();
+    const {data:a,error}=await sb.from('tic_assignments').select('*').eq('id',id).eq('class_id',classId).eq('teacher_id',window.session.user.id).maybeSingle();
     if(error||!a)return toast(error?.message||'Material não encontrado.','error');
     const {data:students}=await getClassStudents49(classId);
     openModal('✏️ Editar material exclusivo',`
@@ -7236,16 +7236,16 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
 
   window.ticV61SavePrivateMaterial = async function(ev,id,classId,oldStudentId){
     ev.preventDefault();
-    const studentId=$('v61PmStudent')?.value;
+    const studentId=window.$('v61PmStudent')?.value;
     const items=typeof collectResources==='function'?collectResources('v61PmRows').filter(r=>r?.url):[];
     if(!studentId)return toast('Selecione o aluno.','error');
     if(!items.length)return toast('Adicione pelo menos um link/arquivo.','error');
     const r=await sb.from('tic_assignments').update({
-      title:$('v61PmTitle').value.trim()||('Material · '+new Date().toLocaleDateString('pt-BR')),
-      instructions:$('v61PmNote').value.trim()||'',
+      title:window.$('v61PmTitle').value.trim()||('Material · '+new Date().toLocaleDateString('pt-BR')),
+      instructions:window.$('v61PmNote').value.trim()||'',
       resource_items:items,
       assignment_type:'material'
-    }).eq('id',id).eq('class_id',classId).eq('teacher_id',session.user.id);
+    }).eq('id',id).eq('class_id',classId).eq('teacher_id',window.session.user.id);
     if(r.error)return toast('Não foi possível atualizar: '+r.error.message,'error');
     if(oldStudentId && oldStudentId!==studentId){
       await sb.from('tic_task_assignments').delete().eq('assignment_id',id).eq('student_id',oldStudentId);
@@ -7259,7 +7259,7 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
     if(!confirm('Remover este material exclusivo e seu vínculo com o aluno?'))return;
     const q=await sb.from('tic_task_assignments').delete().eq('assignment_id',id);
     if(q.error)return toast('Não foi possível remover o vínculo: '+q.error.message,'error');
-    const r=await sb.from('tic_assignments').delete().eq('id',id).eq('class_id',classId).eq('teacher_id',session.user.id);
+    const r=await sb.from('tic_assignments').delete().eq('id',id).eq('class_id',classId).eq('teacher_id',window.session.user.id);
     if(r.error)return toast('Não foi possível remover: '+r.error.message,'error');
     toast('Material removido.','success');
     await window.classCenterTabV41(classId,'materials');
@@ -7279,7 +7279,7 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
       box.innerHTML=`<span class="badge gray">Gerenciar</span>`;
       card.appendChild(box);
       (async()=>{
-        const {data}=await sb.from('tic_assignments').select('id').eq('class_id',window.__ticClassCenterV41?.classId).eq('teacher_id',session.user.id).eq('title',title).eq('assignment_type','material').order('created_at',{ascending:false}).limit(5);
+        const {data}=await sb.from('tic_assignments').select('id').eq('class_id',window.__ticClassCenterV41?.classId).eq('teacher_id',window.session.user.id).eq('title',title).eq('assignment_type','material').order('created_at',{ascending:false}).limit(5);
         const a=(data||[])[0];
         if(!a)return;
         box.innerHTML=`<button class="btn sm ghost" onclick="ticV61EditPrivateMaterial('${a.id}','${window.__ticClassCenterV41.classId}','${student?.id||''}')">✏️ Editar</button><button class="btn sm ghost v61-danger" onclick="ticV61DeletePrivateMaterial('${a.id}','${window.__ticClassCenterV41.classId}')">🗑 Remover</button>`;
@@ -7412,16 +7412,16 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
     });
   }
   setTimeout(ensureV62Nav,700); setTimeout(ensureV62Nav,1800); setTimeout(ensureV62Nav,3500);
-  if($('teacherNav'))new MutationObserver(ensureV62Nav).observe($('teacherNav'),{childList:true,subtree:true});
+  if(window.$('teacherNav'))new MutationObserver(ensureV62Nav).observe(window.$('teacherNav'),{childList:true,subtree:true});
 
   /* ---------- STUDENT ACTIVITY: teacher page ---------- */
   async function activityPage62(){
     setPage('Student Activity','Acessos, sessões, tempo ativo e ações registradas pelos alunos.','<button class="btn secondary" onclick="activityPage62()">↻ Atualizar</button>');
-    const root=$('content');
+    const root=window.$('content');
     root.innerHTML='<div class="card"><div class="v62-empty">Carregando atividade dos alunos...</div></div>';
     const {data:students,error:se}=await sb.from('tic_students')
       .select('id,display_name,email,current_level,status,auth_user_id')
-      .eq('teacher_id',session.user.id).order('display_name');
+      .eq('teacher_id',window.session.user.id).order('display_name');
     if(se){
       root.innerHTML=`<div class="card v62-error"><b>Não foi possível carregar os alunos.</b><p>${esc62(se.message)}</p></div>`;
       return;
@@ -7465,8 +7465,8 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
     renderActivity62();
   }
   window.renderActivity62=function(){
-    const grid=$('v62ActivityGrid');if(!grid)return;
-    const q=($('v62ActSearch')?.value||'').toLowerCase().trim(),f=$('v62ActFilter')?.value||'',A=window.__v62Act||{by:{}};
+    const grid=window.$('v62ActivityGrid');if(!grid)return;
+    const q=(window.$('v62ActSearch')?.value||'').toLowerCase().trim(),f=window.$('v62ActFilter')?.value||'',A=window.__v62Act||{by:{}};
     const rows=Object.values(A.by).filter(x=>{
       const s=x.student;
       if(q&&!`${s.display_name||''} ${s.email||''}`.toLowerCase().includes(q))return false;
@@ -7501,9 +7501,9 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
   /* ---------- FIXED WEEKLY PLANNING ---------- */
   async function loadPlanData62(){
     const [sr,cr,pr]=await Promise.all([
-      sb.from('tic_students').select('id,display_name,email,current_level,status').eq('teacher_id',session.user.id).order('display_name'),
-      sb.from('tic_classes').select('id,name,level,status').eq('teacher_id',session.user.id).order('name'),
-      sb.from('tic_planning').select('*').eq('teacher_id',session.user.id).order('weekday').order('start_time')
+      sb.from('tic_students').select('id,display_name,email,current_level,status').eq('teacher_id',window.session.user.id).order('display_name'),
+      sb.from('tic_classes').select('id,name,level,status').eq('teacher_id',window.session.user.id).order('name'),
+      sb.from('tic_planning').select('*').eq('teacher_id',window.session.user.id).order('weekday').order('start_time')
     ]);
     return {students:sr.data||[],classes:cr.data||[],plans:pr.data||[],error:sr.error||cr.error||pr.error};
   }
@@ -7535,33 +7535,33 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
   window.savePlanning62=async function(ev,id){
     ev.preventDefault();
     const row={
-      teacher_id:session.user.id,
-      student_id:$('v62Student').value,
-      class_id:$('v62Class').value||null,
-      weekday:Number($('v62Weekday').value),
-      start_time:$('v62Start').value,
-      end_time:$('v62End').value,
-      start_date:$('v62StartDate').value||null,
-      end_date:$('v62EndDate').value||null,
-      location:$('v62Location').value.trim()||null,
-      meeting_url:$('v62Meeting').value.trim()||null,
-      notes:$('v62Notes').value.trim()||null,
-      active:$('v62Active').checked,
+      teacher_id:window.session.user.id,
+      student_id:window.$('v62Student').value,
+      class_id:window.$('v62Class').value||null,
+      weekday:Number(window.$('v62Weekday').value),
+      start_time:window.$('v62Start').value,
+      end_time:window.$('v62End').value,
+      start_date:window.$('v62StartDate').value||null,
+      end_date:window.$('v62EndDate').value||null,
+      location:window.$('v62Location').value.trim()||null,
+      meeting_url:window.$('v62Meeting').value.trim()||null,
+      notes:window.$('v62Notes').value.trim()||null,
+      active:window.$('v62Active').checked,
       updated_at:new Date().toISOString()
     };
-    const r=id?await sb.from('tic_planning').update(row).eq('id',id).eq('teacher_id',session.user.id):await sb.from('tic_planning').insert(row);
+    const r=id?await sb.from('tic_planning').update(row).eq('id',id).eq('teacher_id',window.session.user.id):await sb.from('tic_planning').insert(row);
     if(r.error){toast62(r.error.message,'error');return}
     closeModal();toast62(id?'Planejamento atualizado.':'Planejamento criado.','success');await planningPage62();
   };
   window.deletePlanning62=async function(id){
     if(!confirm('Remover este planejamento?'))return;
-    const r=await sb.from('tic_planning').delete().eq('id',id).eq('teacher_id',session.user.id);
+    const r=await sb.from('tic_planning').delete().eq('id',id).eq('teacher_id',window.session.user.id);
     if(r.error){toast62(r.error.message,'error');return}
     toast62('Planejamento removido.','success');await planningPage62();
   };
   async function planningPage62(){
     setPage('Planning','Dias fixos, horários e planejamento individual dos alunos.','<button class="btn primary" onclick="openPlanningForm62()">+ Novo planejamento</button>');
-    const root=$('content');root.innerHTML='<div class="card"><div class="v62-empty">Carregando planejamento...</div></div>';
+    const root=window.$('content');root.innerHTML='<div class="card"><div class="v62-empty">Carregando planejamento...</div></div>';
     const D=await loadPlanData62();window.__v62PlanData=D;
     if(D.error){
       root.innerHTML=`<div class="card v62-error"><b>Planning ainda não está disponível no banco.</b><p>${esc62(D.error.message)}</p><small>Execute o SQL V62 Planning no Supabase. Nenhum dado existente é apagado.</small></div>`;return;
@@ -7578,7 +7578,7 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
   /* ---------- ACTIVITY START SAFETY ---------- */
   async function ensureActivity62(){
     try{
-      if(profile?.role==='student' && session?.user?.id){
+      if(window.profile?.role==='student' && window.session?.user?.id){
         if(typeof window.ticStartStudentActivityV58==='function') await window.ticStartStudentActivityV58();
         else if(typeof window.ticStartStudentActivityV60==='function') await window.ticStartStudentActivityV60();
       }
@@ -7595,13 +7595,13 @@ setTimeout(()=>{if(profile?.role==='student'&&session?.user?.id)window.ticStartS
     if(v==='planning'){currentView=v;toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));await planningPage62();return;}
     if(v==='listeningStudio' && typeof window.ticListeningTeacherPage==='function'){
       currentView=v;toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
-      try{return await window.ticListeningTeacherPage();}catch(e){console.error('[Listening Studio]',e);$('content').innerHTML='<div class="card attention"><h2>🎧 Listening Studio</h2><p>Erro ao abrir o módulo.</p><pre style="white-space:pre-wrap">'+(e?.message||e)+'</pre></div>';return;}
+      try{return await window.ticListeningTeacherPage();}catch(e){console.error('[Listening Studio]',e);window.$('content').innerHTML='<div class="card attention"><h2>🎧 Listening Studio</h2><p>Erro ao abrir o módulo.</p><pre style="white-space:pre-wrap">'+(e?.message||e)+'</pre></div>';return;}
     }
     if(v==='listeningPractice' && typeof window.ticListeningStudentPage==='function'){
       currentView=v;toggleMobile();document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
-      try{return await window.ticListeningStudentPage();}catch(e){console.error('[Listening Practice]',e);$('content').innerHTML='<div class="card attention"><h2>🎧 Listening Practice</h2><p>Erro ao abrir o módulo.</p><pre style="white-space:pre-wrap">'+(e?.message||e)+'</pre></div>';return;}
+      try{return await window.ticListeningStudentPage();}catch(e){console.error('[Listening Practice]',e);window.$('content').innerHTML='<div class="card attention"><h2>🎧 Listening Practice</h2><p>Erro ao abrir o módulo.</p><pre style="white-space:pre-wrap">'+(e?.message||e)+'</pre></div>';return;}
     }
-    if(profile?.role==='student' && String(v||'').startsWith('student')){
+    if(window.profile?.role==='student' && String(v||'').startsWith('student')){
       try{if(typeof window.ticLogStudentEventV58==='function')window.ticLogStudentEventV58('view',v,'student');}catch(_){}
     }
     return baseLoadV62.apply(this,arguments);
@@ -7624,7 +7624,7 @@ const pics={hero:'https://images.unsplash.com/photo-1523240795612-9a054b0db644?a
 function escI(v){return typeof e58==='function'?e58(v??''):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function imgFor(a){if(a?.cover_image_url&&/^https?:/i.test(a.cover_image_url))return a.cover_image_url;const t=String(a?.title||'').toLowerCase();if(/listen|audio|pronunciation/.test(t))return pics.Listening;if(/speak|conversation|dialog/.test(t))return pics.Speaking;if(/read|text|book|alphabet/.test(t))return pics.Reading;if(/write|email|paragraph/.test(t))return pics.Writing;return pics.default;}
 async function renderHome(){if(typeof sb==='undefined'||typeof studentRecord!=='function')return;const root=document.querySelector('#content');if(!root)return;let s;try{s=await studentRecord()}catch(_){return}if(!s)return;let activities=[],progress=[];try{const ar=await sb.from('tic_immersion_activities').select('id,title,description,day_number,cefr_level,skill,estimated_minutes,cover_image_url,is_published,is_archived,sort_order').eq('teacher_id',s.teacher_id).eq('is_published',true).eq('is_archived',false).order('day_number').order('sort_order');if(!ar.error)activities=ar.data||[];const pr=await sb.from('tic_immersion_progress').select('activity_id,status,student_id').eq('student_id',s.id);if(!pr.error)progress=pr.data||[]}catch(_){}const levels=['A0','A1','A2','B1','B2','C1','C2'];const rank={};activities.sort((a,b)=>levels.indexOf(a.cefr_level)-levels.indexOf(b.cefr_level)||(a.day_number-b.day_number)||(a.sort_order-b.sort_order));activities.forEach(a=>{const l=a.cefr_level||'A0';rank[l]=(rank[l]||0)+1;a._slot=levels.indexOf(l)*60+rank[l]});const done=new Set(progress.filter(p=>p.status==='completed').map(p=>p.activity_id));const current=activities.find(a=>!done.has(a.id))||activities[0];const complete=activities.filter(a=>done.has(a.id)).length,pct=activities.length?Math.round(complete/activities.length*100):0,currentLevel=String(s.current_level||'A0').toUpperCase(),levelActivities=activities.filter(a=>a.cefr_level===currentLevel),levelDone=levelActivities.filter(a=>done.has(a.id)).length;const skills=['Listening','Speaking','Reading','Writing'];const skillCards=skills.map(skill=>{const rows=levelActivities.filter(a=>a.skill===skill),d=rows.filter(a=>done.has(a.id)).length;return '<article class="i60-skill"><div class="i60-skill-art" style="background-image:url(&quot;'+pics[skill]+'&quot;)"></div><b>'+skill+'</b><small>'+d+' / '+rows.length+' aulas concluídas</small><div class="i60-bar"><i style="width:'+(rows.length?Math.round(d/rows.length*100):0)+'%"></i></div></article>'}).join('');const path=levels.map(l=>{const rows=activities.filter(a=>a.cefr_level===l),d=rows.filter(a=>done.has(a.id)).length;return '<div class="i60-level '+(l===currentLevel?'active ':'')+(rows.length&&d===rows.length?'done':'')+'"><strong>'+l+'</strong><small>'+d+'/'+rows.length+' aulas</small><small>'+(rows.length&&d===rows.length?'Concluído':l===currentLevel?'Seu nível':'Trilha CEFR')+'</small></div>'}).join('');const card=current?'<article class="i60-lesson"><img class="i60-lesson-img" src="'+escI(imgFor(current))+'" alt="Imagem da aula '+escI(current.title)+'" loading="lazy" onerror="this.onerror=null;this.src=&quot;'+pics.default+'&quot;"><div class="i60-lesson-main"><div class="i60-tags"><span class="i60-tag">DIA '+current._slot+'</span><span class="i60-tag">'+escI(current.cefr_level)+'</span><span class="i60-tag">'+escI(current.skill)+'</span><span class="i60-tag">'+(Number(current.estimated_minutes)||15)+' MIN</span></div><h3>'+escI(current.title)+'</h3><p>'+escI(current.description||'Continue sua trilha diária de inglês com prática guiada.')+'</p><button class="i60-cta" onclick="window.ticImmersionPlannerOpen()">▶ '+(done.has(current.id)?'Revisar aula':'Continuar aula')+'</button></div></article>':'<div class="i60-empty">Seu professor ainda não publicou as aulas do Immersion Planner.</div>';const home='<section class="i60-home"><div class="i60-hero"><div class="i60-hero-copy"><span class="i60-eyebrow">FLUENT IMMERSION · YOUR ENGLISH JOURNEY</span><h2>Let’s keep going, '+escI((s.display_name||'Student').split(' ')[0])+'!</h2><p>Uma aula por dia. Um passo de cada vez. Acompanhe sua evolução do A0 ao C2.</p><div class="i60-bar"><i style="width:'+pct+'%"></i></div><small>'+pct+'% da trilha concluída · '+complete+' de '+activities.length+' aulas</small><button class="i60-cta" onclick="window.ticImmersionPlannerOpen()">Abrir meu Immersion Planner →</button></div><div class="i60-hero-art" style="background-image:url(&quot;'+pics.hero+'&quot;)"></div></div><div class="i60-grid"><div class="i60-tile"><small>📚 Aulas concluídas</small><b>'+complete+'</b><span>de '+activities.length+' aulas</span></div><div class="i60-tile"><small>🎯 Nível atual</small><b>'+escI(currentLevel)+'</b><span>'+levelDone+' de '+levelActivities.length+' aulas</span></div><div class="i60-tile"><small>🏆 Meta de aprendizagem</small><b>'+pct+'%</b><span>da trilha concluída</span></div><div class="i60-tile"><small>⏱️ Próxima sessão</small><b>'+(current?(Number(current.estimated_minutes)||15)+' min':'—')+'</b><span>tempo estimado</span></div></div><div class="i60-section-title"><div><h3>Continue de onde parou</h3><p>Uma atividade principal por dia na sua trilha.</p></div></div>'+card+'<div class="i60-section-title"><div><h3>Treine suas habilidades</h3><p>Seu progresso no nível '+escI(currentLevel)+'.</p></div></div><div class="i60-skills">'+skillCards+'</div><div class="i60-section-title"><div><h3>Minha trilha CEFR</h3><p>420 aulas organizadas em sete níveis progressivos.</p></div></div><div class="i60-path">'+path+'</div></section>';const hero=root.querySelector('.s43-hero');if(hero){root.querySelector('.i60-home')?.remove();hero.insertAdjacentHTML('afterend',home)}else if(!root.querySelector('.i60-home'))root.insertAdjacentHTML('afterbegin',home)}
-const original=window.studentDashboard;window.studentDashboard=async function(){if(typeof original==='function')await original.apply(this,arguments);await renderHome()};window.addEventListener('load',()=>{if(typeof session!=='undefined'&&session?.user&&typeof isStudentRole==='function'&&isStudentRole())setTimeout(renderHome,500)});
+const original=window.studentDashboard;window.studentDashboard=async function(){if(typeof original==='function')await original.apply(this,arguments);await renderHome()};window.addEventListener('load',()=>{if(typeof session!=='undefined'&&window.session?.user&&typeof isStudentRole==='function'&&isStudentRole())setTimeout(renderHome,500)});
 })();
 </script>
 <style id="tp-top-activity-v1-css">
@@ -7643,7 +7643,7 @@ var items=[],busy=false;
 function el(id){return document.getElementById(id)}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function db(){try{return typeof sb!=='undefined'?sb:(window.sb||window.supabaseClient||null)}catch(_){return window.sb||window.supabaseClient||null}}
-function teacher(){try{if(typeof isTeacherRole==='function')return !!isTeacherRole();if(typeof isTeacher==='function')return !!isTeacher();if(typeof profile!=='undefined'&&profile)return ['teacher','admin','gestor','owner'].indexOf(String(profile.role||'').toLowerCase())>=0}catch(_){}return false}
+function teacher(){try{if(typeof isTeacherRole==='function')return !!isTeacherRole();if(typeof isTeacher==='function')return !!isTeacher();if(typeof profile!=='undefined'&&profile)return ['teacher','admin','gestor','owner'].indexOf(String(window.profile.role||'').toLowerCase())>=0}catch(_){}return false}
 function getSeen(){try{return JSON.parse(localStorage.getItem('tp-top-activity-seen-v1')||'[]')}catch(_){return []}}
 function setSeen(ids){try{localStorage.setItem('tp-top-activity-seen-v1',JSON.stringify(ids.slice(-250)))}catch(_){}}
 function addUI(){
@@ -8114,10 +8114,10 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
  const fmtv=v=>v?new Date(v).toLocaleDateString('pt-BR'):'—';
  const isActive=x=>x.active!==false;
  window.assignmentsPage=async function(){
-  const host=$id('content');if(!host||!session?.user?.id)return;
+  const host=$id('content');if(!host||!window.session?.user?.id)return;
   const token=window.__fiAssignmentListToken=(window.__fiAssignmentListToken||0)+1;
   host.innerHTML='<div class="card" style="padding:24px">Carregando tarefas e vínculos com alunos…</div>';
-  const {data,error}=await sb.from('tic_assignments').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+  const {data,error}=await sb.from('tic_assignments').select('*').eq('teacher_id',window.session.user.id).order('created_at',{ascending:false});
   if(token!==window.__fiAssignmentListToken||currentView!=='assignments')return;
   if(error){host.innerHTML='<div class="card attention"><b>Não foi possível carregar as tarefas.</b><p>'+escv(error.message)+'</p></div>';return}
   const all=data||[],active=all.filter(isActive),ids=active.map(x=>x.id);
@@ -8125,13 +8125,13 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
   if(ids.length){
    const [lr,sr]=await Promise.all([
     sb.from('tic_task_assignments').select('id,assignment_id,student_id,status,active,assigned_at').in('assignment_id',ids),
-    sb.from('tic_students').select('id,display_name,email').eq('teacher_id',session.user.id).eq('status','active').order('display_name')
+    sb.from('tic_students').select('id,display_name,email').eq('teacher_id',window.session.user.id).eq('status','active').order('display_name')
    ]);
    if(token!==window.__fiAssignmentListToken||currentView!=='assignments')return;
    if(lr.error){host.innerHTML='<div class="card attention"><b>As tarefas foram carregadas, mas não foi possível consultar os vínculos.</b><p>'+escv(lr.error.message)+'</p></div>';return}
    links=lr.data||[];students=sr.data||[];
   }else{
-   const sr=await sb.from('tic_students').select('id,display_name,email').eq('teacher_id',session.user.id).eq('status','active').order('display_name');
+   const sr=await sb.from('tic_students').select('id,display_name,email').eq('teacher_id',window.session.user.id).eq('status','active').order('display_name');
    if(token!==window.__fiAssignmentListToken||currentView!=='assignments')return;students=sr.data||[];
   }
   window.__fiTaskLinks=links;window.__fiTaskStudents=students;window.__fiTasks=all;
@@ -8151,7 +8151,7 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
  window.manageTaskLinksV1=async function(id){
   const task=(window.__fiTasks||[]).find(x=>x.id===id);if(!task)return toastv('Tarefa não encontrada.','error');
   const [{data:students,error:se},{data:links,error:le}]=await Promise.all([
-   sb.from('tic_students').select('id,display_name,email,current_level').eq('teacher_id',session.user.id).eq('status','active').order('display_name'),
+   sb.from('tic_students').select('id,display_name,email,current_level').eq('teacher_id',window.session.user.id).eq('status','active').order('display_name'),
    sb.from('tic_task_assignments').select('id,assignment_id,student_id,status,active,assigned_at').eq('assignment_id',id)
   ]);
   if(se||le)return toastv('Não foi possível carregar os alunos/vínculos: '+(se?.message||le?.message),'error');
@@ -8180,14 +8180,14 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
  window.archiveTaskV1=async function(id){
   const task=(window.__fiTasks||[]).find(x=>x.id===id);if(!task)return;
   if(!confirm('Arquivar esta tarefa? Ela sairá das listas ativas, mas os vínculos e o histórico de entregas serão preservados.'))return;
-  const r=await sb.from('tic_assignments').update({active:false}).eq('id',id).eq('teacher_id',session.user.id);
+  const r=await sb.from('tic_assignments').update({active:false}).eq('id',id).eq('teacher_id',window.session.user.id);
   if(r.error)return toastv('Não foi possível arquivar: '+r.error.message,'error');
   const links=await sb.from('tic_task_assignments').update({active:false,removed_at:new Date().toISOString()}).eq('assignment_id',id).eq('active',true);
   if(links.error)return toastv('Tarefa arquivada, mas alguns vínculos não foram desativados: '+links.error.message,'error');
   toastv('Tarefa arquivada; histórico preservado.','success');await assignmentsPage();
  };
  window.restoreTaskV1=async function(id){
-  const r=await sb.from('tic_assignments').update({active:true}).eq('id',id).eq('teacher_id',session.user.id);
+  const r=await sb.from('tic_assignments').update({active:true}).eq('id',id).eq('teacher_id',window.session.user.id);
   if(r.error)return toastv('Não foi possível restaurar: '+r.error.message,'error');
   toastv('Tarefa restaurada. Reative os alunos em Atribuir / Reatribuir.','success');await assignmentsPage();
  };
