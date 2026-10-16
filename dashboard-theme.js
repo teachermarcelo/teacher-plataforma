@@ -664,7 +664,51 @@ function installMobileNavToggle(){
 }
 
 function installAlwaysVisibleMobileTabs(){const sidebar=$('#sidebar'),overlay=$('#mobileOverlay');if(!sidebar||!overlay)return;let b=$('#fiMobileTabsHandle');if(!b){b=document.createElement('button');b.id='fiMobileTabsHandle';b.type='button';b.setAttribute('aria-label','Abrir abas do menu lateral');b.setAttribute('aria-controls','sidebar');b.innerHTML='<span class="fi-tabs-bars" aria-hidden="true">☰</span><span>ABAS</span>';b.addEventListener('click',()=>{const opening=!sidebar.classList.contains('open');if(typeof window.toggleMobile==='function')window.toggleMobile(opening);else{sidebar.classList.toggle('open',opening);overlay.classList.toggle('open',opening)}});document.body.appendChild(b)}}
+
+function installRefreshPositionPersistence(){
+ if(window.__fiRefreshPositionPersistence)return;
+ window.__fiRefreshPositionPersistence=true;
+ const KEY='ticPlatformLastViewV1',GESTURE='ticPlatformLastGestureV1';
+ document.addEventListener('click',function(ev){
+  if(!ev.isTrusted)return;
+  try{sessionStorage.setItem(GESTURE,String(Date.now()))}catch(_){}
+ },true);
+ function recentUserAction(){try{return Date.now()-Number(sessionStorage.getItem(GESTURE)||0)<2500}catch(_){return false}}
+ function wrapLoadView(){
+  const fn=window.loadView;
+  if(typeof fn!=='function'||fn.__fiRefreshPositionWrapped)return false;
+  const wrapped=function(view){
+   if(!window.__fiRestoringLastPosition&&recentUserAction()){
+    try{sessionStorage.setItem(KEY,String(view||''))}catch(_){}
+   }
+   return fn.apply(this,arguments);
+  };
+  wrapped.__fiRefreshPositionWrapped=true;
+  wrapped.__fiOriginal=fn;
+  window.loadView=wrapped;
+  return true;
+ }
+ wrapLoadView();
+ let tries=0;
+ const watcher=setInterval(function(){tries++;if(wrapLoadView()||tries>20)clearInterval(watcher)},250);
+ function restore(){
+  let view='';
+  try{view=sessionStorage.getItem(KEY)||''}catch(_){}
+  if(!view||view==='null'||view==='undefined')return;
+  window.__fiRestoringLastPosition=true;
+  try{
+   const fn=window.loadView;
+   if(typeof fn==='function'){
+    const original=fn.__fiRefreshPositionWrapped?fn.__fiOriginal:fn;
+    if(typeof original==='function')original.call(window,view);
+   }
+  }catch(e){console.warn('Não foi possível restaurar a última tela:',e)}
+  setTimeout(function(){window.__fiRestoringLastPosition=false},1800);
+ }
+ setTimeout(restore,1100);
+}
 function init(){
+ installRefreshPositionPersistence();
  addStyle();
  installMobileNavToggle();
  installAlwaysVisibleMobileTabs();
