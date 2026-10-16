@@ -47,7 +47,7 @@
    const body=document.getElementById('ticV41ClassBody');if(!body)return;
    const events=state.evs||[];
    const classify=e=>{
-     const raw=[e.status,e.lesson_status,e.event_status,e.event_type,e.title,e.notes].filter(Boolean).join(' ').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
+     const raw=[e.status,e.lesson_status,e.event_status,e.event_type,e.title,e.notes].filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
      if(/cancelad|cancelled|canceled|\bcancel\b/.test(raw))return 'cancelled';
      if(/adiad|postpon|reschedul/.test(raw))return 'postponed';
      if(/ministrad|realizad|concluid|completed|\btaught\b|\bdone\b/.test(raw))return 'taught';
