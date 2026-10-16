@@ -1,6 +1,41 @@
 (function(){'use strict';
 const css='.v63-card-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0}.v63-card-search{flex:1;min-width:210px;padding:10px 12px;border:1px solid #e5def2;border-radius:11px;background:#fff;color:#251b40;font-size:12px}.v63-card-menu{position:absolute;right:10px;top:10px;z-index:20;background:#fff;border:1px solid #e5def2;border-radius:12px;padding:6px;box-shadow:0 10px 25px #24124b22}.v63-card-menu button{display:block;width:100%;border:0;background:transparent;padding:8px;text-align:left;cursor:pointer}.v63-card-enhanced{position:relative;transition:transform .15s,box-shadow .15s}.v63-card-enhanced:hover{transform:translateY(-2px);box-shadow:0 10px 26px #24124b12}';
-function init(){if(!document.getElementById('v63-card-css')){var st=document.createElement('style');st.id='v63-card-css';st.textContent=css;document.head.appendChild(st)}
+function installClassTabRefreshPersistence(){
+ if(window.__fiClassTabRefreshPersistence)return;
+ window.__fiClassTabRefreshPersistence=true;
+ var CLASS='ticPlatformLastClassTabV1',CLASSVIEW='ticPlatformLastClassTabViewV1',VIEW='ticPlatformLastViewV1',GESTURE='ticPlatformLastGestureV1';
+ document.addEventListener('click',function(ev){if(!ev.isTrusted)return;try{sessionStorage.setItem(GESTURE,String(Date.now()))}catch(_){}},true);
+ function recent(){try{return Date.now()-Number(sessionStorage.getItem(GESTURE)||0)<2500}catch(_){return false}}
+ function wrap(){
+  var fn=window.classCenterTabV41;
+  if(typeof fn!=='function'||fn.__fiRefreshClassTabWrapped)return false;
+  var wrapped=function(classId,tab){
+   if(!window.__fiRestoringLastPosition&&recent()&&classId&&tab){
+    try{sessionStorage.setItem(CLASS,JSON.stringify({classId:String(classId),tab:String(tab)}));sessionStorage.setItem(CLASSVIEW,sessionStorage.getItem(VIEW)||'')}catch(_){}
+   }
+   return fn.apply(this,arguments);
+  };
+  wrapped.__fiRefreshClassTabWrapped=true;wrapped.__fiOriginal=fn;window.classCenterTabV41=wrapped;
+  if(typeof window.classCenterTab!=='function'||window.classCenterTab===fn)window.classCenterTab=wrapped;
+  return true;
+ }
+ wrap();var tries=0;var watcher=setInterval(function(){tries++;if(wrap()||tries>24)clearInterval(watcher)},250);
+ setTimeout(function(){
+  var data=null,view='';
+  try{data=JSON.parse(sessionStorage.getItem(CLASS)||'null');view=sessionStorage.getItem(VIEW)||'';if((sessionStorage.getItem(CLASSVIEW)||'')!==view)return}catch(_){return}
+  if(!data||!data.classId||!data.tab)return;
+  var count=0;var timer=setInterval(function(){
+   count++;var fn=window.classCenterTabV41;
+   var body=document.getElementById('ticV41ClassBody');
+   if(typeof fn==='function'&&body){
+    window.__fiRestoringLastPosition=true;
+    try{var original=fn.__fiRefreshClassTabWrapped?fn.__fiOriginal:fn;Promise.resolve(original.call(window,data.classId,data.tab)).catch(function(e){console.warn('Não foi possível restaurar a aba do Class Center:',e)});}catch(e){console.warn('Não foi possível restaurar a aba do Class Center:',e)}
+    setTimeout(function(){window.__fiRestoringLastPosition=false},1800);clearInterval(timer);
+   }else if(count>=20)clearInterval(timer);
+  },400);
+ },2600);
+}
+function init(){installClassTabRefreshPersistence();if(!document.getElementById('v63-card-css')){var st=document.createElement('style');st.id='v63-card-css';st.textContent=css;document.head.appendChild(st)}
 var body=document.getElementById('ticV41ClassBody');if(!body)return;
 wireOverviewCards(body);
 var cards=body.querySelectorAll('.v61-task-card,.v61-resource-card,.v49-private-card,.v61-lesson-card');if(!cards.length)return;
