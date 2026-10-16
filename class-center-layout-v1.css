@@ -1,0 +1,142 @@
+/* Teacher Platform — Class Center compact header, Trello board and consistent cards.
+   Additive visual layer only: no data, routing, Supabase or assignment logic is changed. */
+.class-center-page{
+  --cc-purple:#6540dc;--cc-purple-dark:#4f2ab7;--cc-lavender:#f6f3ff;
+  --cc-border:#e4def1;--cc-muted:#77728b;--cc-ink:#241b3d;
+  color:var(--cc-ink);min-width:0;
+}
+/* 1) Compact, clearer class header */
+.class-center-page .class-center-top{
+  padding:12px 18px 8px!important;gap:10px!important;
+  background:var(--card,#fff);border-bottom:1px solid var(--cc-border);
+}
+.class-center-page .class-center-title{gap:14px!important;align-items:center!important}
+.class-center-page .class-center-title>div:first-child{min-width:180px}
+.class-center-page .class-center-title .badge{display:inline-flex;vertical-align:middle;margin-bottom:2px}
+.class-center-page .class-center-title h2{
+  display:inline-block;margin:2px 0 3px 8px!important;
+  font-size:clamp(20px,2vw,25px)!important;line-height:1.2;letter-spacing:-.45px
+}
+.class-center-page .class-center-title small{display:block;margin-top:3px;font-size:11px;line-height:1.45}
+.class-center-page .class-center-actions{gap:7px!important;align-items:center}
+.class-center-page .class-center-actions .btn{
+  min-height:38px;padding:8px 12px;border-radius:11px;font-size:11px;
+  font-weight:800;white-space:nowrap;box-shadow:none;transition:background .15s,border-color .15s,transform .15s
+}
+.class-center-page .class-center-actions .btn.primary{
+  background:var(--cc-purple);border-color:var(--cc-purple);box-shadow:0 4px 10px #6540dc22
+}
+.class-center-page .class-center-actions .btn.primary:hover{background:var(--cc-purple-dark);transform:translateY(-1px)}
+.class-center-page .class-center-tabs{gap:6px!important;padding:8px 0 2px!important}
+.class-center-page .class-center-tabs button{
+  padding:8px 11px!important;border-radius:10px!important;font-size:11px;
+  font-weight:800;min-height:35px
+}
+.class-center-page .class-center-body{padding:17px 20px 36px!important;min-width:0}
+.class-center-page .class-center-float{display:none!important}
+/* 2) Trello-style board with consistent columns and visible scroll */
+.class-center-page .class-center-panel{padding:15px!important;border-radius:16px!important;margin-bottom:14px}
+.class-center-page .class-center-panel h3{font-size:15px!important;letter-spacing:-.2px}
+.class-center-page .class-center-board{
+  display:grid;grid-template-columns:repeat(4,minmax(235px,1fr));gap:12px;
+  overflow-x:auto;overflow-y:visible;padding:2px 2px 12px;
+  align-items:start;scroll-snap-type:x proximity
+}
+.class-center-page .class-center-column,.class-center-page .fi-bc-col{
+  min-width:0;min-height:235px;padding:10px;border:1px solid var(--cc-border);
+  border-radius:14px;background:#f8f6fd;scroll-snap-align:start
+}
+.class-center-page .class-center-column-head,.class-center-page .fi-bc-col-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:5px 5px 11px;font-size:12px;font-weight:850
+}
+.class-center-page .class-center-column>div:last-child,.class-center-page .fi-bc-drop{
+  display:grid;gap:9px;align-content:start;min-height:185px
+}
+.class-center-page .fi-bc-board{
+  display:grid;grid-template-columns:repeat(4,minmax(235px,1fr));gap:12px;
+  overflow-x:auto;overflow-y:visible;padding:3px 2px 12px;
+  scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch
+}
+.class-center-page .fi-bc-col{background:#f8f6fd;border-color:var(--cc-border);scroll-snap-align:start}
+.class-center-page .fi-bc-card,.class-center-page .class-center-card{
+  min-width:0;position:relative;border-radius:13px;background:var(--card,#fff);
+  padding:13px;border:1px solid var(--cc-border);
+  box-shadow:0 3px 10px #26174b08;overflow-wrap:anywhere;
+  transition:box-shadow .15s,border-color .15s,transform .15s
+}
+.class-center-page .fi-bc-card{border-left:4px solid var(--fi-type,var(--cc-purple))}
+.class-center-page .fi-bc-card:hover,.class-center-page .class-center-card:hover{
+  transform:translateY(-1px);box-shadow:0 7px 17px #26174b12;border-color:#d2c5f3
+}
+.class-center-page .fi-bc-card b,.class-center-page .class-center-card b{
+  display:block;font-size:12px;line-height:1.5;overflow-wrap:anywhere
+}
+.class-center-page .fi-bc-meta,.class-center-page .class-center-card small{
+  font-size:10px;line-height:1.5;overflow-wrap:anywhere;word-break:break-word
+}
+.class-center-page .fi-bc-card-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.class-center-page .fi-bc-card-links a,.class-center-page .cc-live-link{
+  max-width:100%;border-radius:8px;padding:7px 9px;font-size:10px;font-weight:800;
+  overflow-wrap:anywhere;word-break:break-word
+}
+.class-center-page .fi-bc-card-actions{
+  display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;padding-top:10px;
+  border-top:1px solid #eee9f7
+}
+.class-center-page .fi-bc-card-actions button{
+  min-height:32px;padding:7px 9px;border:1px solid #e1daf0;border-radius:9px;
+  background:#fff;color:#352650;font-size:10px;font-weight:800;line-height:1.2;
+  cursor:pointer;white-space:normal
+}
+.class-center-page .fi-bc-card-actions button:hover{border-color:#a995ed;background:#f6f2ff}
+.class-center-page .fi-bc-card-actions button.danger{color:#b42335}
+.class-center-page .fi-bc-card-actions button.restore{color:#167647}
+.class-center-page .class-center-list{gap:8px}
+.class-center-page .class-center-list-item{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;
+  padding:13px;border:1px solid var(--cc-border);border-radius:13px;background:var(--card,#fff)
+}
+.class-center-page .class-center-kpis{grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px;margin-bottom:14px}
+.class-center-page .class-center-kpi{min-height:75px;padding:12px 14px;border-radius:13px}
+.class-center-page .class-center-kpi b{font-size:clamp(20px,2vw,25px);margin-top:5px}
+.class-center-page .cc-live-board-toolbar{margin-bottom:8px}
+.class-center-page .cc-live-board-toolbar button{border-radius:9px;padding:8px 11px;font-weight:800}
+.class-center-page .fi-bc-toolbar{gap:8px;margin:10px 0 13px}
+.class-center-page .fi-bc-toolbar input{min-height:39px;border-radius:11px}
+/* Dark theme remains legible */
+body.fi-premium:not(.fi-light) .class-center-page .class-center-column,
+body.fi-premium:not(.fi-light) .class-center-page .fi-bc-col{background:#1c1a27;border-color:#39334b}
+body.fi-premium:not(.fi-light) .class-center-page .fi-bc-card-actions{border-top-color:#39334b}
+body.fi-premium:not(.fi-light) .class-center-page .fi-bc-card-actions button{background:#252233;color:#f1edff;border-color:#4a4262}
+body.fi-premium:not(.fi-light) .class-center-page .fi-bc-card-actions button:hover{background:#33294c;border-color:#8d75d5}
+body.fi-premium:not(.fi-light) .class-center-page .class-center-list-item{background:var(--card,#201e2b);border-color:#39334b}
+/* 3) Responsive cards, header and actions */
+@media(max-width:1050px){
+  .class-center-page .class-center-title{align-items:flex-start!important}
+  .class-center-page .class-center-actions{justify-content:flex-start}
+  .class-center-page .class-center-board,.class-center-page .fi-bc-board{grid-template-columns:repeat(4,minmax(220px,260px))}
+  .class-center-page .class-center-body{padding:14px 15px 28px!important}
+}
+@media(max-width:760px){
+  .class-center-page .class-center-top{padding:12px 12px 8px!important;position:relative}
+  .class-center-page .class-center-title{display:flex;flex-direction:column;align-items:stretch!important;gap:10px!important}
+  .class-center-page .class-center-title h2{font-size:21px!important}
+  .class-center-page .class-center-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;width:100%}
+  .class-center-page .class-center-actions .btn{width:100%;justify-content:center;min-width:0;white-space:normal}
+  .class-center-page .class-center-tabs{margin-top:7px;scrollbar-width:thin}
+  .class-center-page .class-center-tabs button{flex:0 0 auto}
+  .class-center-page .class-center-body{padding:12px 10px 28px!important}
+  .class-center-page .class-center-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .class-center-page .class-center-panel{padding:11px!important}
+  .class-center-page .class-center-board,.class-center-page .fi-bc-board{
+    grid-template-columns:repeat(4,minmax(78vw,78vw));gap:9px;padding-bottom:12px
+  }
+  .class-center-page .class-center-column,.class-center-page .fi-bc-col{min-width:0;padding:8px}
+  .class-center-page .fi-bc-card,.class-center-page .class-center-card{padding:11px}
+  .class-center-page .fi-bc-card-actions button{flex:1 1 auto;min-width:70px}
+  .class-center-page .class-center-list-item{grid-template-columns:minmax(0,1fr);gap:7px}
+  .class-center-page .class-center-float{display:flex!important;position:fixed;left:10px;right:10px;bottom:10px;z-index:45;gap:6px;padding:7px;background:rgba(255,255,255,.94);border:1px solid var(--cc-border);border-radius:14px;box-shadow:0 8px 25px #24124b22;backdrop-filter:blur(12px)}
+  .class-center-page .class-center-float .btn{flex:1;min-width:0;padding:9px 5px;font-size:10px;white-space:normal}
+}
+@media(prefers-reduced-motion:reduce){.class-center-page *{transition:none!important;scroll-behavior:auto!important}}
