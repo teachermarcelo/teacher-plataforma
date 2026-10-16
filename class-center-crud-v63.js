@@ -41,12 +41,53 @@
    }).join('');
    body.innerHTML=kpis+'<div class="v41-panel v63-lessons"><div class="v63-heading"><div><h3>📚 Aulas</h3><p>Edite ou remova cada registro. O título é opcional.</p></div><button class="btn primary" onclick="openClassLessonForm(\''+esc(classId)+'\')">＋ Registrar aula</button></div><div class="v63-list">'+(rows||'<div class="v41-empty">Nenhuma aula registrada. Clique em “Registrar aula” para adicionar a primeira.</div>')+'</div></div>';
  }
- const wrapped=async function(classId,tab){if(tab==='lessons')return renderLessons(classId);return original.apply(this,arguments)};
+ function renderLessonStatusOverview(classId){
+   const state=window.__ticClassCenterV41||{};
+   if(state.classId!==classId)return;
+   const body=document.getElementById('ticV41ClassBody');if(!body)return;
+   const events=state.evs||[];
+   const classify=e=>{
+     const raw=[e.status,e.lesson_status,e.event_status,e.event_type,e.title,e.notes].filter(Boolean).join(' ').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
+     if(/cancelad|cancelled|canceled|\bcancel\b/.test(raw))return 'cancelled';
+     if(/adiad|postpon|reschedul/.test(raw))return 'postponed';
+     if(/ministrad|realizad|concluid|completed|\btaught\b|\bdone\b/.test(raw))return 'taught';
+     if(/proxima aula|agendad|scheduled|next_class|\bnext\b|\bplanned\b/.test(raw))return 'upcoming';
+     const date=e.starts_at?new Date(e.starts_at):null;
+     return date&&date.getTime()>=Date.now()?'upcoming':'unmarked';
+   };
+   const counts={taught:0,cancelled:0,postponed:0,upcoming:0,unmarked:0};
+   events.forEach(e=>counts[classify(e)]++);
+   let panel=body.querySelector('.v63-status-overview');
+   if(!panel){
+     panel=document.createElement('section');panel.className='v41-panel v63-status-overview';
+     const lessonsPanel=[...body.querySelectorAll('.v41-panel')].find(el=>/Aulas/.test(el.querySelector('h3')?.textContent||''));
+     if(lessonsPanel)body.insertBefore(panel,lessonsPanel);else body.insertBefore(panel,body.firstChild);
+   }
+   const cards=[
+     ['📚','Total de registros',events.length,'total'],
+     ['✅','Ministradas',counts.taught,'taught'],
+     ['🚫','Canceladas',counts.cancelled,'cancelled'],
+     ['🔁','Adiadas',counts.postponed,'postponed'],
+     ['🗓️','Próximas / agendadas',counts.upcoming,'upcoming'],
+     ['ℹ️','Sem status definido',counts.unmarked,'unmarked']
+   ];
+   panel.innerHTML='<div class="v63-status-heading"><div><h3>📊 Resumo das aulas</h3><p>Contagem baseada no status salvo em cada registro. Aulas antigas sem status ficam em “Sem status definido”.</p></div></div><div class="v63-status-grid">'+cards.map(c=>'<article class="v63-status-card is-'+c[3]+'"><span class="v63-status-icon">'+c[0]+'</span><div><small>'+c[1]+'</small><b>'+c[2]+'</b></div></article>').join('')+'</div>';
+ }
+ const wrapped=async function(classId,tab){
+   if(tab==='lessons')return renderLessons(classId);
+   const result=await original.apply(this,arguments);
+   if(tab==='overview'||tab==='overview_v41'||tab==null){
+     renderLessonStatusOverview(classId);
+     setTimeout(()=>renderLessonStatusOverview(classId),80);
+   }
+   return result;
+ };
  wrapped.__v63Crud=true;
  window.classCenterTabV41=wrapped;
  window.classCenterTab=wrapped;
  const style=document.createElement('style');
  style.id='v63-class-crud-css';
  style.textContent='.v63-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.v63-heading h3{margin:0 0 5px}.v63-heading p{margin:0;color:var(--muted,#74809a);font-size:13px}.v63-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:14px;margin-top:16px}.v63-record{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border:1px solid var(--border,#e2e6f0);border-radius:17px;padding:17px;background:var(--card,#fff);min-width:0;box-shadow:0 5px 18px #1b25500a;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;cursor:pointer;position:relative}.v63-record:hover,.v63-record:focus-visible{transform:translateY(-2px);border-color:#9a7af7;box-shadow:0 12px 26px #5434a51c;outline:none}.v63-record-main{flex:1;min-width:0}.v63-titleline{display:flex;align-items:flex-start;gap:8px;justify-content:space-between;flex-wrap:wrap}.v63-record-main b{display:block;overflow-wrap:anywhere;font-size:14px;line-height:1.45}.v63-type{font-size:10px;font-weight:750;border-radius:99px;background:#eee8ff;color:#5b35c6;padding:5px 8px;white-space:nowrap}.v63-record-main small{display:block;margin-top:7px;color:var(--muted,#74809a);overflow-wrap:anywhere}.v63-date{font-size:11px}.v63-notes{font-size:12px;line-height:1.5;color:var(--muted,#74809a);white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0 0}.v63-links{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.v63-link{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:8px 10px;border:1px solid #ddd3ff;border-radius:10px;background:#f7f4ff;color:#5030b5;text-decoration:none;font-size:11px;font-weight:750;overflow-wrap:anywhere}.v63-link:hover{background:#ece5ff;border-color:#a68af9}.v63-link span:last-child{overflow-wrap:anywhere}.v63-no-link{opacity:.78}.v63-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;flex-shrink:0;position:relative;z-index:1}.v63-actions .btn{white-space:nowrap}.v63-actions .v61-danger{border:1px solid #efcaca!important;color:#b42318!important;background:#fff7f7!important}@media(max-width:720px){.v63-list{grid-template-columns:minmax(0,1fr)}.v63-record{flex-direction:column}.v63-actions{width:100%;justify-content:flex-start}.v63-actions .btn{flex:1;justify-content:center}}';
+ style.textContent += '\n.v63-status-overview{margin-bottom:16px}.v63-status-heading h3{margin:0 0 5px}.v63-status-heading p{margin:0;color:var(--muted,#74809a);font-size:12px;line-height:1.5}.v63-status-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:14px}.v63-status-card{display:flex;align-items:center;gap:10px;min-width:0;padding:13px 12px;border:1px solid var(--border,#e2e6f0);border-radius:14px;background:var(--card,#fff)}.v63-status-icon{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:10px;background:#f1edff;font-size:16px}.v63-status-card div{min-width:0}.v63-status-card small{display:block;font-size:11px;line-height:1.35;color:var(--muted,#74809a);overflow-wrap:anywhere}.v63-status-card b{display:block;margin-top:4px;font-size:24px;line-height:1.1;color:var(--text,#18243b)}.v63-status-card.is-taught .v63-status-icon{background:#dcfce7}.v63-status-card.is-cancelled .v63-status-icon{background:#fee2e2}.v63-status-card.is-postponed .v63-status-icon{background:#fef3c7}.v63-status-card.is-upcoming .v63-status-icon{background:#dbeafe}.v63-status-card.is-unmarked .v63-status-icon{background:#f1f5f9}@media(max-width:1000px){.v63-status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:560px){.v63-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.v63-status-card{padding:11px 9px}.v63-status-card b{font-size:21px}}';
  document.head.appendChild(style);
 })();
