@@ -984,7 +984,20 @@ function openTeacherMaterialFormV53(x=null){
  <div class="resource-box"><div class="resource-head"><b>🔗 Link do material e recursos extras</b><button type="button" class="btn secondary" onclick="addResourceRow('tmResources')">＋ Adicionar recurso</button></div><div id="tmResources"></div><div class="resource-help">Para PDF do Google Drive: compartilhe como “qualquer pessoa com o link” (ou conforme a política da sua escola) e cole o link. O cartão fica privado nesta biblioteca até você escolher atribuir. Você pode adicionar vários links.</div></div>
  <div class="field"><label>Notas privadas do Teacher</label><textarea id="tm6" rows="3" placeholder="Observações e ideias de uso (não coloque senhas).">${esc(x?.notes||'')}</textarea></div>
  <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">💾 Guardar na biblioteca</button></div></form>`);
+
  renderResourceRows('tmResources',x?.resource_items||[]);
+ loadTeacherMaterialFoldersV1(x?.folder_id||null);
+}
+async function loadTeacherMaterialFoldersV1(selectedId){
+ const anchor=$('tmTheme');if(!anchor)return;
+ let field=$('tmFolder')?.closest('.field');
+ if(!field){field=document.createElement('div');field.className='field';field.innerHTML='<label>📁 Pasta</label><div class="tm-folder-select-row"><select id="tmFolder"><option value="">Sem pasta</option></select><button type="button" class="btn secondary" id="tmCreateFolderBtn">＋ Criar pasta</button></div><small class="tm-form-help">Escolha uma pasta existente ou crie uma nova sem sair deste formulário.</small>';anchor.closest('.field').before(field);field.querySelector('#tmCreateFolderBtn').addEventListener('click',createTeacherMaterialFolderV1)}
+ const select=$('tmFolder');if(!select)return;select.innerHTML='<option value="">Sem pasta</option>';
+ try{const user=session?.user;if(!user)throw new Error('Faça login novamente.');const r=await sb.from('tic_material_folders').select('id,name').eq('teacher_id',user.id).order('name');if(r.error)throw r.error;const folders=r.data||[];select.innerHTML='<option value="">Sem pasta</option>'+folders.map(f=>'<option value="'+esc(f.id)+'">'+esc(f.name)+'</option>').join('');if(selectedId&&folders.some(f=>f.id===selectedId))select.value=selectedId;}catch(err){console.error('[Material folders]',err);toast('Não foi possível carregar as pastas: '+(err.message||err),'error')}
+}
+async function createTeacherMaterialFolderV1(){
+ const name=prompt('Nome da nova pasta (ex.: Speaking A1, Grammar, PDFs):');if(name===null||!name.trim())return;const user=session?.user;if(!user)return toast('Faça login novamente para criar uma pasta.','error');
+ try{const q=await sb.from('tic_material_folders').select('id,name').eq('teacher_id',user.id);if(q.error)throw q.error;const duplicate=(q.data||[]).find(f=>String(f.name||'').trim().toLowerCase()===name.trim().toLowerCase());if(duplicate){await loadTeacherMaterialFoldersV1(duplicate.id);toast('Essa pasta já existe; selecionei a pasta existente.','success');return}const r=await sb.from('tic_material_folders').insert({teacher_id:user.id,name:name.trim(),color:'#7440f5'}).select('id,name').single();if(r.error)throw r.error;await loadTeacherMaterialFoldersV1(r.data.id);toast('Pasta criada e selecionada.','success')}catch(err){console.error('[Create material folder]',err);toast('Não foi possível criar a pasta: '+(err.message||err),'error')}
 }
 async function saveTeacherMaterialV53(e,id){
  e.preventDefault();
@@ -992,7 +1005,7 @@ async function saveTeacherMaterialV53(e,id){
  if(!resources.length)return toast('Adicione pelo menos um link ou recurso.','error');
  const theme=$('tmTheme').value.trim(),tags=$('tm5').value.trim();
  const combinedTags=[theme?'Theme: '+theme:'',tags].filter(Boolean).join(' | ')||null;
- const o={teacher_id:session.user.id,title:$('tm1').value.trim(),category:$('tm2').value,level:$('tm3').value||null,description:$('tm4').value.trim()||null,tags:combinedTags,notes:$('tm6').value.trim()||null,resource_items:resources};
+ const o={teacher_id:session.user.id,title:$('tm1').value.trim(),category:$('tm2').value,level:$('tm3').value||null,description:$('tm4').value.trim()||null,tags:combinedTags,notes:$('tm6').value.trim()||null,resource_items:resources,folder_id:$('tmFolder')?.value||null};
  const r=id?await sb.from('tic_teacher_materials').update(o).eq('id',id).eq('teacher_id',session.user.id):await sb.from('tic_teacher_materials').insert(o);
  if(r.error)return toast('Não foi possível guardar: '+r.error.message,'error');
  closeModal();toast(id?'Material atualizado.':'Material guardado na Media Library.','success');await teacherMaterialsPageV53();
@@ -8128,7 +8141,7 @@ body.fi-premium:not(.fi-light) .fi-media-filterbar input,body.fi-premium:not(.fi
 body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d4ff}
 @media(max-width:1100px){.fi-media-filterbar{grid-template-columns:repeat(3,minmax(0,1fr))}.fi-media-search{grid-column:span 3}.fi-media-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.fi-media-hero{padding:18px;align-items:flex-start;flex-direction:column}.fi-media-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.fi-media-filterbar{grid-template-columns:1fr 1fr}.fi-media-search{grid-column:1/-1}.fi-media-cards{grid-template-columns:minmax(0,1fr)}.fi-media-cover{min-height:112px}}
-</style>
+.tm-folder-select-row{display:flex;gap:8px;align-items:center}.tm-folder-select-row select{flex:1;min-width:0}.tm-form-help{display:block;color:var(--muted,#77728b);font-size:11px;margin-top:6px}@media(max-width:600px){.tm-folder-select-row{align-items:stretch;flex-direction:column}.tm-folder-select-row .btn{width:100%}}</style>
 
 
 <style id="fi-task-link-management-v1">
