@@ -140,3 +140,59 @@ body.fi-premium:not(.fi-light) .class-center-page .class-center-list-item{backgr
   .class-center-page .class-center-float .btn{flex:1;min-width:0;padding:9px 5px;font-size:10px;white-space:normal}
 }
 @media(prefers-reduced-motion:reduce){.class-center-page *{transition:none!important;scroll-behavior:auto!important}}
+
+
+/* FIX v2 — target the actual V41 Class Center markup. Earlier rules targeted
+   class-center-page/class-center-top wrappers that this screen does not render. */
+html,body{max-width:100%;overflow-x:hidden}
+.main{min-width:0;width:auto;max-width:calc(100% - 255px)}
+.main>.container{width:100%;min-width:0;max-width:1240px;overflow-x:clip}
+#content{min-width:0;max-width:100%;width:100%}
+.class-center-v41{width:100%;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.class-center-v41 *{min-width:0}
+.class-center-v41 .v41-hero{padding:clamp(16px,2vw,24px);border-radius:18px}
+.class-center-v41 .v41-hero h1{font-size:clamp(22px,2.2vw,30px);line-height:1.2}
+.class-center-v41 .v41-kpis{grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:9px}
+.class-center-v41 .v41-kpi{padding:12px;min-width:0}
+.class-center-v41 .v41-kpi b{font-size:clamp(20px,2vw,25px)}
+.class-center-v41 .v41-toolbar{width:100%;min-width:0}
+.class-center-v41 .v41-toolbar input{box-sizing:border-box;width:100%;min-width:0;max-width:100%}
+.class-center-v41 .v41-class-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px;width:100%;min-width:0}
+.class-center-v41 .v41-class-card{min-width:0;overflow-wrap:anywhere}
+.class-center-v41 .v41-class-card h3{overflow-wrap:anywhere}
+.class-center-v41 .v41-class-actions{display:flex;gap:7px;flex-wrap:wrap}
+.v41-class-shell{width:100%;min-width:0;max-width:100%;overflow:hidden}
+.v41-class-head{padding:clamp(12px,1.6vw,20px)}
+.v41-class-head-main{width:100%;min-width:0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.v41-class-head-main>div:first-child{flex:1 1 220px;min-width:0}
+.v41-class-head-actions{display:flex;flex:1 1 360px;min-width:0;gap:7px;flex-wrap:wrap;justify-content:flex-start}
+.v41-class-head-actions .btn{max-width:100%;white-space:normal}
+.v41-body{padding:clamp(10px,1.5vw,18px);min-width:0;max-width:100%}
+.v41-tabs{max-width:100%;padding:12px clamp(10px,1.5vw,20px) 0;overscroll-behavior-x:contain}
+.v41-student-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.class-center-kpis{grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr))}
+.class-center-panel{min-width:0;max-width:100%}
+.fi-bc-board{grid-template-columns:repeat(4,minmax(230px,1fr));max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+@media(max-width:900px){
+ .main{max-width:calc(100% - 255px)}
+ .class-center-v41 .v41-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .class-center-v41 .v41-class-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr))}
+ .v41-class-head-main{display:flex}
+ .v41-class-head-actions{flex:1 1 100%}
+}
+@media(max-width:650px){
+ .main{margin-left:0;width:100%;max-width:100%}
+ .main>.container{padding:16px 12px 80px;width:100%;max-width:100%}
+ .class-center-v41 .v41-hero{padding:16px}
+ .class-center-v41 .v41-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .class-center-v41 .v41-class-grid{grid-template-columns:minmax(0,1fr)}
+ .class-center-v41 .v41-toolbar input{min-width:0}
+ .v41-class-head{padding:12px}
+ .v41-class-head h2{font-size:21px}
+ .v41-class-head-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+ .v41-class-head-actions .btn{width:100%;padding:9px 7px}
+ .v41-body{padding:10px}
+ .v41-tabs{padding-left:10px;padding-right:10px}
+ .class-center-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .fi-bc-board{grid-template-columns:repeat(4,minmax(78vw,78vw))}
+}
