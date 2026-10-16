@@ -610,6 +610,74 @@ function addStyle(){
  body.fi-premium #content table tbody td:first-child .btn svg,
  body.fi-premium #content table tbody td:first-child a svg { color:#49318f!important; }
 
+/* Platform-wide contrast baseline: every workspace follows the selected theme */
+body.fi-premium:not(.fi-light) #content .v41-class-card,
+body.fi-premium:not(.fi-light) #content article[class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card),
+body.fi-premium:not(.fi-light) #content [class*="-kpi"],
+body.fi-premium:not(.fi-light) #content [class*="-stat"],
+body.fi-premium:not(.fi-light) #content [class*="-panel"]:not(.hero):not(.hubHero),
+body.fi-premium:not(.fi-light) #content .card,
+body.fi-premium:not(.fi-light) #content .stat,
+body.fi-premium:not(.fi-light) #content .quick,
+body.fi-premium:not(.fi-light) #content .table-wrap,
+body.fi-premium:not(.fi-light) #content .empty {
+ background-color:#142238!important;border-color:#34445e!important;color:#f4f7ff!important;
+}
+body.fi-premium:not(.fi-light) #content .v41-class-card h1,
+body.fi-premium:not(.fi-light) #content .v41-class-card h2,
+body.fi-premium:not(.fi-light) #content .v41-class-card h3,
+body.fi-premium:not(.fi-light) #content .v41-class-card b,
+body.fi-premium:not(.fi-light) #content .v41-class-card strong,
+body.fi-premium:not(.fi-light) #content .v41-class-card label,
+body.fi-premium:not(.fi-light) #content article[class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) h1,
+body.fi-premium:not(.fi-light) #content article[class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) h2,
+body.fi-premium:not(.fi-light) #content article[class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) h3,
+body.fi-premium:not(.fi-light) #content article[class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) b,
+body.fi-premium:not(.fi-light) #content article[class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) strong{color:#f8fafc!important;-webkit-text-fill-color:#f8fafc!important}
+body.fi-premium:not(.fi-light) #content .v41-class-card p,
+body.fi-premium:not(.fi-light) #content .v41-class-card small,
+body.fi-premium:not(.fi-light) #content .v41-class-card .v41-meta span,
+body.fi-premium:not(.fi-light) #content [class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) p,
+body.fi-premium:not(.fi-light) #content [class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) small{color:#c2cfe0!important;-webkit-text-fill-color:#c2cfe0!important}
+body.fi-premium:not(.fi-light) #content .v41-class-card .v41-meta>div{background:#1b2a42!important;border-color:#34445e!important;color:#f4f7ff!important}
+body.fi-premium:not(.fi-light) #content .v41-class-card .v41-meta b{color:#f8fafc!important;-webkit-text-fill-color:#f8fafc!important}
+body.fi-premium:not(.fi-light) #content .v41-class-card .badge{background:#2a3d5c!important;color:#f4f7ff!important;-webkit-text-fill-color:#f4f7ff!important}
+body.fi-premium:not(.fi-light) #content .v41-class-card .btn.secondary,
+body.fi-premium:not(.fi-light) #content .v41-class-card .btn.ghost{background:#243650!important;border:1px solid #465a76!important;color:#f4f7ff!important;-webkit-text-fill-color:#f4f7ff!important}
+body.fi-premium.fi-light #content .v41-class-card,
+body.fi-premium.fi-light #content article[class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card),
+body.fi-premium.fi-light #content [class*="-kpi"],
+body.fi-premium.fi-light #content [class*="-stat"],
+body.fi-premium.fi-light #content [class*="-panel"]:not(.hero):not(.hubHero),
+body.fi-premium.fi-light #content .card,
+body.fi-premium.fi-light #content .stat,
+body.fi-premium.fi-light #content .quick,
+body.fi-premium.fi-light #content .table-wrap,
+body.fi-premium.fi-light #content .empty{background-color:#fff!important;border-color:#dce3ef!important;color:#17233a!important}
+body.fi-premium.fi-light #content .v41-class-card h1,
+body.fi-premium.fi-light #content .v41-class-card h2,
+body.fi-premium.fi-light #content .v41-class-card h3,
+body.fi-premium.fi-light #content .v41-class-card b,
+body.fi-premium.fi-light #content .v41-class-card strong,
+body.fi-premium.fi-light #content .v41-class-card label,
+body.fi-premium.fi-light #content article[class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) h1,
+body.fi-premium.fi-light #content article[class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) h2,
+body.fi-premium.fi-light #content article[class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) h3,
+body.fi-premium.fi-light #content article[class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) b,
+body.fi-premium.fi-light #content article[class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) strong{color:#17233a!important;-webkit-text-fill-color:#17233a!important}
+body.fi-premium.fi-light #content .v41-class-card p,
+body.fi-premium.fi-light #content .v41-class-card small,
+body.fi-premium.fi-light #content .v41-class-card .v41-meta span,
+body.fi-premium.fi-light #content [class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) p,
+body.fi-premium.fi-light #content [class*="-card"]:not(.fi-level-card):not(.fi-shortcut):not(.fi-media-card):not(.hubCard):not(.class-center-card) small{color:#53627a!important;-webkit-text-fill-color:#53627a!important}
+body.fi-premium.fi-light #content .v41-class-card .v41-meta>div{background:#f8f9ff!important;border-color:#e0e5ef!important;color:#17233a!important}
+body.fi-premium.fi-light #content .v41-class-card .v41-meta b{color:#17233a!important;-webkit-text-fill-color:#17233a!important}
+body.fi-premium.fi-light #content .v41-class-card .badge{background:#e8edf6!important;color:#263b5c!important;-webkit-text-fill-color:#263b5c!important}
+body.fi-premium.fi-light #content .v41-class-card .btn.secondary,
+body.fi-premium.fi-light #content .v41-class-card .btn.ghost{background:#eee8ff!important;border:1px solid #d8cdfc!important;color:#4c2ca5!important;-webkit-text-fill-color:#4c2ca5!important}
+body.fi-premium #content .v41-class-card .btn.primary{background:linear-gradient(100deg,#6840db,#8055e8)!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
+body.fi-premium #content .v41-class-card .btn.primary *{color:#fff!important;-webkit-text-fill-color:#fff!important}
+
 `;
  document.head.appendChild(st);
 }
