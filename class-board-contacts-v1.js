@@ -125,4 +125,144 @@ function installAssignmentSync(){
 
 function install(){nav();installBoard();installAssignmentSync();let base=window.loadView;if(typeof base==='function'&&!base.__fiContacts){let w=function(v){if(v==='contacts'){window.currentView='contacts';document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='contacts'));if(typeof window.setPage==='function')window.setPage('Contatos','Prospects, potenciais alunos e próximos contatos.','<button class="btn primary" onclick="fiProspectForm()">＋ Novo prospect</button>');return contacts()}return base.apply(this,arguments)};w.__fiContacts=true;window.loadView=w}}
 window.contactsPageV1=contacts;if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();setTimeout(install,400);setTimeout(install,1200);
+
+
+/* Additive student-specific pedagogical diary for Class Center Observações.
+   Reuses tic_class_notes and preserves all legacy class notes. */
+function installStudentDiary(){
+ if(window.__fiStudentDiaryInstalled)return;
+ const dbDiary=()=>typeof sb!=='undefined'?sb:window.sb;
+ const escDiary=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const localInputDate=v=>{if(!v)return '';const d=new Date(v);if(Number.isNaN(d.getTime()))return '';const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes())};
+ const localDateTime=v=>v?new Date(v).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';
+ const toastDiary=(m,t)=>typeof window.toast==='function'?window.toast(m,t||'info'):alert(m);
+ const getState=()=>window.__ticClassCenterV41||window.__ticClassCenter||{};
+ const diaryState={classId:null,students:[],notes:[],editing:null,filterStudent:'all'};
+ const typeOptions=['Aprendizagem','Participação','Correções','Tarefa','Estratégia','Planejamento próxima aula','Comportamento','Outro'];
+ function diaryCss(){
+  if(document.getElementById('fi-student-diary-css'))return;
+  const s=document.createElement('style');s.id='fi-student-diary-css';
+  s.textContent='.fi-diary{border:1px solid var(--border,#e4def0);border-radius:16px;padding:16px;background:var(--card,#fff);margin:0 0 16px;color:var(--text,#1e2437)}.fi-diary-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}.fi-diary-head h3{margin:0 0 5px;font-size:16px}.fi-diary-head p{margin:0;color:var(--muted,#77718b);font-size:12px;line-height:1.5}.fi-diary-actions{display:flex;gap:8px;flex-wrap:wrap}.fi-diary-btn{border:1px solid var(--border,#ded7ef);border-radius:10px;padding:9px 12px;background:var(--card,#fff);color:var(--text,#29233f);font:inherit;font-size:11px;font-weight:800;cursor:pointer}.fi-diary-btn.primary{background:#6841d9;color:#fff;border-color:#6841d9}.fi-diary-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:14px 0}.fi-diary-stat{border:1px solid var(--border,#e4def0);background:var(--surface,#faf9fe);border-radius:12px;padding:11px}.fi-diary-stat small{display:block;color:var(--muted,#77718b);font-size:10px}.fi-diary-stat b{display:block;font-size:21px;margin-top:4px}.fi-diary-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:14px;padding:14px;border:1px solid var(--border,#e4def0);border-radius:13px;background:var(--surface,#faf9fe)}.fi-diary-field{display:grid;gap:5px;min-width:0}.fi-diary-field.wide{grid-column:1/-1}.fi-diary-field label{font-size:11px;font-weight:800;color:var(--muted,#77718b)}.fi-diary-field input,.fi-diary-field select,.fi-diary-field textarea,.fi-diary-toolbar select,.fi-diary-toolbar input{box-sizing:border-box;width:100%;min-width:0;border:1px solid var(--border,#dcd5ed);border-radius:9px;padding:10px;background:var(--card,#fff);color:var(--text,#242039);font:inherit;font-size:12px}.fi-diary-field textarea{min-height:82px;resize:vertical}.fi-diary-form-foot{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.fi-diary-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0}.fi-diary-toolbar select{flex:1;min-width:190px}.fi-diary-list{display:grid;gap:10px}.fi-diary-note{border:1px solid var(--border,#e5def0);border-left:4px solid #8060e8;border-radius:12px;padding:13px;min-width:0}.fi-diary-note.is-followup{border-left-color:#d97706}.fi-diary-note-top{display:flex;align-items:flex-start;justify-content:space-between;gap:9px;flex-wrap:wrap}.fi-diary-note h4{font-size:13px;margin:0 0 5px;overflow-wrap:anywhere}.fi-diary-meta{font-size:10px;color:var(--muted,#77718b);line-height:1.5}.fi-diary-note-body{font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0}.fi-diary-follow{padding:9px 10px;background:#fff7e6;border-radius:9px;color:#895400;font-size:11px;line-height:1.5;margin-top:8px}.fi-diary-empty{border:1px dashed var(--border,#ded7ed);border-radius:12px;padding:22px;text-align:center;color:var(--muted,#77718b);font-size:12px}.fi-diary-tag{display:inline-block;padding:5px 8px;border-radius:99px;background:#eee8ff;color:#5b35c6;font-size:10px;font-weight:800}.fi-diary-check{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted,#77718b)}.fi-diary-check input{width:auto}@media(max-width:620px){.fi-diary-form{grid-template-columns:minmax(0,1fr)}.fi-diary-field.wide,.fi-diary-form-foot{grid-column:1}.fi-diary-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.fi-diary-stat{padding:9px}.fi-diary-stat b{font-size:18px}}body:not(.fi-light) .fi-diary-form,body:not(.fi-light) .fi-diary-stat{background:var(--surface,#242131)}body:not(.fi-light) .fi-diary-follow{background:#3a2d18;color:#ffdc94}';
+  document.head.appendChild(s);
+ }
+ function studentsFromState(){
+  const s=getState();const arr=Array.isArray(s.students)?s.students:[];
+  return arr.map(x=>({id:x.student_id||x.id||x.student?.id,name:x.display_name||x.name||x.student?.display_name||x.student?.name||'Aluno'})).filter(x=>x.id);
+ }
+ async function loadDiary(classId){
+  const d=dbDiary();if(!d)throw new Error('Cliente do Supabase não encontrado.');
+  const stateStudents=studentsFromState();
+  const links=await d.from('tic_class_students').select('student_id').eq('class_id',classId).eq('status','active');
+  if(links.error)throw links.error;
+  const ids=[...new Set((links.data||[]).map(x=>x.student_id).filter(Boolean))];
+  let students=stateStudents.filter(x=>ids.includes(x.id));
+  if(ids.length){
+   const sr=await d.from('tic_students').select('id,display_name,current_level').eq('teacher_id',typeof tid==='function'?tid():null).in('id',ids).order('display_name');
+   if(!sr.error)students=(sr.data||[]).map(x=>({id:x.id,name:x.display_name||'Aluno',level:x.current_level||''}));
+   else if(!students.length)throw sr.error;
+  }
+  const nr=await d.from('tic_class_notes').select('id,teacher_id,class_id,student_id,title,note,note_type,observed_at,next_lesson_at,follow_up,follow_up_done,created_at,updated_at').eq('class_id',classId).eq('teacher_id',typeof tid==='function'?tid():null).order('observed_at',{ascending:false}).limit(200);
+  if(nr.error)throw nr.error;
+  diaryState.classId=classId;diaryState.students=students;diaryState.notes=nr.data||[];
+ }
+ function renderDiaryForm(){
+  const editing=diaryState.notes.find(n=>n.id===diaryState.editing)||null;
+  const now=localInputDate(editing?.observed_at||new Date());
+  const next=localInputDate(editing?.next_lesson_at||'');
+  return '<form class="fi-diary-form" id="fiDiaryForm" onsubmit="fiDiarySave(event)">'+
+   '<div class="fi-diary-field"><label for="fiDiaryStudent">Aluno</label><select id="fiDiaryStudent" required><option value="">Selecione o aluno</option>'+diaryState.students.map(s=>'<option value="'+escDiary(s.id)+'" '+(editing?.student_id===s.id?'selected':'')+'>'+escDiary(s.name)+(s.level?' · '+escDiary(s.level):'')+'</option>').join('')+'</select></div>'+
+   '<div class="fi-diary-field"><label for="fiDiaryType">Categoria</label><select id="fiDiaryType">'+typeOptions.map(t=>'<option '+((editing?.note_type||'Aprendizagem')===t?'selected':'')+'>'+escDiary(t)+'</option>').join('')+'</select></div>'+
+   '<div class="fi-diary-field"><label for="fiDiaryObserved">Data e hora da observação</label><input id="fiDiaryObserved" type="datetime-local" required value="'+escDiary(now)+'"></div>'+
+   '<div class="fi-diary-field"><label for="fiDiaryNext">Próxima aula (data e hora)</label><input id="fiDiaryNext" type="datetime-local" value="'+escDiary(next)+'"></div>'+
+   '<div class="fi-diary-field wide"><label for="fiDiaryTitle">Título / assunto</label><input id="fiDiaryTitle" maxlength="180" required value="'+escDiary(editing?.title||'')+'" placeholder="Ex.: Revisar Past Simple e fluência oral"></div>'+
+   '<div class="fi-diary-field wide"><label for="fiDiaryNote">Nota pedagógica</label><textarea id="fiDiaryNote" required placeholder="O que foi trabalhado, avanços, dificuldades e evidências observadas...">'+escDiary(editing?.note||'')+'</textarea></div>'+
+   '<div class="fi-diary-field wide"><label for="fiDiaryFollow">Retomar / preparar na próxima aula</label><textarea id="fiDiaryFollow" placeholder="Ex.: retomar perguntas no passado; preparar atividade de speaking.">'+escDiary(editing?.follow_up||'')+'</textarea><label class="fi-diary-check"><input id="fiDiaryFollowDone" type="checkbox" '+(editing?.follow_up_done?'checked':'')+'> Pendência já resolvida</label></div>'+
+   '<div class="fi-diary-form-foot"><button type="button" class="fi-diary-btn" onclick="fiDiaryCancelEdit()">Cancelar</button><button type="submit" class="fi-diary-btn primary">'+(editing?'Salvar alterações':'＋ Salvar observação')+'</button></div></form>';
+ }
+ function renderDiaryPanel(){
+  const body=document.getElementById('ticV41ClassBody')||document.getElementById('classCenterBody');if(!body||!diaryState.classId)return;
+  let panel=body.querySelector('#fiStudentDiary');if(!panel){panel=document.createElement('section');panel.id='fiStudentDiary';panel.className='fi-diary';const heading=[...body.querySelectorAll('h3')].find(h=>/observaç|observation|notes/i.test(h.textContent||''))?.closest('.v41-panel,.class-center-panel')||null;if(heading)body.insertBefore(panel,heading);else body.insertBefore(panel,body.firstChild)}
+  const studentFilter=diaryState.filterStudent;
+  const filtered=diaryState.notes.filter(n=>studentFilter==='all'||n.student_id===studentFilter||(!n.student_id&&studentFilter==='legacy'));
+  const followups=diaryState.notes.filter(n=>n.follow_up&&!n.follow_up_done&&(studentFilter==='all'||n.student_id===studentFilter)).length;
+  const nextCount=diaryState.notes.filter(n=>n.next_lesson_at&&(studentFilter==='all'||n.student_id===studentFilter)&&new Date(n.next_lesson_at)>=new Date()).length;
+  const studentsMap=new Map(diaryState.students.map(s=>[s.id,s.name]));
+  panel.innerHTML='<div class="fi-diary-head"><div><h3>📓 Diário pedagógico individual</h3><p>Notas com data e hora, histórico por aluno e preparação da próxima aula. Registros antigos da turma continuam preservados abaixo.</p></div><div class="fi-diary-actions"><button type="button" class="fi-diary-btn" onclick="fiDiaryReload()">↻ Atualizar</button><button type="button" class="fi-diary-btn primary" onclick="fiDiaryNew()">＋ Nova nota</button></div></div>'+
+   '<div class="fi-diary-stats"><div class="fi-diary-stat"><small>Registros no histórico</small><b>'+filtered.length+'</b></div><div class="fi-diary-stat"><small>Pendências abertas</small><b>'+followups+'</b></div><div class="fi-diary-stat"><small>Próximas aulas planejadas</small><b>'+nextCount+'</b></div></div>'+
+   (diaryState.editing!==null?renderDiaryForm():'')+
+   '<div class="fi-diary-toolbar"><select id="fiDiaryFilter" aria-label="Filtrar por aluno" onchange="fiDiarySetFilter(this.value)"><option value="all" '+(studentFilter==='all'?'selected':'')+'>Todos os alunos</option>'+diaryState.students.map(s=>'<option value="'+escDiary(s.id)+'" '+(studentFilter===s.id?'selected':'')+'>'+escDiary(s.name)+'</option>').join('')+'<option value="legacy" '+(studentFilter==='legacy'?'selected':'')+'>Observações antigas da turma</option></select><input id="fiDiarySearch" type="search" placeholder="Buscar nota, assunto ou pendência..." oninput="fiDiarySearch(this.value)"></div>'+
+   '<div class="fi-diary-list" id="fiDiaryList">'+renderDiaryNotes(filtered,studentsMap)+'</div>';
+ }
+ function renderDiaryNotes(notes,studentsMap){
+  if(!notes.length)return '<div class="fi-diary-empty">Nenhuma observação nesta seleção. Clique em “Nova nota” para registrar o acompanhamento do aluno.</div>';
+  return notes.map(n=>'<article class="fi-diary-note '+(n.follow_up&&!n.follow_up_done?'is-followup':'')+'" data-search="'+escDiary([n.title,n.note,n.follow_up,n.note_type,studentsMap.get(n.student_id)||''].join(' ').toLowerCase())+'"><div class="fi-diary-note-top"><div><h4>'+escDiary(n.title||'Observação')+'</h4><div class="fi-diary-meta">'+escDiary(studentsMap.get(n.student_id)||(n.student_id?'Aluno vinculado':'Observação antiga da turma'))+' · '+escDiary(localDateTime(n.observed_at||n.created_at))+(n.next_lesson_at?' · Próxima aula: '+escDiary(localDateTime(n.next_lesson_at)):'')+'</div></div><div class="fi-diary-actions"><span class="fi-diary-tag">'+escDiary(n.note_type||'Observação')+'</span><button class="fi-diary-btn" type="button" onclick="fiDiaryEdit(\''+escDiary(n.id)+'\')">✏️ Editar</button><button class="fi-diary-btn" type="button" onclick="fiDiaryToggleFollow(\''+escDiary(n.id)+'\')">'+(n.follow_up_done?'↩ Reabrir':'✓ Resolver')+'</button><button class="fi-diary-btn" type="button" onclick="fiDiaryDelete(\''+escDiary(n.id)+'\')">🗑</button></div></div><div class="fi-diary-note-body">'+escDiary(n.note||'')+'</div>'+(n.follow_up?'<div class="fi-diary-follow"><b>'+(n.follow_up_done?'Pendência resolvida':'Retomar na próxima aula')+':</b> '+escDiary(n.follow_up)+'</div>':'')+'</article>').join('');
+ }
+ async function refreshDiary(){
+  if(!diaryState.classId)return;
+  const y=window.scrollY;await loadDiary(diaryState.classId);renderDiaryPanel();window.scrollTo(window.scrollX,y);
+ }
+ window.fiDiaryReload=async()=>{try{await refreshDiary();toastDiary('Diário atualizado.','success')}catch(e){toastDiary('Não foi possível atualizar o diário: '+(e.message||e),'error')}};
+ window.fiDiaryNew=()=>{diaryState.editing='new';renderDiaryPanel();document.getElementById('fiDiaryStudent')?.focus()};
+ window.fiDiaryCancelEdit=()=>{diaryState.editing=null;renderDiaryPanel()};
+ window.fiDiarySetFilter=v=>{diaryState.filterStudent=v;renderDiaryPanel()};
+ window.fiDiarySearch=q=>{const query=String(q||'').toLowerCase().trim();document.querySelectorAll('#fiDiaryList .fi-diary-note').forEach(n=>n.hidden=!n.dataset.search.includes(query))};
+ window.fiDiaryEdit=id=>{diaryState.editing=id;renderDiaryPanel();document.getElementById('fiDiaryForm')?.scrollIntoView({behavior:'smooth',block:'start'})};
+ window.fiDiarySave=async ev=>{
+  ev.preventDefault();const d=dbDiary(),s=getState();const studentId=document.getElementById('fiDiaryStudent')?.value;
+  if(!d||!diaryState.classId||!studentId)return toastDiary('Selecione um aluno desta turma.','error');
+  const observed=document.getElementById('fiDiaryObserved')?.value,next=document.getElementById('fiDiaryNext')?.value;
+  const title=document.getElementById('fiDiaryTitle')?.value.trim(),note=document.getElementById('fiDiaryNote')?.value.trim();
+  if(!observed||!title||!note)return toastDiary('Preencha a data, o título e a observação.','error');
+  const payload={teacher_id:typeof tid==='function'?tid():null,class_id:diaryState.classId,student_id:studentId,title,note,note_type:document.getElementById('fiDiaryType')?.value||'Aprendizagem',observed_at:new Date(observed).toISOString(),next_lesson_at:next?new Date(next).toISOString():null,follow_up:document.getElementById('fiDiaryFollow')?.value.trim()||null,follow_up_done:!!document.getElementById('fiDiaryFollowDone')?.checked,updated_at:new Date().toISOString()};
+  if(!payload.teacher_id)return toastDiary('Sessão do professor não identificada. Entre novamente na plataforma.','error');
+  try{
+   let result;
+   if(diaryState.editing&&diaryState.editing!=='new')result=await d.from('tic_class_notes').update(payload).eq('id',diaryState.editing).eq('teacher_id',payload.teacher_id).eq('class_id',diaryState.classId);
+   else result=await d.from('tic_class_notes').insert(payload);
+   if(result.error)throw result.error;
+   diaryState.editing=null;await refreshDiary();toastDiary('Observação salva no diário do aluno.','success');
+  }catch(e){toastDiary('Não foi possível salvar a observação: '+(e.message||e),'error')}
+ };
+ window.fiDiaryToggleFollow=async id=>{
+  const n=diaryState.notes.find(x=>x.id===id);if(!n)return;
+  const r=await dbDiary().from('tic_class_notes').update({follow_up_done:!n.follow_up_done,updated_at:new Date().toISOString()}).eq('id',id).eq('teacher_id',typeof tid==='function'?tid():null);
+  if(r.error)return toastDiary('Não foi possível atualizar a pendência: '+r.error.message,'error');
+  try{await refreshDiary()}catch(e){toastDiary(e.message||String(e),'error')}
+ };
+ window.fiDiaryDelete=async id=>{
+  const n=diaryState.notes.find(x=>x.id===id);if(!n||!confirm('Remover esta observação do diário? Esta ação não pode ser desfeita.'))return;
+  const r=await dbDiary().from('tic_class_notes').delete().eq('id',id).eq('teacher_id',typeof tid==='function'?tid():null).eq('class_id',diaryState.classId);
+  if(r.error)return toastDiary('Não foi possível remover a observação: '+r.error.message,'error');
+  diaryState.editing=null;try{await refreshDiary()}catch(e){toastDiary(e.message||String(e),'error')}
+ };
+ async function attachDiary(classId){
+  if(!classId)return;
+  diaryCss();
+  try{await loadDiary(classId);renderDiaryPanel()}catch(e){console.error('Student diary:',e);const body=document.getElementById('ticV41ClassBody')||document.getElementById('classCenterBody');if(body&&!body.querySelector('#fiStudentDiary')){const p=document.createElement('section');p.id='fiStudentDiary';p.className='fi-diary';p.innerHTML='<div class="fi-diary-head"><div><h3>📓 Diário pedagógico individual</h3><p>Não foi possível carregar os registros. Seus dados antigos foram preservados.</p><p>'+escDiary(e.message||String(e))+'</p></div><button class="fi-diary-btn" onclick="fiDiaryReload()">↻ Tentar novamente</button></div>';body.insertBefore(p,body.firstChild)}}
+ }
+ function isObservationView(tab){
+  const t=String(tab||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  if(/observ|notes/.test(t))return true;
+  const body=document.getElementById('ticV41ClassBody')||document.getElementById('classCenterBody');
+  return !!body&&[...body.querySelectorAll('h2,h3,h4')].some(h=>/observaç|observation/i.test(h.textContent||''));
+ }
+ function wrapTab(){
+  const name=typeof window.classCenterTabV41==='function'?'classCenterTabV41':(typeof window.classCenterTab==='function'?'classCenterTab':null);
+  if(!name)return;
+  const base=window[name];if(base.__fiStudentDiaryWrapped)return;
+  const wrapped=async function(classId,tab){
+   const result=await base.apply(this,arguments);
+   if(isObservationView(tab)){await attachDiary(classId)}
+   return result;
+  };
+  wrapped.__fiStudentDiaryWrapped=true;window[name]=wrapped;
+  if(name==='classCenterTabV41')window.classCenterTab=wrapped;
+ }
+ window.fiStudentDiaryAttach=attachDiary;
+ window.__fiStudentDiaryInstalled=true;
+ wrapTab();setTimeout(wrapTab,500);setTimeout(wrapTab,1500);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installStudentDiary);else installStudentDiary();
+setTimeout(installStudentDiary,500);setTimeout(installStudentDiary,1500);
+
 })();
