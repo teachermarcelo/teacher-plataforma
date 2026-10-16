@@ -679,7 +679,11 @@ function installRefreshPositionPersistence(){
   if(typeof fn!=='function'||fn.__fiRefreshPositionWrapped)return false;
   const wrapped=function(view){
    if(!window.__fiRestoringLastPosition&&recentUserAction()){
-    try{sessionStorage.setItem(KEY,String(view||''))}catch(_){}
+    try{
+     const nextView=String(view||''),previousView=sessionStorage.getItem(KEY)||'';
+     if(previousView&&previousView!==nextView){sessionStorage.removeItem('ticPlatformLastClassTabV1');sessionStorage.removeItem('ticPlatformLastClassTabViewV1')}
+     sessionStorage.setItem(KEY,nextView);
+    }catch(_){}
    }
    return fn.apply(this,arguments);
   };
