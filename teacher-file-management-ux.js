@@ -136,19 +136,22 @@ async function mediaSetCategory(card){
  row.category=value||'Sem categoria';mediaRenderOrganizer();mediaApplyFilters();toast('Categoria atualizada.');
 }
 function installMediaOrganizer(){
- const pageText=(document.body.innerText||'');
- const isMedia=/Media Library/i.test(pageText)&&(/Modelos seus|Minha biblioteca|PDFs e links do Drive/i.test(pageText));
- if(!isMedia)return;
+ // Route detection uses the actual Media Library root, not translated/visible text.
+ const root=document.querySelector('#content .fi-media-library, #content [data-tm53-tab], #content #tm53Stats')?.closest('.fi-media-library')||document.querySelector('#content .fi-media-library');
+ if(!root)return;
  const cards=mediaCards();
  let host=document.getElementById('fi-media-folder-organizer');
  if(!host){
   host=document.createElement('section');host.id='fi-media-folder-organizer';host.className='fi-media-folder-organizer';host.setAttribute('aria-label','Organização da Media Library');
-  const anchor=document.querySelector('#content .fi-media-filterbar, #content .fi-media-toolbar, #content .fi-media-library .fi-media-filterbar, #content .fi-media-library .fi-media-toolbar, #content .fi-media-library');
-  const first=cards[0];const parent=first&&(first.closest('.media-library,.media-library-content,.materials-grid,.fi-media-grid')||first.parentElement?.parentElement||first.parentElement);
+  const anchor=root.querySelector('.fi-media-filterbar')||root.querySelector('.fi-media-stats')||root.querySelector('.fi-teacher-material-tip');
+  const grid=root.querySelector('.fi-media-cards')||root.querySelector('.fi-media-empty');
   if(anchor)anchor.insertAdjacentElement('afterend',host);
-  else if(parent&&parent.parentElement)parent.parentElement.insertBefore(host,parent);
-  else if(parent)parent.before(host);
-  else {const root=document.querySelector('#content');if(root)root.appendChild(host)}
+  else if(grid)grid.before(host);
+  else root.appendChild(host);
+ }else if(!root.contains(host)){
+  const anchor=root.querySelector('.fi-media-filterbar')||root.querySelector('.fi-media-stats')||root.querySelector('.fi-teacher-material-tip');
+  const grid=root.querySelector('.fi-media-cards')||root.querySelector('.fi-media-empty');
+  if(anchor)anchor.insertAdjacentElement('afterend',host);else if(grid)grid.before(host);else root.appendChild(host);
  }
  if(!organizerState.ready&&!organizerState.loading){
   organizerState.loading=true;
@@ -159,7 +162,6 @@ function installMediaOrganizer(){
    host.querySelector('[data-mo-retry]')?.addEventListener('click',()=>{organizerState.ready=false;organizerState.loading=false;installMediaOrganizer()});
   }).finally(()=>{organizerState.loading=false})
  } else if(organizerState.ready&&!host.querySelector('.fi-mo-heading')) mediaRenderOrganizer();
- // Keep material actions enhanced even while the folder list is loading.
  cards.forEach(menuFor);
 }
 function enhance(){
