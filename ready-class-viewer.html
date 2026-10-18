@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Ready Class · Interactive Lesson Viewer</title>
+<style>
+:root{color-scheme:light;--bg:#f3f5fb;--panel:#fff;--text:#17233a;--muted:#65738b;--line:#dce3ef;--accent:#7042e8}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Arial,sans-serif}button,input{font:inherit}.rcv-top{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 18px;background:#211934;color:white;box-shadow:0 5px 20px #1d17302a}.rcv-brand{font-weight:900;letter-spacing:.02em}.rcv-top small{display:block;color:#d8cdef;font-weight:500}.rcv-spacer{flex:1}.rcv-btn{border:1px solid #ddd4f5;background:#fff;color:#38275d;border-radius:10px;padding:9px 12px;font-weight:750;cursor:pointer}.rcv-btn.primary{background:#7042e8;color:#fff;border-color:#7042e8}.rcv-btn:disabled{opacity:.6;cursor:wait}.rcv-wrap{max-width:1500px;margin:22px auto;padding:0 18px}.rcv-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 8px 30px #1c27420b}.rcv-card h1{font-size:clamp(24px,4vw,36px);line-height:1.15;margin:0 0 8px}.rcv-muted{color:var(--muted)}.rcv-tags{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.rcv-tag{background:#eee8ff;color:#4b318b;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800}.rcv-field{display:grid;gap:7px;margin:16px 0}.rcv-field label{font-weight:800;font-size:13px}.rcv-field input{border:1px solid var(--line);border-radius:11px;padding:12px;background:#fff;color:#17233a;width:100%}.rcv-field input:focus{outline:3px solid #7042e82a;border-color:#7042e8}.rcv-error{margin-top:12px;color:#b42345;background:#fff0f2;border:1px solid #ffd1da;border-radius:10px;padding:11px}.rcv-viewer{display:none}.rcv-viewer.active{display:block}.rcv-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0 13px}.rcv-progress{height:8px;background:#e5e7ef;border-radius:99px;overflow:hidden;flex:1;min-width:90px}.rcv-progress i{display:block;width:0;height:100%;background:linear-gradient(90deg,#7042e8,#a78bfa);transition:width .2s}.rcv-status{font-size:12px;color:var(--muted)}.rcv-frame{display:block;width:100%;height:calc(100vh - 155px);min-height:620px;border:1px solid var(--line);border-radius:15px;background:#fff}.rcv-loading{padding:36px;text-align:center;color:var(--muted)}.rcv-hidden{display:none!important}.rcv-foot{font-size:12px;color:var(--muted);margin-top:12px}@media(max-width:600px){.rcv-wrap{padding:0 9px;margin:12px auto}.rcv-card{padding:18px}.rcv-frame{height:calc(100vh - 210px);min-height:560px}.rcv-top{padding:10px}.rcv-brand{font-size:14px}}
+</style>
+</head>
+<body>
+<header class="rcv-top"><div class="rcv-brand">🎬 READY CLASS <small id="rcvMode">Interactive Lesson Viewer</small></div><div class="rcv-spacer"></div><span id="rcvSaveStatus" class="rcv-status" style="color:#ded4f6">Aguardando aula…</span><button class="rcv-btn" id="rcvExit">← Sair</button></header>
+<main class="rcv-wrap">
+<section class="rcv-card" id="rcvLoading"><div class="rcv-loading">Carregando aula com segurança…</div></section>
+<section class="rcv-card rcv-hidden" id="rcvIdentity">
+<h1 id="rcvTitle">Aula interativa</h1><p class="rcv-muted" id="rcvDescription"></p><div class="rcv-tags" id="rcvTags"></div>
+<h2 style="font-size:20px;margin:24px 0 4px">Antes de começar</h2><p class="rcv-muted">Digite seu nome para que o professor possa identificar sua sessão e acompanhar seu progresso.</p>
+<form id="rcvIdentityForm"><div class="rcv-field"><label for="rcvStudentName">Seu nome completo</label><input id="rcvStudentName" name="studentName" maxlength="120" autocomplete="name" required minlength="2" placeholder="Digite seu nome como o professor conhece você"></div><button class="rcv-btn primary" id="rcvStart" type="submit">▶ Começar a estudar</button></form>
+<div id="rcvIdentityError" class="rcv-error rcv-hidden" role="alert"></div><p class="rcv-foot">Seu progresso será salvo para esta aula. Use seu próprio link e não o compartilhe com outras pessoas.</p>
+</section>
+<section id="rcvViewer" class="rcv-viewer">
+<div class="rcv-toolbar"><strong id="rcvViewerTitle">Aula interativa</strong><span class="rcv-status" id="rcvPercent">0%</span><div class="rcv-progress"><i id="rcvProgressBar"></i></div><button class="rcv-btn" id="rcvFullscreen">⛶ Tela cheia</button><button class="rcv-btn primary" id="rcvComplete">✓ Concluir aula</button></div>
+<iframe id="rcvFrame" class="rcv-frame" title="Aula interativa isolada" sandbox="allow-scripts allow-forms allow-modals allow-downloads allow-pointer-lock allow-presentation" allow="fullscreen; autoplay" referrerpolicy="no-referrer"></iframe>
+<p class="rcv-foot" id="rcvViewerFoot">Mantenha esta página aberta enquanto estuda. O progresso será salvo automaticamente quando a aula enviar informações.</p>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./ready-class-viewer.js?v=1"></script>
+</body>
+</html>
