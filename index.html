@@ -8388,7 +8388,7 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
 })();
 </script>
 <script src="./individual-student-messages-v1.js?v=1" defer></script>
-<script src="./ready-class.js?v=19" defer></script>
+<script src="./ready-class.js?v=20" defer></script>
 <script id="ready-class-route-guard">
 (function(){
   if(window.__readyClassIndexRouteGuardV2)return;
@@ -8442,18 +8442,23 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
     if(!navButton)return;
     var view=navButton.getAttribute('data-view');
     try{
-      if(view==='readyClass'){
-        sessionStorage.setItem('tic-current-view','readyClass');
-        sessionStorage.setItem('tic-last-view','readyClass');
-      }else{
-        sessionStorage.setItem('tic-current-view',view);
-        sessionStorage.removeItem('tic-last-view');
-      }
+      sessionStorage.setItem('tic-current-view',view);
+      if(view==='readyClass')sessionStorage.setItem('tic-last-view','readyClass');
+      else sessionStorage.removeItem('tic-last-view');
     }catch(storageError){}
-    if(view!=='readyClass')return;
     e.preventDefault();e.stopPropagation();
     if(e.stopImmediatePropagation)e.stopImmediatePropagation();
-    openReadyClass();
+    if(view==='readyClass'){openReadyClass();return;}
+    if(typeof window.rcCancelPendingRestore==='function')window.rcCancelPendingRestore();
+    if(typeof window.loadView==='function'){
+      Promise.resolve(window.loadView(view)).catch(function(err){
+        console.error('[Teacher Platform navigation]',view,err);
+        var content=document.getElementById('content');
+        if(content)content.innerHTML='<div class="card attention"><h2>Não foi possível abrir esta aba</h2><p>'+String(err&&err.message||err).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})+'</p><button class="btn primary" onclick="location.reload()">Recarregar plataforma</button></div>';
+      });
+    }else{
+      console.error('[Teacher Platform navigation] window.loadView não está disponível');
+    }
   },true);
   function install(){
     var button=document.querySelector('#teacherNav [data-view="readyClass"]');
@@ -8483,7 +8488,7 @@ function rcStyles(){if(document.getElementById(RC_STYLE_ID))return;var s=documen
 '@media(max-width:850px){.rc-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.rc-grid{grid-template-columns:1fr}}@media(max-width:560px){.rc-form-grid{grid-template-columns:1fr}.rc-field.full{grid-column:auto}.rc-hero{padding:18px}.rc-panel{padding:13px}.rc-metrics{gap:8px}.rc-metric{padding:12px}.rc-metric b{font-size:22px}}'+
 '#readyClassApp{width:100%;max-width:100%;min-width:0;overflow-wrap:anywhere}#content:has(#readyClassApp){min-width:0;max-width:100%;overflow-x:hidden}#readyClassApp *{min-width:0;box-sizing:border-box}#readyClassApp .rc-tabs{max-width:100%;overflow-x:auto;flex-wrap:wrap}#readyClassApp .rc-panel>div:first-child{min-width:0}#readyClassApp .rc-hero-actions,#readyClassApp .rc-actions{max-width:100%}#readyClassApp .rc-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}#readyClassApp .rc-card{width:100%;max-width:100%}#readyClassApp .rc-card h3,#readyClassApp .rc-card p{overflow-wrap:anywhere;word-break:break-word}#readyClassApp .rc-folder-toolbar{flex-wrap:wrap}#readyClassApp .rc-folder-toolbar select{max-width:100%}#readyClassApp .rc-tablewrap{max-width:100%}@media(max-width:900px){#readyClassApp .rc-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#readyClassApp .rc-grid{grid-template-columns:minmax(0,1fr)}}';document.head.appendChild(s)}
 function rcHtml(tag,attrs,content){var el=document.createElement(tag);Object.keys(attrs||{}).forEach(function(k){el.setAttribute(k,attrs[k])});el.innerHTML=content||'';return el}
-function rcEnsureNav(){var nav=document.getElementById('teacherNav');if(!nav)return;var b=nav.querySelector('[data-view="readyClass"]');if(!b){b=document.createElement('button');b.type='button';b.dataset.view='readyClass';b.innerHTML='🎬 <span>Ready Class</span>';var anchor=nav.querySelector('[data-view="lessons"]')||nav.querySelector('[data-view="courses"]');if(anchor)nav.insertBefore(b,anchor);else nav.appendChild(b)}b.hidden=false;b.style.removeProperty('display');b.setAttribute('aria-label','Ready Class — biblioteca de aulas interativas');b.onclick=function(e){if(e)e.preventDefault();rcOpenPage()};try{if(sessionStorage.getItem('tic-last-view')==='readyClass'&&!window.__readyClassRestorePending){window.__readyClassRestorePending=true;setTimeout(function(){if(rcTeacher())rcOpenPage();window.__readyClassRestorePending=false},450)}}catch(e){}}
+function rcEnsureNav(){var nav=document.getElementById('teacherNav');if(!nav)return;var b=nav.querySelector('[data-view="readyClass"]');if(!b){b=document.createElement('button');b.type='button';b.dataset.view='readyClass';b.innerHTML='🎬 <span>Ready Class</span>';var anchor=nav.querySelector('[data-view="lessons"]')||nav.querySelector('[data-view="courses"]');if(anchor)nav.insertBefore(b,anchor);else nav.appendChild(b)}b.hidden=false;b.style.removeProperty('display');b.setAttribute('aria-label','Ready Class — biblioteca de aulas interativas');b.onclick=function(e){if(e)e.preventDefault();rcOpenPage()}}
 function rcInstallRoute(){if(!window.__readyClassRouteInstalled){window.__readyClassRouteInstalled=true;var prior=window.loadView;if(typeof prior==='function'){window.loadView=async function(v){try{if(v==='readyClass')sessionStorage.setItem('tic-last-view','readyClass');else sessionStorage.removeItem('tic-last-view')}catch(e){}if(v==='readyClass')return rcOpenPage();return prior.apply(this,arguments)}}document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('#teacherNav [data-view="readyClass"]'):null;if(!b)return;e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();rcOpenPage()},true);if(window.MutationObserver){var mo=new MutationObserver(rcEnsureNav);mo.observe(document.documentElement,{childList:true,subtree:true,characterData:true})}}rcEnsureNav();if(new URLSearchParams(location.search).get('view')==='readyClass'&&rcUid())setTimeout(function(){rcOpenPage()},400)}
 function rcSetPage(){try{currentView='readyClass'}catch(e){}document.querySelectorAll('#teacherNav [data-view]').forEach(function(b){b.classList.toggle('active',b.dataset.view==='readyClass')});if(typeof setPage==='function')setPage('Ready Class','Importe, organize, ministre e compartilhe aulas HTML interativas.','<button class="btn primary" onclick="window.rcOpenEditor()">＋ Nova aula HTML</button>');else{var t=document.getElementById('pageTitle');if(t)t.textContent='Ready Class'}}
 async function rcOpenPage(){try{sessionStorage.setItem('tic-last-view','readyClass')}catch(e){}if(!rcUid()){try{if(typeof sb!=='undefined'&&sb&&sb.auth&&typeof sb.auth.getSession==='function'){var authResult=await sb.auth.getSession();var authSession=authResult&&authResult.data&&authResult.data.session;if(authSession&&authSession.user&&authSession.user.id)rcState.authUserId=authSession.user.id}}catch(authError){console.warn('[Ready Class] não foi possível recuperar sessão pelo Supabase Auth',authError)}}if(!rcUid()){rcToast('Sua sessão não foi identificada pelo Supabase. Não saí da página nem alterei seus dados. Atualize a página e, se necessário, entre novamente.','error');return}rcSetPage();var root=rcRoot();if(!root){console.error('[Ready Class] #content não encontrado');rcToast('Não encontrei a área principal da página (#content). Atualize a plataforma.','error');return}root.innerHTML='<div id="readyClassApp"><div class="rc-hero"><div><h2>🎬 Ready Class</h2><p>Interactive Lesson Studio · Biblioteca, viewer e acompanhamento.</p></div><div class="rc-hero-actions"><button class="rc-btn" onclick="window.rcImportSample()">✨ Importar exemplo A0</button><button class="rc-btn primary" onclick="window.rcOpenEditor()">＋ Nova aula HTML</button></div></div><div class="rc-tabs"><button class="active" data-rc-tab="library">📚 Minhas aulas</button><button data-rc-tab="shares">🔗 Links compartilhados</button><button data-rc-tab="insights">📊 Student Insights</button></div><div id="rcTabContent"><div class="rc-empty">Carregando sua biblioteca…</div></div></div>';root.querySelectorAll('[data-rc-tab]').forEach(function(b){b.onclick=function(){rcState.activeTab=b.dataset.rcTab;root.querySelectorAll('[data-rc-tab]').forEach(function(x){x.classList.toggle('active',x===b)});rcRenderTab()}});return rcLoadAll()}
