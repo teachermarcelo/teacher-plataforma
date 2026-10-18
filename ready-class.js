@@ -5,7 +5,7 @@ var RC_STYLE_ID='ready-class-style-v1';
 var RC_STUDENT_LABEL='Student Viewer';
 var rcState={classes:[],shares:[],sessions:[],students:[],classesList:[],folders:[],folderFilter:'all',activeTab:'library',editing:null,loading:false,lessonCache:{}};
 var rcEsc=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
-var rcUid=function(){return session&&session.user&&session.user.id||null};
+var rcUid=function(){try{if(typeof session!=='undefined'&&session&&session.user&&session.user.id)return session.user.id;var s=window.session||window.__session||window.currentSession;if(s&&s.user&&s.user.id)return s.user.id;return null}catch(e){console.warn('[Ready Class] sessão ainda não disponível',e);return null}};
 var rcTeacher=function(){var r=(document.getElementById('userRole')||{}).textContent||'';return /teacher|admin/i.test(r)||(typeof profile!=='undefined'&&profile&&/teacher|admin/i.test(profile.role||''))};
 var rcToast=function(m,kind){if(typeof toast==='function')toast(m,kind||'success');else alert(m)};
 var rcRoot=function(){return document.getElementById('content')};
