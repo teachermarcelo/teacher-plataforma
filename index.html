@@ -8387,6 +8387,31 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
 })();
 </script>
 <script src="./individual-student-messages-v1.js?v=1" defer></script>
-<script src="./ready-class.js?v=15" defer></script>
+<script src="./ready-class.js?v=16" defer></script>
+<script id="ready-class-route-guard">
+(function(){
+  if(window.__readyClassIndexRouteGuard)return;
+  window.__readyClassIndexRouteGuard=true;
+  document.addEventListener('click',function(e){
+    var button=e.target&&e.target.closest?e.target.closest('#teacherNav [data-view="readyClass"]'):null;
+    if(!button)return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+    var open=window.rcOpenPage;
+    if(typeof open!=='function'){
+      console.error('[Ready Class] rcOpenPage não foi carregada. Verifique ready-class.js?v=16.');
+      var content=document.getElementById('content');
+      if(content)content.innerHTML='<div class="card attention"><h2>Ready Class não carregou</h2><p>O arquivo da biblioteca não foi carregado corretamente. Atualize a página com Ctrl+Shift+R. Se o problema continuar, verifique a publicação do GitHub Pages.</p><button class="btn primary" onclick="location.reload()">Recarregar plataforma</button></div>';
+      return;
+    }
+    Promise.resolve().then(function(){return open()}).catch(function(err){
+      console.error('[Ready Class] Falha ao abrir a biblioteca:',err);
+      var content=document.getElementById('content');
+      if(content)content.innerHTML='<div class="card attention"><h2>Erro ao abrir Ready Class</h2><p>'+String(err&&err.message||err).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})+'</p><button class="btn primary" onclick="window.rcOpenPage()">Tentar novamente</button></div>';
+    });
+  },true);
+})();
+</script>
 </body>
 </html>
