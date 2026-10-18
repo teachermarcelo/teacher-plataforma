@@ -529,7 +529,7 @@ async function boot(){
  $('userName').textContent=profile.full_name||'User';$('topName').textContent=profile.full_name||'User';$('userRole').textContent=profile.role==='admin'?'Admin':profile.role==='teacher'?'Teacher':'Student';
  if(profile.role==='teacher'||profile.role==='admin'){
   $('teacherNav').classList.remove('hidden');setTeacherOnlyUI(true);const {data:t}=await sb.from('tic_teachers').select('*').eq('id',session.user.id).maybeSingle();teacher=t;
-  currentView='overview';await loadView('overview');
+  let savedView='overview';try{const candidate=sessionStorage.getItem('tic-current-view');if(candidate&&document.querySelector('#teacherNav [data-view="'+candidate+'"]'))savedView=candidate;}catch(e){}currentView=savedView;await loadView(savedView);
  }else{
   setTeacherOnlyUI(false);
   $('teacherNav').innerHTML=`<div class="nav-label">My Learning</div>
@@ -551,7 +551,8 @@ async function boot(){
  document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.onclick=()=>loadView(b.dataset.view));
 }
 async function loadView(v){
- if(v==='readyClass'&&typeof window.rcOpenPage==='function')return window.rcOpenPage();
+ if(v==='readyClass'&&typeof window.rcOpenPage==='function'){try{sessionStorage.setItem('tic-current-view','readyClass')}catch(e){}return window.rcOpenPage();}
+ try{sessionStorage.setItem('tic-current-view',v)}catch(e){}
  currentView=v;toggleMobile();
  // Cada aba abre no topo do próprio workspace, sem ficar presa na posição da aba anterior.
  requestAnimationFrame(()=>{const c=document.querySelector('.main>.container');if(c)c.scrollTo({top:0,left:0,behavior:'instant'});});
