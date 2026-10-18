@@ -8444,10 +8444,7 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
 
 <!-- Ready Class fallback: if GitHub Pages or the browser fails to load the external JS file,
      this bundled copy activates only when window.rcOpenPage is still missing after page load. -->
-<script id="ready-class-inline-fallback-source">
-window.addEventListener("load",function(){
-  if(typeof window.rcOpenPage==="function")return;
-
+<script id="ready-class-inline-fallback-source" type="text/plain">
 /* Ready Class — HTML lesson library, teacher viewer, share links and insights. */
 (function(){
 'use strict';
@@ -8504,8 +8501,6 @@ window.rcOpenPage=rcOpenPage;window.rcOpenEditor=rcOpenEditor;window.rcImportSam
 rcStyles();rcInstallRoute();
 })();
 
-
-});
 </script>
 <script id="ready-class-inline-fallback-loader">
 (function(){
