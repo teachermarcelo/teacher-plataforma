@@ -551,6 +551,7 @@ async function boot(){
  document.querySelectorAll('#teacherNav [data-view]').forEach(b=>b.onclick=()=>loadView(b.dataset.view));
 }
 async function loadView(v){
+ if(v==='readyClass'&&typeof window.rcOpenPage==='function')return window.rcOpenPage();
  currentView=v;toggleMobile();
  // Cada aba abre no topo do próprio workspace, sem ficar presa na posição da aba anterior.
  requestAnimationFrame(()=>{const c=document.querySelector('.main>.container');if(c)c.scrollTo({top:0,left:0,behavior:'instant'});});
@@ -8386,6 +8387,6 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
 })();
 </script>
 <script src="./individual-student-messages-v1.js?v=1" defer></script>
-<script src="./ready-class.js?v=13" defer></script>
+<script src="./ready-class.js?v=14" defer></script>
 </body>
 </html>
