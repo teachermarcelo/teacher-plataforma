@@ -8438,8 +8438,19 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
     document.head.appendChild(script);
   }
   document.addEventListener('click',function(e){
-    var button=e.target&&e.target.closest?e.target.closest('#teacherNav [data-view="readyClass"]'):null;
-    if(!button)return;
+    var navButton=e.target&&e.target.closest?e.target.closest('#teacherNav [data-view]'):null;
+    if(!navButton)return;
+    var view=navButton.getAttribute('data-view');
+    try{
+      if(view==='readyClass'){
+        sessionStorage.setItem('tic-current-view','readyClass');
+        sessionStorage.setItem('tic-last-view','readyClass');
+      }else{
+        sessionStorage.setItem('tic-current-view',view);
+        sessionStorage.removeItem('tic-last-view');
+      }
+    }catch(storageError){}
+    if(view!=='readyClass')return;
     e.preventDefault();e.stopPropagation();
     if(e.stopImmediatePropagation)e.stopImmediatePropagation();
     openReadyClass();
