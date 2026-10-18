@@ -8411,6 +8411,34 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
       if(content)content.innerHTML='<div class="card attention"><h2>Erro ao abrir Ready Class</h2><p>'+String(err&&err.message||err).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})+'</p><button class="btn primary" onclick="window.rcOpenPage()">Tentar novamente</button></div>';
     });
   },true);
+  /* Final route lock: deferred scripts can wrap loadView after this inline script runs.
+     Install the Ready Class route again after all scripts have initialized. */
+  function installReadyClassRoute(){
+    if(typeof window.loadView==='function'&&!window.__readyClassFinalLoadViewGuard){
+      var previous=window.loadView;
+      var guarded=async function(view,...args){
+        if(view==='readyClass'){
+          if(typeof window.rcOpenPage==='function')return window.rcOpenPage();
+          throw new Error('Ready Class ainda está carregando. Atualize a página e tente novamente.');
+        }
+        return previous.apply(this,arguments);
+      };
+      guarded.__readyClassFinalLoadViewGuard=true;
+      window.loadView=guarded;
+      window.__readyClassFinalLoadViewGuard=true;
+    }
+    var nav=document.getElementById('teacherNav');
+    var button=nav&&nav.querySelector('[data-view="readyClass"]');
+    if(button){
+      button.hidden=false;
+      button.onclick=function(event){
+        if(event){event.preventDefault();event.stopPropagation();}
+        if(typeof window.rcOpenPage==='function')window.rcOpenPage();
+      };
+    }
+  }
+  if(document.readyState==='complete')installReadyClassRoute();
+  else window.addEventListener('load',installReadyClassRoute,{once:true});
 })();
 </script>
 </body>
