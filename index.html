@@ -2207,20 +2207,7 @@ function ticResponsiveSrcdoc(content){
  if(!c)return '';
  const meta='<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">';
  if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}`);
-  return '<!doctype html><html><head>'+meta+'</head><body>'+c+'
-<script id="teacher-platform-persistent-tab-v1">
-(function(){
-  if(window.__tpPersistentTabV1)return;window.__tpPersistentTabV1=true;
-  var KEY='tic-current-view-v2';
-  function save(view){if(!view||typeof view!=='string')return;try{localStorage.setItem(KEY,view);sessionStorage.setItem('tic-current-view',view)}catch(e){}}
-  function wrap(){var prior=window.loadView;if(typeof prior!=='function'||prior.__tpPersistentTabWrapped)return;var wrapped=function(view,...args){save(view);return prior.apply(this,arguments)};wrapped.__tpPersistentTabWrapped=true;window.loadView=wrapped;}
-  document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('#teacherNav [data-view]'):null;if(b)save(b.getAttribute('data-view'));},true);
-  wrap();
-  document.addEventListener('DOMContentLoaded',wrap,{once:true});
-  window.addEventListener('load',wrap,{once:true});
-})();
-</script>
-</body></html>';
+ return '<!doctype html><html><head>'+meta+'</head><body>'+c+'</body></html>';
 }
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
@@ -8574,6 +8561,16 @@ rcStyles();rcInstallRoute();
   }
   if(document.readyState==='complete')ensureReadyClass();
   else window.addEventListener('load',ensureReadyClass,{once:true});
+})();
+</script>
+<script id="teacher-platform-persistent-tab-v1">
+(function(){
+  if(window.__tpPersistentTabV1)return;window.__tpPersistentTabV1=true;
+  var KEY='tic-current-view-v2';
+  function save(view){if(!view||typeof view!=='string')return;try{localStorage.setItem(KEY,view);sessionStorage.setItem('tic-current-view',view)}catch(e){}}
+  function wrap(){var prior=window.loadView;if(typeof prior!=='function'||prior.__tpPersistentTabWrapped)return;var wrapped=function(view,...args){save(view);return prior.apply(this,arguments)};wrapped.__tpPersistentTabWrapped=true;window.loadView=wrapped;}
+  document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('#teacherNav [data-view]'):null;if(b)save(b.getAttribute('data-view'));},true);
+  wrap();document.addEventListener('DOMContentLoaded',wrap,{once:true});window.addEventListener('load',wrap,{once:true});
 })();
 </script>
 </body>
