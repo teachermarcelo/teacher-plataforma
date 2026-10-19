@@ -539,6 +539,7 @@ async function boot(){
   <button data-view="studentTasks">✅ <span>My Tasks</span></button>
   <button data-view="studentProgress">📊 <span>My Progress</span></button>
   <button data-view="studentLessons">📚 <span>My Lessons</span></button>
+  <button data-view="studentReadyLessons">📥 <span>LESSONS RECEBIDAS</span></button>
    <button data-view="games">🎮 <span>Games</span></button>
   <button data-view="interactiveVideoLab">🎬 <span>Interactive Video Lab</span></button>
   <button data-view="learningHub">📚 <span>Learning Hub</span></button>
@@ -586,6 +587,7 @@ async function loadView(v){
  studentTasks:['My Tasks','Atividades atribuídas pelo Teacher.',''],
  studentProgress:['My Progress','Seu desenvolvimento.',''],
  studentLessons:['My Lessons','Aulas disponíveis para você.',''],
+ studentReadyLessons:['LESSONS RECEBIDAS','Aulas HTML atribuídas diretamente pelo seu Teacher.',''],
  games:['Games','Escolha um jogo, assunto e nível CEFR.',''],
  interactiveVideoLab:['Interactive Video Lab','Vídeo interativo, legendas clicáveis, lacunas e prática de pronúncia.',''],
  studentCalendar:['Calendar','Suas próximas aulas.',''],
@@ -616,6 +618,7 @@ async function loadView(v){
  if(v==='studentClass')return studentClassPage();
  if(v==='studentTasks')return studentTasks();
  if(v==='studentLessons')return studentLessons();
+ if(v==='studentReadyLessons'&&typeof window.rcStudentAssignmentsPage==='function')return window.rcStudentAssignmentsPage();
 }
 
 async function overview(){
@@ -8388,7 +8391,7 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
 })();
 </script>
 <script src="./individual-student-messages-v1.js?v=1" defer></script>
-<script src="./ready-class.js?v=22" defer></script>
+<script src="./ready-class.js?v=23" defer></script>
 <script id="ready-class-route-guard">
 (function(){
   if(window.__readyClassIndexRouteGuardV2)return;
