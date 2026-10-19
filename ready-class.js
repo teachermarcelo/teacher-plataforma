@@ -82,15 +82,9 @@ async function rcStudentAssignmentsPage(){
 async function rcOpenAssignedReadyLesson(assignmentId){
  var student=null;try{if(typeof studentRecord==='function')student=await studentRecord()}catch(e){}
  if(!student)return rcToast('Conta de aluno não encontrada.','error');
- var ar=await sb.from('tic_ready_class_assignments').select('id,ready_class_id,student_id,teacher_id,status').eq('id',assignmentId).eq('student_id',student.id).maybeSingle();
+ var ar=await sb.from('tic_ready_class_assignments').select('id,student_id,status').eq('id',assignmentId).eq('student_id',student.id).maybeSingle();
  if(ar.error||!ar.data)return rcToast(ar.error?ar.error.message:'Aula atribuída não encontrada.','error');
- var lr=await sb.from('tic_ready_classes').select('id,title,description,cefr_level,duration_minutes,html_content').eq('id',ar.data.ready_class_id).maybeSingle();
- if(lr.error||!lr.data)return rcToast(lr.error?lr.error.message:'O conteúdo desta aula não está disponível.','error');
- var now=new Date().toISOString();if(ar.data.status!=='completed'){var update=await sb.from('tic_ready_class_assignments').update({status:'in_progress',opened_at:now,updated_at:now}).eq('id',assignmentId).eq('student_id',student.id);if(update.error)return rcToast('Não foi possível registrar a abertura: '+update.error.message,'error')}
- var l=lr.data,body='<div style="height:min(68vh,720px);min-height:420px"><iframe id="rcAssignedLessonFrame" title="'+rcEsc(l.title)+'" sandbox="allow-scripts allow-forms allow-modals" style="width:100%;height:100%;border:1px solid var(--rc-line);border-radius:12px;background:white"></iframe></div>';
- var ov=rcModal('📘 '+l.title,l.cefr_level+' · '+Number(l.duration_minutes||0)+' min',body,'<button class="rc-btn" data-rc-close>Fechar</button><button class="rc-btn primary" id="rcAssignedComplete">✓ Marcar como concluída</button>');
- var frame=ov.querySelector('#rcAssignedLessonFrame');if(frame)frame.srcdoc=l.html_content||'<p>Esta aula não possui conteúdo HTML.</p>';
- ov.querySelector('#rcAssignedComplete').onclick=async function(){var btn=ov.querySelector('#rcAssignedComplete');btn.disabled=true;var done=await sb.from('tic_ready_class_assignments').update({status:'completed',completed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',assignmentId).eq('student_id',student.id);if(done.error){btn.disabled=false;return rcToast('Não foi possível marcar como concluída: '+done.error.message,'error')}ov.remove();rcToast('Aula marcada como concluída.','success');await rcStudentAssignmentsPage()};
+ location.href='./ready-class-assignment.html?assignment='+encodeURIComponent(assignmentId);
 }
 function rcEditLesson(id){return rcEditor(id)}
 async function rcDuplicateLesson(id){var r=await sb.from('tic_ready_classes').select('*').eq('id',id).eq('teacher_id',rcUid()).maybeSingle();if(r.error||!r.data)return rcToast('Não foi possível duplicar a aula.','error');var x=r.data;var n=await sb.from('tic_ready_classes').insert({teacher_id:rcUid(),title:x.title+' (cópia)',description:x.description,cefr_level:x.cefr_level,skills:x.skills,duration_minutes:x.duration_minutes,folder_id:x.folder_id||null,source_filename:x.source_filename,html_content:x.html_content,html_version:1,active:true,teacher_state:{}}).select('id').single();if(n.error)return rcToast('Falha ao duplicar: '+n.error.message,'error');rcToast('Cópia criada.','success');await rcLoadAll()}
