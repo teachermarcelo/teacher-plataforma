@@ -296,6 +296,14 @@ body{overflow:hidden;}
 .tic-lessons-table tbody tr{transition:background .15s}.tic-lessons-table tbody tr:hover{background:color-mix(in srgb,#8054ed 6%,transparent)}
 @media(max-width:950px){.tic-lessons-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.tic-lessons-filters input{grid-column:1/-1}}
 @media(max-width:560px){.tic-lessons-library{padding:13px}.tic-lessons-filters{grid-template-columns:minmax(0,1fr)}.tic-lessons-filters input{grid-column:auto}.tic-lesson-actions .btn{flex:1}}
+</style><style id="tic-v41-board-actions-v2">
+.v41-board-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:8px 0 14px;padding:12px 14px;border:1px solid #e6def7;border-radius:14px;background:linear-gradient(115deg,#faf8ff,#fff)}
+.v41-board-toolbar>div{display:grid;gap:4px}.v41-board-toolbar b{font-size:12px;color:var(--text,#29223d)}.v41-board-toolbar small{font-size:10px;color:var(--muted,#777);line-height:1.5}
+.v41-board-card{position:relative;display:flex;flex-direction:column;gap:8px;padding:13px!important;border:1px solid #e3dcf1!important;border-left:4px solid #7650df!important;border-radius:14px!important;background:linear-gradient(150deg,#fff,#fbfaff)!important;box-shadow:0 4px 14px rgba(42,25,83,.05);transition:transform .16s,box-shadow .16s,border-color .16s}
+.v41-board-card:hover{transform:translateY(-2px);box-shadow:0 9px 22px rgba(58,35,112,.11);border-color:#b9a5ee!important}.v41-board-card>b{font-size:12px;line-height:1.45;color:#241b3d}.v41-board-card>small{font-size:10px;color:#756c8e}
+.v41-board-card-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;padding-top:9px;border-top:1px solid #eee8f7}.v41-board-card-actions .btn{font-size:10px!important;padding:6px 8px!important;border-radius:8px!important;min-height:28px}.v41-board-card-actions .btn.danger{color:#b42335;border-color:#f1cbd1}
+.v41-board-col{background:linear-gradient(180deg,#faf8ff,#f6f3fc)!important;border:1px solid #e7def5!important;border-radius:18px!important;padding:11px!important;min-width:0}.v41-board-head{font-weight:800;font-size:11px;margin-bottom:10px!important}.v41-board-drop{display:grid;align-content:start;gap:10px}
+@media(max-width:650px){.v41-board-toolbar{align-items:flex-start}.v41-board-card-actions .btn{flex:1;min-width:76px}}
 </style></head>
 <body>
 
@@ -4128,7 +4136,10 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
     const br=await sb.from('tic_class_board_items').select('id,title,description,item_type,status,position,source_type,source_id,created_at,updated_at').eq('class_id',classId).eq('teacher_id',window.session.user.id).order('position').order('created_at');
     if(!br.error) boardItems=br.data||[];
 
-    window.__ticClassCenterV41={classId,cls,students:students||[],tasks:assignments||[],evs:events||[],boardItems};
+    let hiddenAssignmentIds=[];
+    const hiddenResult=await sb.from('tic_class_board_hidden_items').select('source_id').eq('class_id',classId).eq('teacher_id',window.session.user.id).eq('source_type','assignment');
+    if(!hiddenResult.error) hiddenAssignmentIds=(hiddenResult.data||[]).map(x=>x.source_id);
+    window.__ticClassCenterV41={classId,cls,students:students||[],tasks:assignments||[],evs:events||[],boardItems,hiddenAssignmentIds};
     const tabs=[
       ['overview','📊 Visão geral'],['board','📌 Board'],['lessons','📚 Aulas'],
       ['students','👥 Alunos'],['tasks','📝 Tasks'],['materials','🔗 Materiais'],
@@ -4154,19 +4165,52 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
   }
 
   function boardHtmlV41(s){
-    const tasks=s.tasks||[], items=s.boardItems||[];
+    const allTasks=s.tasks||[],hidden=new Set(s.hiddenAssignmentIds||[]),items=s.boardItems||[],showHidden=!!window.__ticV41ShowHidden;
+    const tasks=allTasks.filter(t=>showHidden?hidden.has(t.id):!hidden.has(t.id));
     const statusMap=new Map(items.map(x=>[x.source_id,x.status]));
     const cols=[['planned','📋 Planejado'],['doing','🔵 Em andamento'],['review','🟡 Revisão'],['done','🟢 Concluído']];
     const fallback=t=>t.active===false?'done':'planned';
-    return `<div class="v41-board">${cols.map(([key,label])=>{
+    return `<div class="v41-board-toolbar"><div><b>${showHidden?'🗂️ Itens removidos do quadro':'✨ Quadro de conteúdos da turma'}</b><small>${showHidden?'Os registros continuam salvos; você pode restaurar qualquer cartão.':'Edite, gerencie os destinatários ou retire cartões do quadro sem apagar a lesson original.'}</small></div><button type="button" class="btn sm ghost" onclick="ticV41ToggleHidden()">${showHidden?'← Voltar ao quadro':'♻️ Ver removidos'} (${hidden.size})</button></div><div class="v41-board">${cols.map(([key,label])=>{
       const list=tasks.filter(t=>(statusMap.get(t.id)||fallback(t))===key);
       return `<section class="v41-board-col" data-v41-board="${key}" ondragover="event.preventDefault();this.style.background='#eee8fb'" ondragleave="this.style.background=''" ondrop="ticV41BoardDrop(event,'${key}')">
         <div class="v41-board-head"><span>${label}</span><span>${list.length}</span></div>
-        <div class="v41-board-drop">${list.map(t=>`<article class="v41-board-card" draggable="true" ondragstart="ticV41BoardStart(event,'${t.id}')"><b>${escV41(t.title)}</b><small>${escV41(t.assignment_type||'task')}${t.cefr_level?' · '+escV41(t.cefr_level):''}</small></article>`).join('')||'<div class="v41-empty">Solte aqui</div>'}</div>
+        <div class="v41-board-drop">${list.map(t=>{
+          const actions=showHidden
+            ? '<button type="button" class="btn sm secondary" onclick="event.stopPropagation();ticV41RestoreAssignment(\''+t.id+'\')">↩ Restaurar</button>'
+            : '<button type="button" class="btn sm ghost" onclick="event.stopPropagation();ticV41EditAssignment(\''+t.id+'\')">✏️ Editar</button><button type="button" class="btn sm secondary" onclick="event.stopPropagation();ticV41ManageAssignment(\''+t.id+'\',\''+s.classId+'\')">👥 Alunos</button><button type="button" class="btn sm danger" onclick="event.stopPropagation();ticV41RemoveAssignment(\''+t.id+'\')">🗑 Remover</button>';
+          return `<article class="v41-board-card" draggable="true" ondragstart="ticV41BoardStart(event,'${t.id}')"><b>${escV41(t.title)}</b><small>${escV41(t.assignment_type||'task')}${t.cefr_level?' · '+escV41(t.cefr_level):''}</small><div class="v41-board-card-actions">${actions}</div></article>`;
+        }).join('')||'<div class="v41-empty">Nenhum cartão nesta coluna.</div>'}</div>
       </section>`;
     }).join('')}</div>`;
   }
-
+  window.ticV41EditAssignment=async function(id){
+    const r=await sb.from('tic_assignments').select('*').eq('id',id).eq('teacher_id',window.session.user.id).maybeSingle();
+    if(r.error||!r.data)return toast('Não foi possível abrir a atribuição: '+(r.error?.message||'registro não encontrado'),'error');
+    return openAssignmentForm(r.data);
+  };
+  window.ticV41ManageAssignment=function(id,classId){
+    if(typeof window.fiBoardManageRecipients==='function')return window.fiBoardManageRecipients(id,classId);
+    return toast('O gerenciador de alunos ainda não foi carregado. Atualize a página.','error');
+  };
+  window.ticV41RemoveAssignment=async function(id){
+    const st=window.__ticClassCenterV41||{};if(!st.classId)return;
+    const t=(st.tasks||[]).find(x=>x.id===id);if(!t)return;
+    if(!confirm('Retirar “'+(t.title||'esta lesson')+'” do quadro desta turma? O conteúdo original e os registros dos alunos serão preservados.'))return;
+    const r=await sb.from('tic_class_board_hidden_items').upsert({teacher_id:window.session.user.id,class_id:st.classId,source_type:'assignment',source_id:id},{onConflict:'class_id,source_type,source_id'}).select('id').maybeSingle();
+    if(r.error)return toast('Não foi possível retirar o cartão: '+r.error.message,'error');
+    st.hiddenAssignmentIds=[...new Set([...(st.hiddenAssignmentIds||[]),id])];
+    const tab=document.querySelector('.v41-tabs button.active')?.dataset.tab||'overview';await classCenterTabV41(st.classId,tab);
+    toast('Cartão retirado do quadro. O conteúdo original foi preservado.','success');
+  };
+  window.ticV41RestoreAssignment=async function(id){
+    const st=window.__ticClassCenterV41||{};if(!st.classId)return;
+    const r=await sb.from('tic_class_board_hidden_items').delete().eq('teacher_id',window.session.user.id).eq('class_id',st.classId).eq('source_type','assignment').eq('source_id',id);
+    if(r.error)return toast('Não foi possível restaurar o cartão: '+r.error.message,'error');
+    st.hiddenAssignmentIds=(st.hiddenAssignmentIds||[]).filter(x=>x!==id);
+    await classCenterTabV41(st.classId,document.querySelector('.v41-tabs button.active')?.dataset.tab||'overview');
+    toast('Cartão restaurado.','success');
+  };
+  window.ticV41ToggleHidden=function(){window.__ticV41ShowHidden=!window.__ticV41ShowHidden;const st=window.__ticClassCenterV41||{};classCenterTabV41(st.classId,document.querySelector('.v41-tabs button.active')?.dataset.tab||'overview')};
   window.ticV41BoardStart=(e,id)=>{window.__ticV41Drag=id;try{e.dataTransfer.setData('text/plain',id);e.dataTransfer.effectAllowed='move'}catch(_){}};
   window.ticV41BoardDrop=async(e,status)=>{
     e.preventDefault();
@@ -8601,5 +8645,38 @@ rcStyles();rcInstallRoute();
   wrap();document.addEventListener('DOMContentLoaded',wrap,{once:true});window.addEventListener('load',wrap,{once:true});
 })();
 </script>
+
+<script id="tic-lessons-search-effective-v2">
+(function(){
+ const base=window.lessonsPage;
+ if(typeof base!=='function'||base.__effectiveSearchV2)return;
+ const wrap=async function(plan=false){
+  await base(plan);
+  if(plan)return;
+  const content=document.getElementById('content');
+  const table=content?.querySelector('.table-wrap table.table');
+  if(!content||!table||!table.tHead||!table.tBodies[0])return;
+  if(content.querySelector('#ticEffectiveLessonSearch'))return;
+  const card=table.closest('.card')||table.parentElement;
+  const bar=document.createElement('section');bar.id='ticEffectiveLessonSearchBar';
+  bar.innerHTML='<div class="tic-effective-search-head"><div><b>🔎 Encontrar e atribuir uma lesson</b><small>Pesquise e filtre antes de abrir a ação Atribuir da aula desejada.</small></div><span id="ticEffectiveSearchCount"></span></div><div class="tic-effective-search-controls"><input id="ticEffectiveLessonSearch" type="search" placeholder="Título, descrição, nível, skill, curso ou módulo…"><select id="ticEffectiveLessonLevel"><option value="">Todos os níveis</option></select><select id="ticEffectiveLessonSkill"><option value="">Todas as skills</option></select><select id="ticEffectiveLessonCourse"><option value="">Todos os cursos</option></select><button type="button" id="ticEffectiveLessonReset" class="btn sm ghost">Limpar</button></div>';
+  const tableWrap=table.closest('.table-wrap');if(tableWrap)card.insertBefore(bar,tableWrap);else card.insertBefore(bar,table);
+  const body=table.tBodies[0],rows=[...body.rows];const values=(row,i)=>String(row.cells[i]?.innerText||'').replace(/\s+/g,' ').trim();
+  const fill=(id,idx)=>{const sel=document.getElementById(id),vals=[...new Set(rows.map(r=>values(r,idx)).filter(v=>v&&!/^(Sem curso|Sem módulo|—)$/i.test(v)))].sort((a,b)=>a.localeCompare(b,'pt-BR'));sel.insertAdjacentHTML('beforeend',vals.map(v=>'<option value="'+v.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">'+v.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</option>').join(''))};
+  fill('ticEffectiveLessonLevel',1);fill('ticEffectiveLessonSkill',4);fill('ticEffectiveLessonCourse',2);
+  const run=()=>{const q=(document.getElementById('ticEffectiveLessonSearch').value||'').trim().toLocaleLowerCase('pt-BR'),level=document.getElementById('ticEffectiveLessonLevel').value,skill=document.getElementById('ticEffectiveLessonSkill').value,course=document.getElementById('ticEffectiveLessonCourse').value;let n=0;rows.forEach(row=>{const hay=[0,1,2,3,4].map(i=>values(row,i)).join(' ').toLocaleLowerCase('pt-BR');const show=(!q||hay.includes(q))&&(!level||values(row,1)===level)&&(!skill||values(row,4)===skill)&&(!course||values(row,2)===course);row.hidden=!show;if(show)n++});const counter=document.getElementById('ticEffectiveSearchCount');if(counter)counter.textContent=n+' de '+rows.length+' lessons'};
+  ['ticEffectiveLessonSearch','ticEffectiveLessonLevel','ticEffectiveLessonSkill','ticEffectiveLessonCourse'].forEach(id=>{const el=document.getElementById(id);el.addEventListener(id==='ticEffectiveLessonSearch'?'input':'change',run)});
+  document.getElementById('ticEffectiveLessonReset').addEventListener('click',()=>{['ticEffectiveLessonSearch','ticEffectiveLessonLevel','ticEffectiveLessonSkill','ticEffectiveLessonCourse'].forEach(id=>document.getElementById(id).value='');run()});run();
+ };
+ wrap.__effectiveSearchV2=true;window.lessonsPage=wrap;
+})();
+</script>
+<style id="tic-effective-lessons-search-css">
+#ticEffectiveLessonSearchBar{margin:0 0 14px;padding:15px 16px;border:1px solid var(--border,#ded8ee);border-radius:16px;background:linear-gradient(135deg,#faf8ff,#fff);box-shadow:0 7px 20px rgba(49,28,99,.06)}
+.tic-effective-search-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}.tic-effective-search-head>div{display:grid;gap:4px}.tic-effective-search-head b{font-size:13px;color:var(--text,#241b3d)}.tic-effective-search-head small{font-size:11px;color:var(--muted,#777)}
+#ticEffectiveSearchCount{border-radius:999px;padding:6px 10px;background:#eee7ff;color:#5832bd;font-size:10px;font-weight:800}
+.tic-effective-search-controls{display:grid;grid-template-columns:minmax(220px,2fr) repeat(3,minmax(120px,1fr)) auto;gap:8px}.tic-effective-search-controls input,.tic-effective-search-controls select{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--border,#dcd8e9);border-radius:10px;padding:10px 11px;background:var(--card,#fff);color:var(--text,#29243b);font:inherit;font-size:12px}.tic-effective-search-controls input:focus,.tic-effective-search-controls select:focus{outline:2px solid #b6a0ff;outline-offset:1px}
+@media(max-width:1050px){.tic-effective-search-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.tic-effective-search-controls input{grid-column:1/-1}}@media(max-width:560px){.tic-effective-search-controls{grid-template-columns:minmax(0,1fr)}.tic-effective-search-controls input{grid-column:auto}}
+</style>
 </body>
 </html>
