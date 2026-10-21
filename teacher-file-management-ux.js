@@ -157,9 +157,18 @@ function mediaReadyHtml(row){
  return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:920px;margin:0 auto;padding:clamp(18px,4vw,42px);color:#20243a;background:#f7f5fc}header,section{background:#fff;border:1px solid #e5def4;border-radius:18px;padding:22px;margin:14px 0}h1{line-height:1.2;color:#39256d}h2{font-size:18px}li{margin:12px 0}a{color:#6236d7;font-weight:700}iframe{width:100%;height:min(70vh,680px);border:1px solid #ddd;border-radius:12px;margin-top:10px}small{color:#6f7183}.pill{display:inline-block;border-radius:99px;padding:4px 10px;background:#eee8ff;color:#4b318b;font-size:12px;font-weight:700;margin-right:6px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style></head><body><header><span class="pill">Material da biblioteca</span><span class="pill">'+esc(row.level||'A0')+'</span><h1>'+esc(title)+'</h1>'+(description?'<p>'+esc(description)+'</p>':'')+(tags?'<p><small>Tags: '+esc(tags)+'</small></p>':'')+'</header>'+(content?'<section><h2>Recursos</h2><ul>'+content+'</ul></section>':'<section><h2>Conteúdo</h2><p>Este material foi enviado da biblioteca de materiais. Use as informações abaixo e adicione links ou atividades no editor da Ready Class quando necessário.</p>'+(description?'<p>'+esc(description)+'</p>':'')+'</section>')+(notes?'<section><h2>Notas do professor</h2><pre>'+esc(notes)+'</pre></section>':'')+'<footer><small>Importado da biblioteca de materiais. O original permanece preservado na aba Materials.</small></footer></body></html>';
 }
 async function mediaSendToReadyClass(card){
- const row=mediaRowForCard(card);
- if(!row){toast('Não consegui localizar os dados completos deste material. Atualize a biblioteca e tente novamente.');return}
- if(!organizerState.ready){try{await mediaLoadOrganizer();organizerState.ready=true}catch(e){toast('Não foi possível carregar os dados do material: '+e.message);return}}
+ // Load the source rows before resolving the card; the menu can be opened before the organizer finishes loading.
+ if(!organizerState.ready){try{await mediaLoadOrganizer();organizerState.ready=true}catch(e){console.error('[Resolve material before transfer]',e);toast('Não foi possível carregar a biblioteca: '+(e.message||'erro de conexão'));return}}
+ let row=mediaRowForCard(card);
+ if(!row){
+  const heading=card.querySelector('h3,.material-title,.fi-media-cardbody h3,h4');
+  const title=String(heading&&heading.textContent||'').trim().toLocaleLowerCase('pt-BR');
+  if(title)row=organizerState.rows.find(r=>String(r.title||'').trim().toLocaleLowerCase('pt-BR')===title)||null;
+ }
+ if(!row){
+  console.error('[Send to Ready Class] card did not match source rows',{cardText:(card.innerText||'').slice(0,300),dataset:{...card.dataset},loadedRows:organizerState.rows.length});
+  toast('Não consegui associar este cartão a um registro da biblioteca. Atualize a página e tente novamente.');return
+ }
  const d=mediaDb();if(!d||!organizerState.teacherId){toast('Entre novamente na plataforma para enviar o material.');return}
  let folders=[];
  try{const f=await d.from('tic_ready_class_folders').select('id,name,color').eq('teacher_id',organizerState.teacherId).order('name');if(f.error)throw f.error;folders=f.data||[]}catch(e){console.error('[Send to Ready Class folders]',e);toast('Não foi possível carregar as pastas do Ready Class: '+e.message);return}
