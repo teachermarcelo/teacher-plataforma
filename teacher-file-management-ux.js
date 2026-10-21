@@ -26,7 +26,7 @@ function inferCardTitle(card){return (card.querySelector('h3,h4,b,strong,.fi-med
 function menuFor(card){
  if(card.dataset.fiFcEnhanced)return;card.dataset.fiFcEnhanced='1';card.classList.add('fi-fc-card');
  const b=document.createElement('button');b.type='button';b.className='fi-fc-kebab';b.setAttribute('aria-label','Ações do material');b.title='Editar, atribuir, mover ou remover';b.textContent='⋮';
- b.addEventListener('click',e=>{e.stopPropagation();document.querySelectorAll('.fi-fc-menu').forEach(x=>x.remove());const m=document.createElement('div');m.className='fi-fc-menu';m.innerHTML='<button data-action="open">↗ Visualizar / abrir</button><button data-action="edit">✎ Editar detalhes</button><button data-action="assign">♙ Atribuir a alunos</button><button data-action="move">📁 Mover para pasta</button><button data-action="category">🏷️ Definir categoria</button><button data-action="download">↓ Baixar / salvar</button><button data-action="remove" class="danger">⌫ Remover material</button>';m.addEventListener('click',ev=>{const action=ev.target.closest('button')?.dataset.action;if(!action)return;m.remove();if(action==='move'&&/Media Library/i.test(document.body.innerText||'')){mediaMoveCardToFolder(card);return}if(action==='category'&&/Media Library/i.test(document.body.innerText||'')){mediaSetCategory(card);return}handleAction(card,action)});card.appendChild(m);const close=ev=>{if(!m.contains(ev.target)&&ev.target!==b){m.remove();document.removeEventListener('click',close)}};setTimeout(()=>document.addEventListener('click',close),0)});card.appendChild(b)
+ b.addEventListener('click',e=>{e.stopPropagation();document.querySelectorAll('.fi-fc-menu').forEach(x=>x.remove());const m=document.createElement('div');m.className='fi-fc-menu';m.innerHTML='<button data-action="open">↗ Visualizar / abrir</button><button data-action="edit">✎ Editar detalhes</button><button data-action="assign">♙ Atribuir a alunos</button><button data-action="send-ready">🎬 Enviar para Ready Class…</button><button data-action="move">📁 Mover para pasta</button><button data-action="category">🏷️ Definir categoria</button><button data-action="download">↓ Baixar / salvar</button><button data-action="remove" class="danger">⌫ Remover material</button>';m.addEventListener('click',ev=>{const action=ev.target.closest('button')?.dataset.action;if(!action)return;m.remove();if(action==='send-ready'){mediaSendToReadyClass(card);return}if(action==='move'&&/Media Library/i.test(document.body.innerText||'')){mediaMoveCardToFolder(card);return}if(action==='category'&&/Media Library/i.test(document.body.innerText||'')){mediaSetCategory(card);return}handleAction(card,action)});card.appendChild(m);const close=ev=>{if(!m.contains(ev.target)&&ev.target!==b){m.remove();document.removeEventListener('click',close)}};setTimeout(()=>document.addEventListener('click',close),0)});card.appendChild(b)
 }
 function handleAction(card,action){
  const title=inferCardTitle(card);const buttons='<button class="fi-fc-btn" data-close>Cancelar</button><button class="fi-fc-btn fi-fc-primary" data-continue>Continuar</button>';
@@ -55,7 +55,7 @@ async function mediaLoadOrganizer(){
  const user=await mediaUser();if(!user)return;
  organizerState.teacherId=user.id;
  const [rr,ff]=await Promise.all([
-  d.from('tic_teacher_materials').select('id,title,teacher_id,category,folder_id,level').eq('teacher_id',user.id),
+  d.from('tic_teacher_materials').select('*').eq('teacher_id',user.id),
   d.from('tic_material_folders').select('id,name,color,teacher_id').eq('teacher_id',user.id).order('name')
  ]);
  if(rr.error)throw rr.error;if(ff.error)throw ff.error;
@@ -127,6 +127,70 @@ async function mediaMoveCardToFolder(card){
  const overlay=dialog('📁 Mover material para uma pasta','<p class="fi-mo-move-title">'+mediaEscape(row.title)+'</p><label class="fi-mo-modal-label" for="fi-mo-destination">Pasta de destino</label><select id="fi-mo-destination"><option value="">Sem pasta — deixar na biblioteca geral</option>'+opts+'</select><div class="fi-mo-modal-note">O material original, seus links e suas atribuições aos alunos serão preservados. Apenas a pasta será alterada.</div><button type="button" class="fi-fc-btn" data-mo-create-inline>＋ Criar pasta</button>','<button type="button" class="fi-fc-btn" data-close>Cancelar</button><button type="button" class="fi-fc-btn fi-fc-primary" data-mo-confirm>📁 Mover material</button>');
  overlay.querySelector('[data-mo-create-inline]').addEventListener('click',async()=>{const values=await mediaFolderEditor({title:'Criar pasta de destino',subtitle:'A nova pasta será selecionada para este material.',button:'Criar e selecionar',hint:'Ex.: Speaking B1, PDFs'});if(!values)return;const dup=organizerState.folders.find(f=>f.name.trim().toLowerCase()===values.name.toLowerCase());if(dup){overlay.querySelector('#fi-mo-destination').value=dup.id;toast('Pasta existente selecionada.');return}const d=mediaDb(),r=await d.from('tic_material_folders').insert({teacher_id:organizerState.teacherId,name:values.name,color:values.color}).select('id,name,color,teacher_id').single();if(r.error){toast('Não foi possível criar a pasta: '+r.error.message);return}organizerState.folders.push(r.data);organizerState.folders.sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));overlay.querySelector('#fi-mo-destination').insertAdjacentHTML('beforeend','<option value="'+mediaEscape(r.data.id)+'">'+mediaEscape(r.data.name)+'</option>');overlay.querySelector('#fi-mo-destination').value=r.data.id;mediaRenderOrganizer();toast('Pasta criada e selecionada.');});
  overlay.querySelector('[data-mo-confirm]').addEventListener('click',async()=>{const folderId=overlay.querySelector('#fi-mo-destination').value||null;const d=mediaDb(),res=await d.from('tic_teacher_materials').update({folder_id:folderId}).eq('id',row.id).eq('teacher_id',organizerState.teacherId).select('id,folder_id').maybeSingle();if(res.error){console.error('[Media Library move]',res.error);toast('Não foi possível mover o material: '+res.error.message);return}row.folder_id=folderId;overlay.remove();mediaRenderOrganizer();mediaApplyFilters();toast(folderId?'Material movido para “'+(organizerState.folders.find(f=>f.id===folderId)?.name||'pasta')+'”.':'Material removido da pasta.');});
+}
+function mediaReadyHtml(row){
+ const esc=mediaEscape;
+ const title=String(row.title||'Material').trim();
+ const description=String(row.description||'').trim();
+ const notes=String(row.notes||'').trim();
+ const tags=String(row.tags||'').trim();
+ let items=row.resource_items;
+ if(typeof items==='string'){try{items=JSON.parse(items)}catch(_){items=[]}}
+ if(!Array.isArray(items)){items=items&&typeof items==='object'?[items]:[]}
+ const safeUrl=value=>{try{const u=new URL(String(value||''),location.href);return /^https?:$/.test(u.protocol)?u.href:''}catch(_){return ''}};
+ const resources=items.map((it,index)=>{
+  if(typeof it==='string')it={url:it,title:'Recurso '+(index+1)};
+  it=it&&typeof it==='object'?it:{};
+  const url=safeUrl(it.url||it.href||it.link||it.content_url||it.pdf_url||it.video_url||it.embed_url||it.src);
+  const name=String(it.title||it.name||it.label||('Recurso '+(index+1)));
+  const detail=String(it.description||it.notes||'');
+  if(!url)return '<li><strong>'+esc(name)+'</strong>'+(detail?'<p>'+esc(detail)+'</p>':'')+'</li>';
+  const ext=(url.split('?')[0].split('.').pop()||'').toLowerCase();
+  const isPdf=ext==='pdf'||/pdf/i.test(String(it.type||it.category||''));
+  const embed=/youtube\.com\/embed\//i.test(url)||/player\.vimeo\.com\/video\//i.test(url);
+  return '<li><strong>'+esc(name)+'</strong>'+(detail?'<p>'+esc(detail)+'</p>':'')+'<p><a rel="noopener noreferrer" target="_blank" href="'+esc(url)+'">Abrir recurso ↗</a></p>'+(isPdf?'<iframe title="'+esc(name)+'" src="'+esc(url)+'" loading="lazy"></iframe>':embed?'<iframe title="'+esc(name)+'" src="'+esc(url)+'" loading="lazy" allowfullscreen></iframe>':'')+'</li>';
+ }).join('');
+ if(!resources && items.length===0) {
+  const found=[];
+  ['url','href','link','content_url','pdf_url','video_url','embed_url'].forEach(k=>{const u=safeUrl(row[k]);if(u&&!found.some(x=>x.url===u))found.push({url:u,name:k.replace(/_/g,' ')});});
+  found.forEach((x,i)=>{resources;});
+ }
+ const extraLinks=[];
+ ['url','href','link','content_url','pdf_url','video_url','embed_url'].forEach(k=>{const u=safeUrl(row[k]);if(u&&!items.some(it=>it&&typeof it==='object'&&safeUrl(it.url||it.href||it.link||it.content_url||it.pdf_url||it.video_url||it.embed_url||it.src)===u))extraLinks.push('<li><strong>'+esc(k.replace(/_/g,' '))+'</strong><p><a rel="noopener noreferrer" target="_blank" href="'+esc(u)+'">Abrir recurso ↗</a></p>'+(k==='pdf_url'?'<iframe title="PDF" src="'+esc(u)+'" loading="lazy"></iframe>':'')+'</li>')});
+ const content=resources+extraLinks.join('');
+ return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:920px;margin:0 auto;padding:clamp(18px,4vw,42px);color:#20243a;background:#f7f5fc}header,section{background:#fff;border:1px solid #e5def4;border-radius:18px;padding:22px;margin:14px 0}h1{line-height:1.2;color:#39256d}h2{font-size:18px}li{margin:12px 0}a{color:#6236d7;font-weight:700}iframe{width:100%;height:min(70vh,680px);border:1px solid #ddd;border-radius:12px;margin-top:10px}small{color:#6f7183}.pill{display:inline-block;border-radius:99px;padding:4px 10px;background:#eee8ff;color:#4b318b;font-size:12px;font-weight:700;margin-right:6px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style></head><body><header><span class="pill">Material da biblioteca</span><span class="pill">'+esc(row.level||'A0')+'</span><h1>'+esc(title)+'</h1>'+(description?'<p>'+esc(description)+'</p>':'')+(tags?'<p><small>Tags: '+esc(tags)+'</small></p>':'')+'</header>'+(content?'<section><h2>Recursos</h2><ul>'+content+'</ul></section>':'<section><h2>Conteúdo</h2><p>Este material foi enviado da biblioteca de materiais. Use as informações abaixo e adicione links ou atividades no editor da Ready Class quando necessário.</p>'+(description?'<p>'+esc(description)+'</p>':'')+'</section>')+(notes?'<section><h2>Notas do professor</h2><pre>'+esc(notes)+'</pre></section>':'')+'<footer><small>Importado da biblioteca de materiais. O original permanece preservado na aba Materials.</small></footer></body></html>';
+}
+async function mediaSendToReadyClass(card){
+ const row=mediaRowForCard(card);
+ if(!row){toast('Não consegui localizar os dados completos deste material. Atualize a biblioteca e tente novamente.');return}
+ if(!organizerState.ready){try{await mediaLoadOrganizer();organizerState.ready=true}catch(e){toast('Não foi possível carregar os dados do material: '+e.message);return}}
+ const d=mediaDb();if(!d||!organizerState.teacherId){toast('Entre novamente na plataforma para enviar o material.');return}
+ let folders=[];
+ try{const f=await d.from('tic_ready_class_folders').select('id,name,color').eq('teacher_id',organizerState.teacherId).order('name');if(f.error)throw f.error;folders=f.data||[]}catch(e){console.error('[Send to Ready Class folders]',e);toast('Não foi possível carregar as pastas do Ready Class: '+e.message);return}
+ const level=/^(A0|A1|A2|B1|B2|C1|C2)$/i.test(String(row.level||''))?String(row.level).toUpperCase():'A0';
+ const overlay=dialog('🎬 Enviar para Ready Class','<p class="fi-mo-move-title">'+mediaEscape(row.title)+'</p><p>Será criada uma cópia na biblioteca Ready Class. O material original, suas pastas e atribuições atuais continuarão intactos.</p><label class="fi-mo-modal-label" for="fi-ready-level">Nível CEFR</label><select id="fi-ready-level">'+['A0','A1','A2','B1','B2','C1','C2'].map(x=>'<option '+(x===level?'selected':'')+'>'+x+'</option>').join('')+'</select><label class="fi-mo-modal-label" for="fi-ready-folder">Pasta de destino no Ready Class</label><select id="fi-ready-folder"><option value="">Sem pasta — biblioteca geral</option>'+folders.map(f=>'<option value="'+mediaEscape(f.id)+'">'+mediaEscape(f.name)+'</option>').join('')+'</select><div class="fi-mo-modal-note">Você pode escolher uma pasta existente ou criar uma nova sem sair desta janela.</div><button type="button" class="fi-fc-btn" data-ready-newfolder>＋ Criar pasta no Ready Class</button>','<button type="button" class="fi-fc-btn" data-close>Cancelar</button><button type="button" class="fi-fc-btn fi-fc-primary" data-ready-send>📚 Criar cópia na Ready Class</button>');
+ overlay.querySelector('[data-ready-newfolder]').addEventListener('click',async()=>{
+  const name=prompt('Nome da nova pasta no Ready Class:');if(name===null)return;const clean=name.trim();if(!clean)return toast('Digite um nome para a pasta.');
+  const dupe=folders.find(f=>String(f.name||'').trim().toLowerCase()===clean.toLowerCase());if(dupe){overlay.querySelector('#fi-ready-folder').value=dupe.id;toast('Pasta existente selecionada.');return}
+  const res=await d.from('tic_ready_class_folders').insert({teacher_id:organizerState.teacherId,name:clean,color:'#7440f5'}).select('id,name,color').single();
+  if(res.error){toast('Não foi possível criar a pasta: '+res.error.message);return}
+  folders.push(res.data);folders.sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+  overlay.querySelector('#fi-ready-folder').insertAdjacentHTML('beforeend','<option value="'+mediaEscape(res.data.id)+'">'+mediaEscape(res.data.name)+'</option>');
+  overlay.querySelector('#fi-ready-folder').value=res.data.id;toast('Pasta criada e selecionada.');
+ });
+ overlay.querySelector('[data-ready-send]').addEventListener('click',async()=>{
+  const btn=overlay.querySelector('[data-ready-send]');btn.disabled=true;btn.textContent='Enviando…';
+  try{
+   const levelNow=overlay.querySelector('#fi-ready-level').value;
+   const folderId=overlay.querySelector('#fi-ready-folder').value||null;
+   const html=mediaReadyHtml(row);
+   const payload={teacher_id:organizerState.teacherId,title:String(row.title||'Material').trim().slice(0,180),description:String(row.description||'Material enviado da biblioteca de materiais.').slice(0,500),cefr_level:levelNow,skills:[],duration_minutes:30,source_filename:'material-'+String(row.id)+'.html',html_content:html,html_version:1,active:true,folder_id:folderId};
+   const res=await d.from('tic_ready_classes').insert(payload).select('id,title').single();
+   if(res.error)throw res.error;
+   overlay.remove();toast('Material enviado para Ready Class. O original foi preservado.');
+   if(confirm('Material enviado! Deseja abrir Ready Class agora?')){if(typeof window.rcOpenPage==='function')window.rcOpenPage();else if(typeof window.loadView==='function')window.loadView('readyClass');else location.href='./index.html#readyClass'}
+  }catch(e){console.error('[Send material to Ready Class]',e);btn.disabled=false;btn.textContent='📚 Criar cópia na Ready Class';toast('Não foi possível enviar para Ready Class: '+(e.message||'erro inesperado'))}
+ });
 }
 async function mediaSetCategory(card){
  const row=mediaRowForCard(card);if(!row){toast('Não consegui vincular este cartão ao registro da biblioteca.');return}
