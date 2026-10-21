@@ -54,12 +54,13 @@ async function mediaLoadOrganizer(){
  const d=mediaDb();if(!d)return;
  const user=await mediaUser();if(!user)return;
  organizerState.teacherId=user.id;
- const [rr,ff]=await Promise.all([
+ const [rr,tm,ff]=await Promise.all([
   d.from('tic_teacher_materials').select('*').eq('teacher_id',user.id),
+  d.from('tic_materials').select('*').eq('teacher_id',user.id),
   d.from('tic_material_folders').select('id,name,color,teacher_id').eq('teacher_id',user.id).order('name')
  ]);
- if(rr.error)throw rr.error;if(ff.error)throw ff.error;
- organizerState.rows=rr.data||[];organizerState.folders=ff.data||[];
+ if(rr.error)throw rr.error;if(tm.error)throw tm.error;if(ff.error)throw ff.error;
+ organizerState.rows=[...(rr.data||[]).map(r=>({...r,_source_table:'tic_teacher_materials'})),...(tm.data||[]).map(r=>({...r,_source_table:'tic_materials',category:r.material_type||r.category||'website',description:r.description||'',tags:r.skill||'',notes:'',resource_items:r.resource_items||[],url:r.external_url||r.file_url||null}))];organizerState.folders=ff.data||[];
  mediaRenderOrganizer();mediaApplyFilters();
 }
 function mediaRenderOrganizer(){
@@ -126,7 +127,7 @@ async function mediaMoveCardToFolder(card){
  const opts=organizerState.folders.map(f=>'<option value="'+mediaEscape(f.id)+'" '+(String(row.folder_id||'')===String(f.id)?'selected':'')+'>'+mediaEscape(f.name)+'</option>').join('');
  const overlay=dialog('📁 Mover material para uma pasta','<p class="fi-mo-move-title">'+mediaEscape(row.title)+'</p><label class="fi-mo-modal-label" for="fi-mo-destination">Pasta de destino</label><select id="fi-mo-destination"><option value="">Sem pasta — deixar na biblioteca geral</option>'+opts+'</select><div class="fi-mo-modal-note">O material original, seus links e suas atribuições aos alunos serão preservados. Apenas a pasta será alterada.</div><button type="button" class="fi-fc-btn" data-mo-create-inline>＋ Criar pasta</button>','<button type="button" class="fi-fc-btn" data-close>Cancelar</button><button type="button" class="fi-fc-btn fi-fc-primary" data-mo-confirm>📁 Mover material</button>');
  overlay.querySelector('[data-mo-create-inline]').addEventListener('click',async()=>{const values=await mediaFolderEditor({title:'Criar pasta de destino',subtitle:'A nova pasta será selecionada para este material.',button:'Criar e selecionar',hint:'Ex.: Speaking B1, PDFs'});if(!values)return;const dup=organizerState.folders.find(f=>f.name.trim().toLowerCase()===values.name.toLowerCase());if(dup){overlay.querySelector('#fi-mo-destination').value=dup.id;toast('Pasta existente selecionada.');return}const d=mediaDb(),r=await d.from('tic_material_folders').insert({teacher_id:organizerState.teacherId,name:values.name,color:values.color}).select('id,name,color,teacher_id').single();if(r.error){toast('Não foi possível criar a pasta: '+r.error.message);return}organizerState.folders.push(r.data);organizerState.folders.sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));overlay.querySelector('#fi-mo-destination').insertAdjacentHTML('beforeend','<option value="'+mediaEscape(r.data.id)+'">'+mediaEscape(r.data.name)+'</option>');overlay.querySelector('#fi-mo-destination').value=r.data.id;mediaRenderOrganizer();toast('Pasta criada e selecionada.');});
- overlay.querySelector('[data-mo-confirm]').addEventListener('click',async()=>{const folderId=overlay.querySelector('#fi-mo-destination').value||null;const d=mediaDb(),res=await d.from('tic_teacher_materials').update({folder_id:folderId}).eq('id',row.id).eq('teacher_id',organizerState.teacherId).select('id,folder_id').maybeSingle();if(res.error){console.error('[Media Library move]',res.error);toast('Não foi possível mover o material: '+res.error.message);return}row.folder_id=folderId;overlay.remove();mediaRenderOrganizer();mediaApplyFilters();toast(folderId?'Material movido para “'+(organizerState.folders.find(f=>f.id===folderId)?.name||'pasta')+'”.':'Material removido da pasta.');});
+ overlay.querySelector('[data-mo-confirm]').addEventListener('click',async()=>{const folderId=overlay.querySelector('#fi-mo-destination').value||null;const d=mediaDb(),table=row._source_table||'tic_teacher_materials',res=await d.from(table).update({folder_id:folderId}).eq('id',row.id).eq('teacher_id',organizerState.teacherId).select('id,folder_id').maybeSingle();if(res.error){console.error('[Media Library move]',res.error);toast('Não foi possível mover o material: '+res.error.message);return}row.folder_id=folderId;overlay.remove();mediaRenderOrganizer();mediaApplyFilters();toast(folderId?'Material movido para “'+(organizerState.folders.find(f=>f.id===folderId)?.name||'pasta')+'”.':'Material removido da pasta.');});
 }
 function mediaReadyHtml(row){
  const esc=mediaEscape;
@@ -191,9 +192,9 @@ async function mediaSendToReadyClass(card){
 async function mediaSetCategory(card){
  const row=mediaRowForCard(card);if(!row){toast('Não consegui vincular este cartão ao registro da biblioteca.');return}
  const current=String(row.category||'');const next=prompt('Categoria do material (ex.: Aula interativa, PDF, Vídeo, Speaking):',current);if(next===null)return;
- const value=next.trim()||null,d=mediaDb();const r=await d.from('tic_teacher_materials').update({category:value}).eq('id',row.id).eq('teacher_id',organizerState.teacherId).select('id,category').maybeSingle();
+ const value=next.trim()||null,d=mediaDb();const table=row._source_table||'tic_teacher_materials';const patch=table==='tic_materials'?{material_type:value||'link'}:{category:value};const r=await d.from(table).update(patch).eq('id',row.id).eq('teacher_id',organizerState.teacherId).select('*').maybeSingle();
  if(r.error){console.error('[Media Library category]',r.error);toast('Não foi possível salvar a categoria: '+r.error.message);return}
- row.category=value||'Sem categoria';mediaRenderOrganizer();mediaApplyFilters();toast('Categoria atualizada.');
+ row.category=value||'Sem categoria';if(table==='tic_materials')row.material_type=value||'link';mediaRenderOrganizer();mediaApplyFilters();toast('Categoria atualizada.');
 }
 function installMediaOrganizer(){
  // Route detection uses the actual Media Library root, not translated/visible text.
