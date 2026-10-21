@@ -3237,7 +3237,7 @@ window.saveMaterialAssignV52=async function(ev,sourceId){
 
     if(already?.id){
       const {error:ue}=await sb.from('tic_task_assignments')
-        .update({active:true,status:already.status==='completed'?'completed':'pending',assigned_at:new Date().toISOString(),due_at:due?new Date(due).toISOString():null})
+        .update({active:true,status:already.status==='completed'?'completed':'pending',assigned_at:new Date().toISOString()})
         .eq('id',already.id);
       if(ue)throw ue;
     }else{
@@ -3247,7 +3247,7 @@ window.saveMaterialAssignV52=async function(ev,sourceId){
         status:'pending',
         active:true,
         assigned_at:new Date().toISOString(),
-        due_at:due?new Date(due).toISOString():null
+        
       });
       if(te)throw te;
     }
