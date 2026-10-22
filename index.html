@@ -9392,14 +9392,71 @@ observer.observe(document.documentElement,{childList:true,subtree:true});
      const isDone=!!pmap.get(l.id)?.first_completed_at,course=g.course||courseMap.get(l.course_id),mod=modMap.get(l.module_id),search=[l.title,l.description,l.skill,l.level,course?.title,mod?.title,g.label].filter(Boolean).join(' ');
      return '<article class="fi-lesson-card-v2" data-fi-lesson-card-v2 data-status="'+(isDone?'done':'pending')+'" data-search="'+esc(search)+'"><span class="fi-lesson-art-v2">'+skillIcon(l.skill)+'</span><span><div class="fi-lesson-title-v2">'+esc(l.title)+'</div><span class="fi-lesson-meta-v2"><span class="fi-lesson-chip-v2">'+esc(l.skill||'Lesson')+'</span><span class="fi-lesson-chip-v2 '+(isDone?'done':'')+'">'+(isDone?'✓ Concluída':'○ Pendente')+'</span>'+(l.html_enabled?'<span>🧩 Interativa</span>':'')+'</span></span><button class="fi-lesson-open-v2" onclick="viewStudentLessonInteractive(\''+l.id+'\')">'+(isDone?'Revisar →':'Abrir lesson →')+'</button></article>';
     }).join('');
-    return '<section data-fi-lessons-group class="fi-lessons-list"><div class="fi-lessons-course-heading"><div><h2>'+esc(g.course?g.course.title+' · '+g.label:g.label)+'</h2><small>'+esc(g.subtitle)+'</small></div><span class="badge purple">'+g.lessons.length+'</span></div>'+rows+'</section>';
+    return '<section data-fi-lessons-group class="fi-lessons-list '+(g.course?'fi-group-module':'fi-group-assigned')+'"><div class="fi-lessons-course-heading"><div><span class="fi-hierarchy-label">'+(g.course?'COURSE  /  MODULE':'TEACHER ASSIGNED')+'</span><h2>'+esc(g.course?g.course.title+'  ›  '+g.label:g.label)+'</h2><small>'+esc(g.subtitle)+'</small></div><span class="fi-module-count">'+g.lessons.length+'</span></div>'+rows+'</section>';
    }).join('');
    setPage('My Lessons','Aulas, atividades e seu progresso.');
-   $('content').innerHTML='<div class="fi-lessons-shell"><section class="fi-lessons-hero"><div><span class="fi-lessons-kicker">FLUENT IMMERSION · STUDY SPACE</span><h1>My Lessons 📚</h1><p>Encontre sua próxima aula, continue de onde parou e revise o que já aprendeu.</p><div style="margin-top:15px"><button class="fi-course-primary" '+(next?'onclick="viewStudentLessonInteractive(\''+next.id+'\')"':'disabled')+'>'+(next?(done===all.length?'Revisar uma lesson':'Continuar aprendendo →'):'Nenhuma aula disponível')+'</button></div></div><div class="fi-lessons-stats"><div class="fi-lessons-stat"><b>'+all.length+'</b><span>Disponíveis</span></div><div class="fi-lessons-stat"><b>'+done+'</b><span>Concluídas</span></div><div class="fi-lessons-stat"><b>'+pct+'%</b><span>Progresso</span></div></div></section><div class="fi-lessons-toolbar"><div class="fi-lessons-tabs"><button class="fi-lessons-tab active" data-fi-lesson-filter="all" onclick="fiLessonsSetFilterV2(this)">Todas</button><button class="fi-lessons-tab" data-fi-lesson-filter="pending" onclick="fiLessonsSetFilterV2(this)">Pendentes</button><button class="fi-lessons-tab" data-fi-lesson-filter="done" onclick="fiLessonsSetFilterV2(this)">Concluídas</button></div><input id="fiLessonsSearchV2" class="fi-lessons-search" type="search" placeholder="Buscar aula, skill, curso ou módulo…"></div><div id="fiLessonsCountV2" class="fi-lessons-count">'+all.length+' lesson(s)</div><div class="fi-lessons-list">'+(groupHtml||'<div class="fi-lessons-empty"><b>Nenhuma aula disponível no momento</b>Quando o Teacher liberar aulas ou atribuir atividades, elas aparecerão aqui.</div>')+'</div></div>';
+   $('content').innerHTML='<div class="fi-lessons-shell"><section class="fi-lessons-hero"><div><span class="fi-lessons-kicker">FLUENT IMMERSION · STUDY SPACE</span><h1>My Lessons 📚</h1><p>Encontre sua próxima aula, continue de onde parou e revise o que já aprendeu.</p><div style="margin-top:15px"><button class="fi-course-primary" '+(next?'onclick="viewStudentLessonInteractive(\''+next.id+'\')"':'disabled')+'>'+(next?(done===all.length?'Revisar uma lesson':'Continuar aprendendo →'):'Nenhuma aula disponível')+'</button></div></div><div class="fi-lessons-stats"><div class="fi-lessons-stat"><b>'+all.length+'</b><span>Disponíveis</span></div><div class="fi-lessons-stat"><b>'+done+'</b><span>Concluídas</span></div><div class="fi-lessons-stat"><b>'+pct+'%</b><span>Progresso</span></div></div></section><div class="fi-lessons-toolbar"><div class="fi-lessons-tabs"><button class="fi-lessons-tab active" data-fi-lesson-filter="all" onclick="fiLessonsSetFilterV2(this)">Todas</button><button class="fi-lessons-tab" data-fi-lesson-filter="pending" onclick="fiLessonsSetFilterV2(this)">Pendentes</button><button class="fi-lessons-tab" data-fi-lesson-filter="done" onclick="fiLessonsSetFilterV2(this)">Concluídas</button></div><input id="fiLessonsSearchV2" class="fi-lessons-search" type="search" placeholder="Buscar aula, skill, curso ou módulo…"></div><div id="fiLessonsCountV2" class="fi-lessons-count">'+all.length+' lesson(s)</div><div class="fi-lessons-list">'+(groupHtml||'<div class="fi-lessons-empty"><b>Nenhuma aula disponível no momento</b>Quando o Teacher liberar aulas ou atribuir atividades, elas aparecerão aqui.</div>')+'</div></div>'+(next?'<aside class="fi-floating-next" aria-label="Continuar aprendendo"><div class="fi-floating-spark">✦</div><div class="fi-floating-copy"><span>CONTINUE APRENDENDO</span><b>'+esc(next.title)+'</b><small>'+(pmap.get(next.id)?.first_completed_at?'Aula concluída · revisar':'Sua próxima aula')+'</small></div><button onclick="viewStudentLessonInteractive(\''+next.id+'\')" aria-label="Abrir próxima aula">▶</button></aside>':'');
    $('fiLessonsSearchV2').addEventListener('input',window.fiLessonsFilterV2);
   }catch(e){$('content').innerHTML='<div class="card attention"><b>Não foi possível carregar suas lessons.</b><p>'+esc(e.message||e)+'</p></div>'}
  };
 })();
 </script>
+
+<style id="fi-learning-studio-premium">
+/* Learning Studio — premium purple hierarchy */
+.fi-student-hero{background:radial-gradient(circle at 83% 5%,#7861e9 0,transparent 34%),linear-gradient(118deg,#171d49 0%,#35227e 52%,#6e42df 100%);box-shadow:0 18px 44px #4429a626;border:1px solid #ffffff24}
+.fi-student-stat{background:#ffffff!important;border:1px solid #ebe5ff!important;box-shadow:0 8px 24px #35206d08}
+.fi-student-stat b{color:#171b45}
+.fi-student-stat span{color:#746a92}
+.fi-course-card{border:1px solid #e4dcff;box-shadow:0 9px 25px #30206d0b;border-radius:22px}
+.fi-course-card-top{background:linear-gradient(125deg,#fff 0%,#fbf9ff 70%,#f3efff 100%)}
+.fi-course-art{background:linear-gradient(145deg,#e9e0ff,#cbbaff);box-shadow:inset 0 0 0 1px #ffffffa8}
+.fi-course-progress i{background:linear-gradient(90deg,#5b35e5,#a16bff)}
+.fi-course-primary{background:linear-gradient(110deg,#5428db,#8b43f4);box-shadow:0 5px 14px #6737db2b;transition:transform .16s,box-shadow .16s}
+.fi-course-primary:hover{background:linear-gradient(110deg,#4820c6,#7734e8);transform:translateY(-1px);box-shadow:0 8px 18px #6737db38}
+.fi-course-secondary{background:linear-gradient(110deg,#faf8ff,#f0eaff);border-color:#d9ccff}
+.fi-course-tab{box-shadow:0 2px 6px #30206d06}
+.fi-course-tab.active{background:linear-gradient(110deg,#552bde,#8547ee);box-shadow:0 5px 13px #6737db26}
+.fi-lessons-hero{background:radial-gradient(circle at 86% 0%,#7859ec 0,transparent 35%),linear-gradient(118deg,#171d49 0%,#35227e 52%,#6e42df 100%);border:1px solid #ffffff24;box-shadow:0 18px 42px #39217f28;position:relative;overflow:hidden}
+.fi-lessons-hero:after{content:"";position:absolute;right:12%;top:-90px;width:210px;height:210px;border:28px solid #ffffff10;border-radius:50%;pointer-events:none}
+.fi-lessons-hero>div{position:relative;z-index:1}
+.fi-lessons-stat{background:#ffffff17;border:1px solid #ffffff30;backdrop-filter:blur(8px)}
+.fi-lessons-toolbar{padding:4px 0}
+.fi-lessons-tab{transition:background .15s,transform .15s,box-shadow .15s}
+.fi-lessons-tab:hover{transform:translateY(-1px)}
+.fi-lessons-tab.active{background:linear-gradient(110deg,#552bde,#8547ee);box-shadow:0 5px 13px #6737db26}
+.fi-lessons-list{gap:11px}
+.fi-lessons-course-heading{position:relative;overflow:hidden;border-radius:17px;border:1px solid #dfd5ff;background:linear-gradient(110deg,#f0eaff 0%,#faf8ff 58%,#eee8ff 100%);padding:15px 18px}
+.fi-lessons-course-heading:before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,#6638e9,#bd8aff)}
+.fi-hierarchy-label{display:block;font-size:9px;font-weight:950;letter-spacing:.13em;color:#6841d7;margin-bottom:5px}
+.fi-lessons-course-heading h2{font-size:14px;font-weight:900;letter-spacing:-.01em}
+.fi-lessons-course-heading small{font-size:10px}
+.fi-module-count{display:grid;place-items:center;min-width:34px;height:34px;padding:0 9px;border-radius:12px;background:linear-gradient(145deg,#35206f,#5b35c8);color:#fff;font-weight:900;font-size:12px;box-shadow:0 5px 12px #35206f20}
+.fi-group-module:nth-of-type(3n+2) .fi-lessons-course-heading:before{background:linear-gradient(180deg,#3295ff,#75c7ff)}
+.fi-group-module:nth-of-type(3n+2) .fi-lessons-course-heading{background:linear-gradient(110deg,#eaf4ff,#fbfdff 65%,#eaf4ff);border-color:#d5e8ff}
+.fi-group-module:nth-of-type(3n+2) .fi-hierarchy-label{color:#2472cb}
+.fi-group-module:nth-of-type(3n+2) .fi-module-count{background:linear-gradient(145deg,#2472cb,#55a7ff)}
+.fi-group-module:nth-of-type(3n) .fi-lessons-course-heading:before{background:linear-gradient(180deg,#e74791,#ff9dbe)}
+.fi-group-module:nth-of-type(3n) .fi-lessons-course-heading{background:linear-gradient(110deg,#fff0f6,#fffafd 65%,#ffeaf3);border-color:#f8d8e6}
+.fi-group-module:nth-of-type(3n) .fi-hierarchy-label{color:#c63879}
+.fi-group-module:nth-of-type(3n) .fi-module-count{background:linear-gradient(145deg,#c63879,#f06da4)}
+.fi-lesson-card-v2{border:1px solid #e5def8;border-radius:17px;box-shadow:0 5px 16px #33205f06;transition:transform .16s,border-color .16s,box-shadow .16s}
+.fi-lesson-card-v2:hover{transform:translateY(-2px);border-color:#c9b8ff;box-shadow:0 11px 24px #5632a512}
+.fi-lesson-art-v2{background:linear-gradient(145deg,#eee7ff,#d8caff);box-shadow:inset 0 0 0 1px #fff}
+.fi-lesson-chip-v2{background:#f0eaff;color:#6840d8}
+.fi-lesson-chip-v2.done{background:#e0f8eb;color:#167b4b}
+.fi-lesson-open-v2{background:linear-gradient(110deg,#faf8ff,#f0eaff);border-color:#d6c8ff;transition:all .15s}
+.fi-lesson-open-v2:hover{background:linear-gradient(110deg,#552bde,#8547ee);box-shadow:0 5px 13px #6737db26;transform:translateY(-1px)}
+.fi-floating-next{position:fixed;z-index:1000;right:24px;bottom:24px;display:flex;align-items:center;gap:11px;width:min(330px,calc(100vw - 32px));padding:12px;border-radius:19px;background:linear-gradient(120deg,#211754,#4a25b5 70%,#7744e8);color:#fff;border:1px solid #ffffff2b;box-shadow:0 16px 42px #24145b55;backdrop-filter:blur(12px)}
+.fi-floating-spark{display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;border-radius:13px;background:#ffffff1c;font-size:22px;color:#d9caff}
+.fi-floating-copy{display:grid;gap:3px;min-width:0;flex:1}
+.fi-floating-copy span{font-size:8px;font-weight:950;letter-spacing:.13em;color:#d9ccff}
+.fi-floating-copy b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi-floating-copy small{font-size:9px;color:#ded6ff}
+.fi-floating-next>button{width:38px;height:38px;flex:0 0 38px;border:0;border-radius:12px;background:linear-gradient(135deg,#9d5bff,#6b36ee);color:white;font-size:14px;font-weight:900;cursor:pointer;box-shadow:0 5px 13px #140d383d}
+.fi-floating-next>button:hover{transform:scale(1.04)}
+@media(max-width:700px){.fi-floating-next{right:12px;bottom:12px;width:min(310px,calc(100vw - 24px));padding:10px}.fi-lessons-hero{padding:21px}.fi-lessons-course-heading{padding:13px 14px}}
+@media(prefers-reduced-motion:reduce){.fi-lesson-card-v2,.fi-course-primary,.fi-course-tab,.fi-lesson-open-v2{transition:none!important}}
+</style>
 </body>
 </html>
