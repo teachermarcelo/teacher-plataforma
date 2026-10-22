@@ -9303,5 +9303,103 @@ observer.observe(document.documentElement,{childList:true,subtree:true});
  };
 })();
 </script>
+
+<style id="fi-course-lessons-v2">
+/* Refine the Courses hero so progress tiles never overflow the viewport */
+.fi-student-hero{grid-template-columns:minmax(0,1fr) minmax(270px,340px);min-width:0}
+.fi-student-hero>div{min-width:0}
+.fi-student-stats{grid-template-columns:repeat(3,minmax(0,1fr));min-width:0;width:100%}
+.fi-student-stat{min-width:0;padding:12px 10px;overflow-wrap:anywhere}
+.fi-student-stat b{font-size:clamp(18px,2vw,24px);white-space:nowrap}
+.fi-student-stat span{display:block;line-height:1.4;overflow-wrap:anywhere}
+.fi-lessons-shell{display:grid;gap:18px;max-width:1400px;margin:0 auto;min-width:0}
+.fi-lessons-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:20px;padding:26px 28px;border-radius:24px;background:linear-gradient(120deg,#18284b 0%,#39258b 55%,#7956e8 100%);color:#fff;box-shadow:0 14px 35px #35206d1a;min-width:0}
+.fi-lessons-hero h1{font-size:clamp(25px,3vw,34px);margin:5px 0 8px;color:#fff}
+.fi-lessons-hero p{font-size:12px;line-height:1.6;color:#e7e0ff;margin:0}
+.fi-lessons-kicker{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#d5c9ff;font-weight:900}
+.fi-lessons-stats{display:grid;grid-template-columns:repeat(3,minmax(76px,1fr));gap:8px}
+.fi-lessons-stat{border:1px solid #ffffff2e;background:#ffffff15;border-radius:15px;padding:12px;min-width:0}
+.fi-lessons-stat b{display:block;font-size:22px}
+.fi-lessons-stat span{font-size:10px;color:#e8e1ff}
+.fi-lessons-toolbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(210px,320px);gap:12px;align-items:center}
+.fi-lessons-tabs{display:flex;gap:7px;flex-wrap:wrap}
+.fi-lessons-tab{border:1px solid var(--border,#e5def3);background:var(--card,#fff);color:var(--text,#29213c);border-radius:999px;padding:9px 13px;font-weight:800;font-size:11px;cursor:pointer}
+.fi-lessons-tab.active{background:#6139d8;color:#fff;border-color:#6139d8}
+.fi-lessons-search{width:100%;min-width:0;border:1px solid var(--border,#e2dced);border-radius:12px;padding:11px 13px;background:var(--card,#fff);color:var(--text,#29213c);font:inherit;font-size:12px}
+.fi-lessons-list{display:grid;gap:10px}
+.fi-lessons-course-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 16px;background:var(--surface,#f8f6ff);border:1px solid var(--border,#e5def2);border-radius:14px}
+.fi-lessons-course-heading h2{font-size:14px;margin:0;color:var(--text,#29213c)}
+.fi-lessons-course-heading small{display:block;font-size:10px;color:var(--muted,#777085);margin-top:4px}
+.fi-lesson-card-v2{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:13px;padding:15px 17px;border:1px solid var(--border,#e6e0f0);border-radius:16px;background:var(--card,#fff);transition:box-shadow .18s,transform .18s;min-width:0}
+.fi-lesson-card-v2:hover{box-shadow:0 9px 22px #35206d0d;transform:translateY(-1px)}
+.fi-lesson-art-v2{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:linear-gradient(145deg,#eee8ff,#d9ccff);color:#5c35c8;font-size:18px}
+.fi-lesson-title-v2{font-size:13px;font-weight:850;color:var(--text,#29213c);margin:0 0 5px;overflow-wrap:anywhere}
+.fi-lesson-meta-v2{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:10px;color:var(--muted,#777085)}
+.fi-lesson-chip-v2{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:5px 8px;background:#f0ebff;color:#5e3ac8;font-weight:800;font-size:9px}
+.fi-lesson-chip-v2.done{background:#e2f7eb;color:#167a48}
+.fi-lesson-open-v2{border:1px solid #d8ccff;background:#f6f2ff;color:#5934c7;border-radius:11px;padding:10px 13px;font-size:11px;font-weight:850;white-space:nowrap;cursor:pointer}
+.fi-lesson-open-v2:hover{background:#6139d8;color:white}
+.fi-lessons-empty{padding:28px 18px;text-align:center;border:1px dashed var(--border,#ded5ee);border-radius:16px;color:var(--muted,#777085);background:var(--card,#fff)}
+.fi-lessons-empty b{display:block;color:var(--text,#29213c);margin-bottom:6px}
+.fi-lessons-count{font-size:10px;color:var(--muted,#777085)}
+@media(max-width:850px){.fi-student-hero{grid-template-columns:minmax(0,1fr);gap:18px}.fi-student-stats{max-width:100%}.fi-lessons-hero{grid-template-columns:minmax(0,1fr)}.fi-lessons-stats{max-width:100%}.fi-lessons-toolbar{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.fi-student-hero{padding:20px}.fi-student-stat{padding:10px 7px}.fi-student-stat b{font-size:18px}.fi-lessons-hero{padding:21px}.fi-lessons-stat{padding:10px 8px}.fi-lessons-stat b{font-size:19px}.fi-lessons-tabs{overflow-x:auto;flex-wrap:nowrap;padding-bottom:3px}.fi-lessons-tab{white-space:nowrap}.fi-lesson-card-v2{grid-template-columns:38px minmax(0,1fr);gap:10px;padding:13px}.fi-lesson-art-v2{width:36px;height:36px}.fi-lesson-open-v2{grid-column:2;justify-self:start}.fi-lessons-course-heading{padding:11px 12px}}
+</style>
+<script id="fi-course-lessons-v2-js">
+(function(){
+ window.fiLessonsSetFilterV2=function(btn){document.querySelectorAll('[data-fi-lesson-filter]').forEach(x=>x.classList.toggle('active',x===btn));window.fiLessonsFilterV2()};
+ window.fiLessonsFilterV2=function(){
+  const q=(document.getElementById('fiLessonsSearchV2')?.value||'').trim().toLocaleLowerCase('pt-BR');
+  const active=document.querySelector('[data-fi-lesson-filter].active')?.dataset.fiLessonFilter||'all';
+  let visible=0;
+  document.querySelectorAll('[data-fi-lesson-card-v2]').forEach(card=>{
+   const hay=(card.dataset.search||'').toLocaleLowerCase('pt-BR'),status=card.dataset.status||'pending';
+   const show=(!q||hay.includes(q))&&(active==='all'||(active==='pending'&&status!=='done')||(active==='done'&&status==='done'));
+   card.hidden=!show;if(show)visible++;
+  });
+  document.querySelectorAll('[data-fi-lessons-group]').forEach(group=>{const any=[...group.querySelectorAll('[data-fi-lesson-card-v2]')].some(x=>!x.hidden);group.hidden=!any});
+  const count=document.getElementById('fiLessonsCountV2');if(count)count.textContent=visible+' lesson(s)';
+ };
+ window.studentLessons=async function(){
+  const st=await studentRecord();if(!st){$('content').innerHTML='<div class="card empty">Sua conta ainda não está vinculada a um cadastro de aluno.</div>';return}
+  try{
+   const courses=await ticGetStudentOrderedCoursesV19(st.id),ids=courses.map(c=>c.id);
+   const [{data:mods,error:me},{data:lessons,error:le},{data:lp,error:pe},{data:direct,error:de}]=await Promise.all([
+    ids.length?sb.from('tic_modules').select('*').in('course_id',ids).order('position',{ascending:true}):Promise.resolve({data:[],error:null}),
+    ids.length?sb.from('tic_lessons').select('*').in('course_id',ids).eq('active',true).eq('student_visible',true).order('position',{ascending:true}).order('created_at',{ascending:true}):Promise.resolve({data:[],error:null}),
+    sb.from('tic_lesson_progress').select('lesson_id,first_completed_at').eq('student_id',st.id),
+    sb.from('tic_lesson_assignments').select('lesson_id,assigned_at,note,tic_lessons(*)').eq('student_id',st.id).eq('active',true).order('assigned_at',{ascending:false})
+   ]);
+   if(me||le||pe||de)throw(me||le||pe||de);
+   const pmap=new Map((lp||[]).map(x=>[x.lesson_id,x])),visibleDirect=(direct||[]).map(x=>x.tic_lessons).filter(l=>l&&l.student_visible!==false&&l.active!==false);
+   const courseLessonIds=new Set((lessons||[]).map(l=>l.id)),extra=visibleDirect.filter(l=>!courseLessonIds.has(l.id));
+   const courseMap=new Map(courses.map(c=>[c.id,c])),modMap=new Map((mods||[]).map(m=>[m.id,m]));
+   const all=[...(lessons||[]),...extra],done=all.filter(l=>pmap.get(l.id)?.first_completed_at).length,pending=all.length-done,pct=all.length?Math.round(done/all.length*100):0;
+   const next=all.find(l=>!pmap.get(l.id)?.first_completed_at)||all[0];
+   const skillIcon=skill=>{const x=String(skill||'').toLowerCase();return x.includes('listen')?'🎧':x.includes('speak')?'🗣️':x.includes('read')?'📖':x.includes('writ')?'✍️':x.includes('grammar')?'🧩':x.includes('vocab')?'🔤':'📘'};
+   const groups=[];
+   courses.forEach(c=>{
+    const cl=(lessons||[]).filter(l=>l.course_id===c.id).sort((a,b)=>(Number(a.position)||999999)-(Number(b.position)||999999));
+    const groupLessons=[];
+    const cms=(mods||[]).filter(m=>m.course_id===c.id).sort((a,b)=>(Number(a.position)||999999)-(Number(b.position)||999999));
+    cms.forEach(m=>{const ml=cl.filter(l=>l.module_id===m.id);if(ml.length)groupLessons.push({label:m.title,subtitle:c.level+' · '+ml.length+' lesson(s)',lessons:ml})});
+    const general=cl.filter(l=>!l.module_id);if(general.length)groupLessons.push({label:'Aulas gerais',subtitle:c.level+' · '+general.length+' lesson(s)',lessons:general});
+    groupLessons.forEach(g=>groups.push({course:c,label:g.label,subtitle:g.subtitle,lessons:g.lessons}));
+   });
+   if(extra.length)groups.push({course:null,label:'Lessons atribuídas pelo Teacher',subtitle:'Aulas compartilhadas diretamente com você',lessons:extra});
+   const groupHtml=groups.map((g,gi)=>{
+    const rows=g.lessons.map(l=>{
+     const isDone=!!pmap.get(l.id)?.first_completed_at,course=g.course||courseMap.get(l.course_id),mod=modMap.get(l.module_id),search=[l.title,l.description,l.skill,l.level,course?.title,mod?.title,g.label].filter(Boolean).join(' ');
+     return '<article class="fi-lesson-card-v2" data-fi-lesson-card-v2 data-status="'+(isDone?'done':'pending')+'" data-search="'+esc(search)+'"><span class="fi-lesson-art-v2">'+skillIcon(l.skill)+'</span><span><div class="fi-lesson-title-v2">'+esc(l.title)+'</div><span class="fi-lesson-meta-v2"><span class="fi-lesson-chip-v2">'+esc(l.skill||'Lesson')+'</span><span class="fi-lesson-chip-v2 '+(isDone?'done':'')+'">'+(isDone?'✓ Concluída':'○ Pendente')+'</span>'+(l.html_enabled?'<span>🧩 Interativa</span>':'')+'</span></span><button class="fi-lesson-open-v2" onclick="viewStudentLessonInteractive(\''+l.id+'\')">'+(isDone?'Revisar →':'Abrir lesson →')+'</button></article>';
+    }).join('');
+    return '<section data-fi-lessons-group class="fi-lessons-list"><div class="fi-lessons-course-heading"><div><h2>'+esc(g.course?g.course.title+' · '+g.label:g.label)+'</h2><small>'+esc(g.subtitle)+'</small></div><span class="badge purple">'+g.lessons.length+'</span></div>'+rows+'</section>';
+   }).join('');
+   setPage('My Lessons','Aulas, atividades e seu progresso.');
+   $('content').innerHTML='<div class="fi-lessons-shell"><section class="fi-lessons-hero"><div><span class="fi-lessons-kicker">FLUENT IMMERSION · STUDY SPACE</span><h1>My Lessons 📚</h1><p>Encontre sua próxima aula, continue de onde parou e revise o que já aprendeu.</p><div style="margin-top:15px"><button class="fi-course-primary" '+(next?'onclick="viewStudentLessonInteractive(\''+next.id+'\')"':'disabled')+'>'+(next?(done===all.length?'Revisar uma lesson':'Continuar aprendendo →'):'Nenhuma aula disponível')+'</button></div></div><div class="fi-lessons-stats"><div class="fi-lessons-stat"><b>'+all.length+'</b><span>Disponíveis</span></div><div class="fi-lessons-stat"><b>'+done+'</b><span>Concluídas</span></div><div class="fi-lessons-stat"><b>'+pct+'%</b><span>Progresso</span></div></div></section><div class="fi-lessons-toolbar"><div class="fi-lessons-tabs"><button class="fi-lessons-tab active" data-fi-lesson-filter="all" onclick="fiLessonsSetFilterV2(this)">Todas</button><button class="fi-lessons-tab" data-fi-lesson-filter="pending" onclick="fiLessonsSetFilterV2(this)">Pendentes</button><button class="fi-lessons-tab" data-fi-lesson-filter="done" onclick="fiLessonsSetFilterV2(this)">Concluídas</button></div><input id="fiLessonsSearchV2" class="fi-lessons-search" type="search" placeholder="Buscar aula, skill, curso ou módulo…"></div><div id="fiLessonsCountV2" class="fi-lessons-count">'+all.length+' lesson(s)</div><div class="fi-lessons-list">'+(groupHtml||'<div class="fi-lessons-empty"><b>Nenhuma aula disponível no momento</b>Quando o Teacher liberar aulas ou atribuir atividades, elas aparecerão aqui.</div>')+'</div></div>';
+   $('fiLessonsSearchV2').addEventListener('input',window.fiLessonsFilterV2);
+  }catch(e){$('content').innerHTML='<div class="card attention"><b>Não foi possível carregar suas lessons.</b><p>'+esc(e.message||e)+'</p></div>'}
+ };
+})();
+</script>
 </body>
 </html>
