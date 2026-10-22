@@ -22,10 +22,16 @@ async function showMaterials(classId){
 }
 const previousTab=window.classCenterTabV41;
 if(typeof previousTab==='function'){
- window.classCenterTabV41=async function(classId,tab){
+ const routedTab=async function(classId,tab){
    if(tab==='materials')return showMaterials(classId);
    return previousTab.apply(this,arguments);
  };
+ routedTab.__fiMaterialRouting=true;
+ routedTab.__fiOriginal=previousTab;
+ window.classCenterTabV41=routedTab;
+ /* Keep both public entry points synchronized. Quick actions call classCenterTab,
+    while the tab strip and older modules call classCenterTabV41. */
+ window.classCenterTab=routedTab;
 }
 function routeMaterials(ev){
  const btn=ev.target.closest?.('.v41-tabs button[data-tab="materials"]');
