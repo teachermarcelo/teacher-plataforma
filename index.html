@@ -340,7 +340,21 @@ body{overflow:hidden;}
 @media(max-width:520px){.tic63-student{padding:11px;border-radius:14px}.tic63-course>header{padding:11px}.tic63-lessons{padding:7px}.tic63-lesson{padding:11px}.tic63-controls label{flex-basis:100%}.tic63-controls .btn{width:100%;justify-content:center}.tic63-legend span{flex:1;text-align:center}}
 @media(prefers-reduced-motion:reduce){.tic63-lesson{transition:none}}
 </style>
-</head>
+<style id="tic-class-overview-v65">
+.tic-class-overview-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:0 0 18px;padding:20px 22px;border:1px solid #e4dcf5;border-radius:18px;background:linear-gradient(115deg,#f4efff,#fff 72%);box-shadow:0 5px 18px rgba(64,42,112,.045)}
+.tic-overview-eyebrow{font-size:9px;font-weight:900;letter-spacing:1.5px;color:#7551cb}.tic-class-overview-head h2{margin:5px 0;font-size:22px;font-weight:800;letter-spacing:-.6px;color:#24183f}.tic-class-overview-head p{margin:0;color:#746b86;font-size:12px;line-height:1.6}
+.tic-overview-total{display:grid;gap:2px;min-width:78px;text-align:center;padding:10px 15px;border:1px solid #ddd0ff;border-radius:14px;background:#fff;color:#6d3ce8}.tic-overview-total span{font-size:10px;font-weight:700}.tic-overview-total b{font-size:25px;font-weight:900}
+.tic-class-overview-card{padding:17px!important;border:1px solid #dce2f1!important;border-radius:19px!important;background:linear-gradient(155deg,#fff,#fdfcff)!important;box-shadow:0 5px 18px rgba(30,41,80,.045);transition:transform .16s,box-shadow .16s}.tic-class-overview-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(64,42,112,.09)}
+.tic-class-overview-card .section-head{align-items:flex-start;margin-bottom:15px}.tic-class-name{font:800 17px 'Plus Jakarta Sans',sans-serif!important;letter-spacing:-.3px;color:#24183f;margin:7px 0 3px!important}.tic-class-schedule{font-size:10px;color:#81758f;font-weight:600}
+.tic-class-kpis{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}.tic-class-kpi{display:grid;gap:5px;min-width:0;padding:12px;border-radius:13px;border:1px solid}.tic-class-kpi span{font-size:10px;font-weight:800;line-height:1.4}.tic-class-kpi b{font-size:25px;line-height:1;font-weight:900;letter-spacing:-.7px}.tic-class-kpi small{font-size:9px;line-height:1.4;font-weight:600}
+.tic-kpi-taught{background:#ecfdf3;border-color:#b7ebcb;color:#166534}.tic-kpi-planned{background:#eff6ff;border-color:#c8dcff;color:#1d4ed8}
+.tic-next-lesson{display:flex;align-items:center;gap:10px;margin:10px 0;padding:12px;border:1px solid;border-radius:13px;min-width:0}.tic-next-active{background:#fff8e8;border-color:#f5d48b}.tic-next-empty{background:#f7f5fb;border-color:#e5def0}
+.tic-next-icon{display:grid;place-items:center;flex:0 0 36px;height:36px;border-radius:11px;background:#fff;font-size:17px;box-shadow:0 2px 6px #37225b0d}.tic-next-content{display:grid;gap:4px;min-width:0;flex:1}.tic-next-content>span{font-size:9px;font-weight:900;letter-spacing:.8px;color:#9a6700}.tic-next-empty .tic-next-content>span{color:#766a8c}.tic-next-content b{font-size:11px;line-height:1.4;font-weight:800;color:#2b2041;overflow-wrap:anywhere}.tic-next-content small{font-size:10px;color:#756b83;font-weight:600;line-height:1.4}
+.tic-next-status{align-self:flex-start;white-space:nowrap;padding:5px 7px;border-radius:7px;background:#ffedb9;color:#8a5800;font-size:8px;font-weight:900;letter-spacing:.35px}.tic-next-empty .tic-next-status{background:#e9e4f1;color:#766a8c}
+.tic-class-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:11px 0}.tic-class-info-grid .mini{padding:10px 11px;border:1px solid #e0e5f2;border-radius:11px;background:#f8faff}.tic-class-info-grid .mini span{font-size:10px;color:#706486}.tic-class-info-grid .mini b{font-size:11px;font-weight:800}
+.tic-class-actions{display:flex;flex-wrap:wrap;gap:7px!important;margin-top:14px!important}.tic-class-actions .btn{border-radius:9px!important;font-weight:800!important}
+@media(max-width:620px){.tic-class-overview-head{align-items:flex-start;padding:15px}.tic-class-overview-head h2{font-size:18px}.tic-overview-total{min-width:58px;padding:8px 10px}.tic-class-kpis{gap:7px}.tic-class-kpi{padding:10px}.tic-class-kpi span{font-size:9px}.tic-next-status{display:none}.tic-class-actions .btn{flex:1 1 42%;justify-content:center}}
+</style></head>
 <body>
 
 <div id="login" class="login">
@@ -726,25 +740,51 @@ async function saveStudent(e,id){
 async function classesPage(){
  const {data,error}=await sb.from('tic_classes').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
  if(error){$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar as turmas.</b><p>${esc(error.message)}</p></div>`;return}
- const ids=(data||[]).map(x=>x.id);
- let members=[];
- if(ids.length){const r=await sb.from('tic_class_students').select('class_id,student_id,status').in('class_id',ids);members=r.data||[];}
+ const classes=data||[],ids=classes.map(x=>x.id);let members=[],events=[];
+ if(ids.length){
+  const [mr,er]=await Promise.all([
+   sb.from('tic_class_students').select('class_id,student_id,status').in('class_id',ids),
+   sb.from('tic_events').select('id,class_id,title,event_type,starts_at,ends_at,notes,status,meeting_url').eq('teacher_id',session.user.id).in('class_id',ids).order('starts_at',{ascending:true})
+  ]);
+  members=mr.data||[];if(er.error)console.warn('Class overview events could not be loaded:',er.error.message);events=er.data||[];
+ }
  const countBy={};members.forEach(m=>{if(m.status==='active')countBy[m.class_id]=(countBy[m.class_id]||0)+1});
- $('content').innerHTML=`<div class="grid cols2">${(data||[]).map(c=>`<article class="card">
-   <div class="section-head"><div><span class="badge blue">${esc(c.level||'A1')}</span><h2 style="font:800 18px 'Plus Jakarta Sans';margin:8px 0 0">${esc(c.name)}</h2></div>${badge(c.status||'active')}</div>
-   <div class="mini"><span>👥 Alunos</span><b>${countBy[c.id]||0}</b></div>
-   <div class="mini"><span>🕐 Horário</span><b>${esc(c.schedule_text||'Não definido')}</b></div>
-   <div class="mini"><span>🔗 Aula online</span><b>${c.meeting_url?'Configurado':'Não definido'}</b></div>
-   <div class="actions" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:7px">
-    <button class="btn sm secondary" onclick="openClassMembers('${c.id}')">👥 Alunos</button>
-    <button class="btn sm primary" onclick="openClassAssign('${c.id}')">📤 Atribuir</button>
-    <button class="btn sm ghost" onclick="openClassSubmissions('${c.id}')">📝 Feedback</button>
-    <button class="btn sm ghost" onclick="openClassProgress('${c.id}')">📊 Progresso</button>
-    <button class="btn sm primary" onclick="openClassCenter('${c.id}')">🏫 Abrir turma</button>
-    <button class="btn sm ghost" onclick='editGeneric("classes",${JSON.stringify(c)})'>Editar</button>
-    <button class="btn sm danger" onclick="deleteRow('tic_classes','${c.id}','classes')">Excluir</button>
+ const now=new Date(),byClass={};
+ events.forEach(e=>{(byClass[e.class_id]||(byClass[e.class_id]=[])).push(e)});
+ function metaFor(e){
+  let meta=null;const raw=String(e.notes||''),mark='[TIC_LESSON_TRACKING_V1]',idx=raw.indexOf(mark);
+  if(idx>=0){try{meta=JSON.parse(raw.slice(idx+mark.length).trim())}catch(_){}}
+  const st=String(meta&&meta.status||e.status||'').toLowerCase(),type=String(e.event_type||'').toLowerCase();
+  const cancelled=/cancel/.test(st)||/cancel/.test(type);
+  const taught=st==='taught'||['completed','complete','done','ministrada','ministrado'].includes(st)||type==='lesson_completed';
+  const planned=!cancelled&&!taught&&(st==='planned'||st==='pending'||st==='scheduled'||st==='review'||type==='lesson_tracking'||!!e.starts_at);
+  const date=e.starts_at?new Date(e.starts_at):null;
+  return {cancelled,taught,planned,date};
+ }
+ const fmtDate=d=>d&&!isNaN(d.getTime())?d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'Data não definida';
+ $('content').innerHTML=`<div class="tic-class-overview-head"><div><span class="tic-overview-eyebrow">CLASS COMMAND CENTER</span><h2>Visão geral das turmas</h2><p>Acompanhe aulas ministradas, planejadas e os próximos encontros de cada turma.</p></div><div class="tic-overview-total"><span>Turmas</span><b>${classes.length}</b></div></div><div class="grid cols2">${classes.map(c=>{
+  const evs=(byClass[c.id]||[]).map(e=>({e,m:metaFor(e)})).filter(x=>!x.m.cancelled);
+  const taught=evs.filter(x=>x.m.taught).length,planned=evs.filter(x=>x.m.planned).length;
+  const next=evs.filter(x=>x.m.date&&!isNaN(x.m.date.getTime())&&x.m.date>=now&&!x.m.taught).sort((a,b)=>a.m.date-b.m.date)[0];
+  const nextTitle=next?next.e.title||'Aula planejada':'Nenhuma aula agendada';
+  const nextDate=next?fmtDate(next.m.date):'Adicione uma aula para acompanhar aqui';
+  const nextTime=next&&next.m.date?next.m.date.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+  return `<article class="card tic-class-overview-card">
+   <div class="section-head"><div><span class="badge blue">${esc(c.level||'A1')}</span><h2 class="tic-class-name">${esc(c.name)}</h2><small class="tic-class-schedule">${esc(c.schedule_text||'Horário não definido')}</small></div>${badge(c.status||'active')}</div>
+   <div class="tic-class-kpis">
+    <div class="tic-class-kpi tic-kpi-taught"><span>✓ Aulas ministradas</span><b>${taught}</b><small>Registradas no histórico</small></div>
+    <div class="tic-class-kpi tic-kpi-planned"><span>◷ Aulas planejadas</span><b>${planned}</b><small>Agendadas ou pendentes</small></div>
    </div>
- </article>`).join('')||'<div class="card empty">Nenhuma turma criada.</div>'}</div>`;
+   <div class="tic-next-lesson ${next?'tic-next-active':'tic-next-empty'}"><div class="tic-next-icon">${next?'📅':'🗓️'}</div><div class="tic-next-content"><span>PRÓXIMA AULA</span><b>${esc(nextTitle)}</b><small>${esc(nextDate)}${nextTime?' · '+esc(nextTime):''}</small></div><span class="tic-next-status">${next?'PLANEJADA':'SEM AGENDA'}</span></div>
+   <div class="tic-class-info-grid"><div class="mini"><span>👥 Alunos</span><b>${countBy[c.id]||0}</b></div><div class="mini"><span>🔗 Aula online</span><b>${c.meeting_url?'Configurado':'Não definida'}</b></div></div>
+   <div class="actions tic-class-actions">
+    <button class="btn sm primary" onclick="openClassCenter('${c.id}')">🎯 Abrir Class Center</button>
+    <button class="btn sm secondary" onclick="openClassMembers('${c.id}')">👥 Alunos</button>
+    <button class="btn sm ghost" onclick="openClassAssign('${c.id}')">📤 Atribuir</button>
+    <button class="btn sm ghost" onclick='editGeneric("classes",${JSON.stringify(c)})'>✏️ Editar</button>
+   </div>
+  </article>`
+ }).join('')||'<div class="card empty">Nenhuma turma criada.</div>'}</div>`;
 }
 
 async function openClassCenter(classId,initialTab='overview'){
