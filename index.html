@@ -801,7 +801,7 @@ async function openClassCenter(classId,initialTab='overview'){
  const tasks=assignments||[],evs=events||[],boardItems=boardData||[];
  let counts={planned:tasks.filter(t=>t.active!==false).length,inProgress:0,done:0};
  if(tasks.length&&memberIds.length){const {data:tas}=await sb.from('tic_task_assignments').select('assignment_id,student_id,status,completed_at').in('assignment_id',tasks.map(t=>t.id));const by={};(tas||[]).forEach(x=>(by[x.assignment_id]??=[]).push(x));tasks.forEach(t=>{const a=by[t.id]||[];if(a.length&&a.every(x=>['completed','submitted','graded'].includes(String(x.status||'').toLowerCase())))counts.done++;else if(a.some(x=>['started','in_progress','submitted','graded'].includes(String(x.status||'').toLowerCase())))counts.inProgress++});counts.planned=Math.max(0,tasks.filter(t=>t.active!==false).length-counts.inProgress-counts.done)}
- const tabs=[['overview','📊 Visão geral'],['board','📌 Board'],['lessons','📚 Lessons'],['topics','📚 Assuntos & Tópicos'],['students','👥 Alunos'],['tasks','📝 Tasks'],['materials','🔗 Materiais'],['resources','🧰 Resources'],['notes','💬 Observações'],['progress','📈 Progresso']];
+ const tabs=[['overview','📊 Visão geral'],['agenda','📅 Agenda'],['board','📌 Board'],['lessons','📚 Lessons'],['topics','📚 Assuntos & Tópicos'],['students','👥 Alunos'],['tasks','📝 Tasks'],['materials','🔗 Materiais'],['resources','🧰 Resources'],['notes','💬 Observações'],['progress','📈 Progresso']];
  /* V36: Class Center is a real full-page workspace, not a modal. Everything that already exists inside the Class Center is preserved. */
  const shell=`<div class="class-center-shell class-center-page" data-class-center="${classId}"><div class="class-center-top"><div class="class-center-title"><div><span class="badge blue">${esc(cls.level||'A1')}</span><h2>🏫 ${esc(cls.name)}</h2><small>${esc(cls.schedule_text||'Horário não definido')} · ${cls.meeting_url?'Aula online configurada':'Aula online não definida'}</small></div><div class="class-center-actions"><button class="btn secondary" onclick="openClassMembers('${classId}')">👥 Alunos</button><button class="btn primary" onclick="openClassAssign('${classId}')">📤 Atribuir</button><button class="btn ghost" onclick="openClassFormById('${classId}')">✏️ Editar</button><button class="btn ghost" onclick="loadView('classes')">← Voltar para Classes</button></div></div><div class="class-center-tabs">${tabs.map(([id,label])=>`<button data-tab="${id}" class="${initialTab===id?'active':''}" onclick="classCenterTab('${classId}','${id}')">${label}</button>`).join('')}</div></div><div id="classCenterBody" class="class-center-body"></div><div class="class-center-float"><button class="btn primary" onclick="openClassAssign('${classId}')">📤 Atribuir</button><button class="btn secondary" onclick="openClassMembers('${classId}')">👥 Alunos</button><button class="btn ghost" onclick="openClassFormById('${classId}')">⚙️ Editar</button><button class="btn ghost" onclick="loadView('classes')">← Classes</button></div></div>`;
  /* Leave the global modal untouched: Class Center now occupies the normal app workspace and can scroll naturally. */
@@ -8854,5 +8854,114 @@ if(typeof previous==='function')window.classCenterTabV41=function(classId,tab){i
 .tic63-student{border:1px solid var(--line,#e5e0f0);border-radius:16px;padding:15px;margin:14px 0;background:var(--surface,#fff)}.tic63-student-head{display:flex;align-items:center;gap:11px;margin-bottom:14px}.tic63-avatar{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:#eee8ff;color:#5c37c8;font-weight:900;font-size:17px}.tic63-student-head h3{margin:0 0 4px;font-size:15px}.tic63-student-head small,.tic63-course header small{color:var(--muted,#7b7590);font-size:11px}.tic63-course{border:1px solid #e8e1f5;border-radius:13px;padding:13px;margin:10px 0;background:#fcfbff}.tic63-course header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}.tic63-course h4{margin:6px 0 3px;font-size:14px}.tic63-pill{display:inline-flex;border-radius:999px;padding:4px 8px;background:#eee8ff;color:#5c37c8;font-size:10px;font-weight:800}.tic63-lessons{display:grid;gap:8px}.tic63-lesson{display:grid;grid-template-columns:minmax(150px,1fr) minmax(310px,1.7fr);align-items:center;gap:12px;padding:12px;border:1px solid #ece7f5;background:#fff;border-radius:12px}.tic63-lesson-title b{display:block;font-size:12px}.tic63-lesson-title small{display:block;margin-top:4px;color:var(--muted,#7b7590);font-size:10px}.tic63-controls{display:flex;align-items:end;gap:8px;flex-wrap:wrap}.tic63-controls label{display:grid;gap:4px;font-size:10px;color:var(--muted,#7b7590);font-weight:700}.tic63-controls select,.tic63-controls input{border:1px solid #ddd5ed;border-radius:8px;padding:8px;background:#fff;color:#211b35;min-height:34px}.tic63-controls button{min-height:34px}.tic63-saved{grid-column:1/-1;color:#13865b;font-size:10px;font-weight:700}.tic63-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;margin:12px 0;color:var(--muted,#7b7590)}@media(max-width:850px){.tic63-lesson{grid-template-columns:1fr}.tic63-controls label{flex:1 1 130px}.tic63-controls button{flex:1 1 100%}}
 </style>
 
+
+<style id="tic-class-agenda-v65">
+.tic-class-agenda{display:grid;gap:14px}
+.tic-agenda-hero{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:18px;border-radius:16px;border:1px solid #ddd2fa;background:linear-gradient(120deg,#f3edff,#fff)}
+.tic-agenda-hero h3{margin:0 0 4px;font-size:19px;font-weight:850;color:#261747}
+.tic-agenda-hero p{margin:0;color:#655b78;font-size:12px}
+.tic-agenda-actions{display:flex;gap:8px;flex-wrap:wrap}
+.tic-agenda-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.tic-agenda-stat{padding:12px;border-radius:13px;border:1px solid #dce3ef;background:#fff;display:grid;gap:5px}
+.tic-agenda-stat span{font-size:10px;color:#52627a;font-weight:750}
+.tic-agenda-stat b{font-size:24px;color:#172033;font-weight:900}
+.tic-agenda-stat.taught{background:#e8f8ee;border-color:#a9e1bc}.tic-agenda-stat.planned{background:#eaf2ff;border-color:#bad2ff}.tic-agenda-stat.review{background:#fff5dc;border-color:#f0d17c}.tic-agenda-stat.cancelled{background:#fff0f1;border-color:#f0bdc4}
+.tic-agenda-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tic-agenda-filters input,.tic-agenda-filters select{min-height:40px;border:1px solid #cbd5e1;border-radius:10px;padding:8px 11px;background:#fff;color:#172033}
+.tic-agenda-event{display:grid;grid-template-columns:7px minmax(0,1fr) auto;gap:12px;align-items:stretch;border:1px solid #dce3ef;border-radius:14px;overflow:hidden;background:#fff;padding:0;margin:0}
+.tic-agenda-color{width:7px;height:100%;min-height:90px;background:#64748b}
+.tic-agenda-event.planned .tic-agenda-color{background:#3478e5}.tic-agenda-event.inprogress .tic-agenda-color{background:#8b5cf6}.tic-agenda-event.review .tic-agenda-color{background:#e5a11a}.tic-agenda-event.completed .tic-agenda-color{background:#16a36a}.tic-agenda-event.cancelled .tic-agenda-color{background:#dc3545}.tic-agenda-event.rescheduled .tic-agenda-color{background:#0e9fa8}
+.tic-agenda-event-main{padding:13px 0;min-width:0}
+.tic-agenda-event-main h4{margin:0 0 6px;font-size:14px;font-weight:850;color:#172033;overflow-wrap:anywhere}
+.tic-agenda-event-meta{display:flex;gap:7px 12px;flex-wrap:wrap;color:#52627a;font-size:11px}
+.tic-agenda-event-notes{margin-top:7px;color:#475569;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
+.tic-agenda-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:850;white-space:nowrap}
+.tic-agenda-pill.planned{background:#eaf2ff;color:#1d4ed8}.tic-agenda-pill.inprogress{background:#f0eaff;color:#6d28d9}.tic-agenda-pill.review{background:#fff5dc;color:#854d0e}.tic-agenda-pill.completed{background:#e8f8ee;color:#166534}.tic-agenda-pill.cancelled{background:#fff0f1;color:#a61b35}.tic-agenda-pill.rescheduled{background:#e5fbfc;color:#0f6970}
+.tic-agenda-event-buttons{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;padding:10px}
+.tic-agenda-empty{padding:28px 16px;text-align:center;border:1px dashed #cbd5e1;border-radius:14px;color:#64748b;background:#f8fafc}
+.tic-agenda-event-link{display:inline-flex;margin-top:7px;font-size:11px;font-weight:800;color:#5b35c5;text-decoration:underline}
+body.fi-premium:not(.fi-light) .tic-agenda-hero{background:linear-gradient(120deg,#1c1a32,#202b42);border-color:#41435f}
+body.fi-premium:not(.fi-light) .tic-agenda-hero h3{color:#f8fafc}body.fi-premium:not(.fi-light) .tic-agenda-hero p{color:#c4cede}
+body.fi-premium:not(.fi-light) .tic-agenda-stat{background:#172338;border-color:#34445c}body.fi-premium:not(.fi-light) .tic-agenda-stat span{color:#c4cede}body.fi-premium:not(.fi-light) .tic-agenda-stat b{color:#f8fafc}
+body.fi-premium:not(.fi-light) .tic-agenda-stat.taught{background:#12372d;border-color:#237b5a}body.fi-premium:not(.fi-light) .tic-agenda-stat.planned{background:#172f50;border-color:#3b6cb0}body.fi-premium:not(.fi-light) .tic-agenda-stat.review{background:#3a2b12;border-color:#9a6b20}body.fi-premium:not(.fi-light) .tic-agenda-stat.cancelled{background:#421f2a;border-color:#92394e}
+body.fi-premium:not(.fi-light) .tic-agenda-filters input,body.fi-premium:not(.fi-light) .tic-agenda-filters select{background:#0b1728;color:#f8fafc;border-color:#465873}
+body.fi-premium:not(.fi-light) .tic-agenda-event{background:#151f31;border-color:#34445c}body.fi-premium:not(.fi-light) .tic-agenda-event-main h4{color:#f8fafc}body.fi-premium:not(.fi-light) .tic-agenda-event-meta,body.fi-premium:not(.fi-light) .tic-agenda-event-notes{color:#c4cede}
+body.fi-premium:not(.fi-light) .tic-agenda-pill.planned{background:#172f50;color:#dbeafe}body.fi-premium:not(.fi-light) .tic-agenda-pill.inprogress{background:#33245a;color:#e9ddff}body.fi-premium:not(.fi-light) .tic-agenda-pill.review{background:#3a2b12;color:#ffe7a3}body.fi-premium:not(.fi-light) .tic-agenda-pill.completed{background:#12372d;color:#baf7d5}body.fi-premium:not(.fi-light) .tic-agenda-pill.cancelled{background:#421f2a;color:#ffd9df}body.fi-premium:not(.fi-light) .tic-agenda-pill.rescheduled{background:#12383c;color:#b9f4f4}
+body.fi-premium:not(.fi-light) .tic-agenda-empty{background:#111c2d;border-color:#465873;color:#c4cede}body.fi-premium:not(.fi-light) .tic-agenda-event-link{color:#c4b5fd}
+body.fi-premium.fi-light .tic-agenda-hero{background:linear-gradient(120deg,#f3edff,#fff);border-color:#ddd2fa}body.fi-premium.fi-light .tic-agenda-hero h3{color:#261747}body.fi-premium.fi-light .tic-agenda-hero p{color:#655b78}
+@media(max-width:680px){.tic-agenda-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.tic-agenda-event{grid-template-columns:6px minmax(0,1fr)}.tic-agenda-event-buttons{grid-column:2;justify-content:flex-start;padding:0 12px 12px}.tic-agenda-event-main{padding:12px 12px 6px 0}.tic-agenda-hero{padding:14px}}
+</style>
+<script id="tic-class-agenda-v65">
+(function(){
+'use strict';
+const escA=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const statusInfo=s=>{s=String(s||'scheduled').toLowerCase();if(['completed','done','taught'].includes(s))return {key:'completed',label:'Concluída'};if(['review','in_review'].includes(s))return {key:'review',label:'Revisão'};if(['in_progress','in progress'].includes(s))return {key:'inprogress',label:'Em andamento'};if(['cancelled','canceled'].includes(s))return {key:'cancelled',label:'Cancelada'};if(['rescheduled'].includes(s))return {key:'rescheduled',label:'Reagendada'};return {key:'planned',label:'Planejada'}};
+const localInputA=d=>{const x=new Date(d||Date.now()+3600000);return new Date(x.getTime()-x.getTimezoneOffset()*60000).toISOString().slice(0,16)};
+const dateA=d=>d?new Date(d).toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}):'Data não definida';
+const timeA=d=>d?new Date(d).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+function renderA(classId){
+ const st=window.__ticClassCenterV41||{};if(st.classId!==classId)return;
+ const body=document.getElementById('ticV41ClassBody');if(!body)return;
+ const all=(st.evs||[]).filter(e=>e.class_id===classId).slice().sort((a,b)=>new Date(a.starts_at||0)-new Date(b.starts_at||0));
+ const upcoming=all.filter(e=>new Date(e.starts_at)>=new Date()&&!['completed','done','cancelled'].includes(String(e.status||'').toLowerCase()));
+ const counts={planned:0,inprogress:0,review:0,completed:0,cancelled:0,rescheduled:0};
+ all.forEach(e=>counts[statusInfo(e.status).key]++);
+ body.innerHTML=`<div class="tic-class-agenda">
+  <header class="tic-agenda-hero"><div><h3>📅 Agenda da turma</h3><p>Aulas, datas, status, links e compromissos desta turma em um só lugar.</p></div><div class="tic-agenda-actions"><button class="btn secondary" onclick="ticClassAgendaRefreshV65('${classId}')">↻ Atualizar</button><button class="btn primary" onclick="ticClassAgendaFormV65('${classId}')">＋ Adicionar à agenda</button></div></header>
+  <div class="tic-agenda-summary">
+   <div class="tic-agenda-stat planned"><span>🔵 Planejadas</span><b>${counts.planned}</b></div>
+   <div class="tic-agenda-stat inprogress"><span>🟣 Em andamento</span><b>${counts.inprogress}</b></div>
+   <div class="tic-agenda-stat review"><span>🟡 Revisão</span><b>${counts.review}</b></div>
+   <div class="tic-agenda-stat completed"><span>🟢 Concluídas</span><b>${counts.completed}</b></div>
+  </div>
+  <div class="tic-agenda-filters"><input id="ticAgendaSearchV65" placeholder="Buscar aula, observação..." oninput="ticClassAgendaFilterV65('${classId}')" /><select id="ticAgendaStatusV65" onchange="ticClassAgendaFilterV65('${classId}')"><option value="">Todos os status</option><option value="planned">Planejada</option><option value="inprogress">Em andamento</option><option value="review">Revisão</option><option value="completed">Concluída</option><option value="cancelled">Cancelada</option><option value="rescheduled">Reagendada</option></select><input id="ticAgendaDateV65" type="date" aria-label="Filtrar por data" onchange="ticClassAgendaFilterV65('${classId}')" /></div>
+  <div id="ticAgendaEventsV65" class="tic-class-agenda-events">${renderRowsA(all)}</div>
+ </div>`;
+ window.__ticClassAgendaRowsV65=all;
+}
+function renderRowsA(rows){
+ if(!rows.length)return '<div class="tic-agenda-empty">📅 Nenhum evento encontrado. Use “Adicionar à agenda” para registrar a próxima aula.</div>';
+ return rows.map(e=>{const st=statusInfo(e.status),url=String(e.meeting_url||'').trim();return `<article class="tic-agenda-event ${st.key}"><div class="tic-agenda-color"></div><div class="tic-agenda-event-main"><h4>${escA(e.title||'Aula sem título')}</h4><div class="tic-agenda-event-meta"><span>📅 ${escA(dateA(e.starts_at))}</span><span>🕒 ${escA(timeA(e.starts_at))}${e.ends_at?' – '+escA(timeA(e.ends_at)):''}</span><span>🏷️ ${escA(({class:'Aula',lesson:'Aula',meeting:'Reunião',exam:'Avaliação',other:'Evento',next_class:'Próxima aula',review:'Revisão'})[e.event_type]||e.event_type||'Aula')}</span><span class="tic-agenda-pill ${st.key}">${st.label}</span></div>${e.notes?'<div class="tic-agenda-event-notes">'+escA(e.notes)+'</div>':''}${url?'<a class="tic-agenda-event-link" href="'+escA(url)+'" target="_blank" rel="noopener noreferrer">🔗 Abrir link da aula</a>':''}</div><div class="tic-agenda-event-buttons"><button class="btn sm secondary" onclick="ticClassAgendaFormV65('${e.class_id}','${e.id}')">✏️ Editar</button><button class="btn sm ghost" onclick="ticClassAgendaStatusV65('${e.id}','${e.class_id}')">↻ Status</button></div></article>`}).join('');
+}
+window.ticClassAgendaFilterV65=function(classId){
+ const rows=window.__ticClassAgendaRowsV65||[],q=(document.getElementById('ticAgendaSearchV65')?.value||'').toLowerCase().trim(),st=document.getElementById('ticAgendaStatusV65')?.value||'',day=document.getElementById('ticAgendaDateV65')?.value||'';
+ const filtered=rows.filter(e=>{const si=statusInfo(e.status);return (!q||[e.title,e.notes,e.event_type].join(' ').toLowerCase().includes(q))&&(!st||si.key===st)&&(!day||String(e.starts_at||'').slice(0,10)===day)});
+ const target=document.getElementById('ticAgendaEventsV65');if(target)target.innerHTML=renderRowsA(filtered);
+};
+window.ticClassAgendaRefreshV65=async function(classId){await window.openClassCenterV41(classId,'agenda')};
+window.ticClassAgendaFormV65=async function(classId,eventId){
+ const st=window.__ticClassCenterV41||{};if(st.classId!==classId)return;
+ let x=null;
+ if(eventId){const r=await sb.from('tic_events').select('*').eq('id',eventId).eq('teacher_id',session.user.id).eq('class_id',classId).maybeSingle();if(r.error||!r.data)return toast('Não foi possível abrir o evento: '+(r.error?.message||'registro não encontrado'),'error');x=r.data}
+ const start=localInputA(x?.starts_at||new Date(Date.now()+3600000)),end=localInputA(x?.ends_at||new Date(Date.now()+7200000)),si=statusInfo(x?.status);
+ openModal(x?'✏️ Editar evento da agenda':'📅 Adicionar à agenda',`<form class="form" onsubmit="ticClassAgendaSaveV65(event,'${classId}','${eventId||''}')">
+ <div class="form-grid"><div class="field"><label>Título da aula / evento</label><input id="ticAgTitleV65" required value="${escA(x?.title||'')}" placeholder="Ex.: Present Simple — speaking"></div><div class="field"><label>Tipo</label><select id="ticAgTypeV65">${[['class','📚 Aula'],['lesson','📘 Lesson'],['meeting','🤝 Reunião'],['exam','📝 Avaliação'],['review','🔎 Revisão'],['other','📌 Outro']].map(([v,l])=>'<option value="'+v+'" '+((x?.event_type||'class')===v?'selected':'')+'>'+l+'</option>').join('')}</select></div></div>
+ <div class="form-grid"><div class="field"><label>Data e hora de início</label><input id="ticAgStartV65" type="datetime-local" required value="${start}"></div><div class="field"><label>Data e hora de término</label><input id="ticAgEndV65" type="datetime-local" value="${end}"></div></div>
+ <div class="form-grid"><div class="field"><label>Status</label><select id="ticAgStatusV65">${[['scheduled','🔵 Planejada'],['in_progress','🟣 Em andamento'],['review','🟡 Revisão'],['completed','🟢 Concluída'],['cancelled','🔴 Cancelada'],['rescheduled','🩵 Reagendada']].map(([v,l])=>'<option value="'+v+'" '+((x?.status||'scheduled')===v?'selected':'')+'>'+l+'</option>').join('')}</select></div><div class="field"><label>Link da aula / reunião</label><input id="ticAgLinkV65" type="url" value="${escA(x?.meeting_url||'')}" placeholder="https://..."></div></div>
+ <div class="field"><label>Observações, conteúdo ou tarefa</label><textarea id="ticAgNotesV65" rows="4" placeholder="Conteúdo da aula, materiais, tarefa...">${escA(x?.notes||'')}</textarea></div>
+ <div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">${x?'Salvar alterações':'Adicionar à agenda'}</button></div></form>`);
+};
+window.ticClassAgendaSaveV65=async function(ev,classId,eventId){
+ ev.preventDefault();const title=document.getElementById('ticAgTitleV65')?.value.trim(),startValue=document.getElementById('ticAgStartV65')?.value,endValue=document.getElementById('ticAgEndV65')?.value;
+ if(!title||!startValue)return toast('Preencha o título e a data de início.','error');
+ const start=new Date(startValue),end=endValue?new Date(endValue):new Date(start.getTime()+60*60000);if(isNaN(start.getTime())||isNaN(end.getTime())||end<=start)return toast('Confira as datas: o término deve ser posterior ao início.','error');
+ const data={teacher_id:session.user.id,class_id:classId,title,event_type:document.getElementById('ticAgTypeV65').value,starts_at:start.toISOString(),ends_at:end.toISOString(),status:document.getElementById('ticAgStatusV65').value,meeting_url:document.getElementById('ticAgLinkV65').value.trim()||null,notes:document.getElementById('ticAgNotesV65').value.trim()||null};
+ const r=eventId?await sb.from('tic_events').update(data).eq('id',eventId).eq('teacher_id',session.user.id).eq('class_id',classId):await sb.from('tic_events').insert(data);
+ if(r.error)return toast('Não foi possível salvar a agenda: '+r.error.message,'error');
+ closeModal();toast(eventId?'Evento atualizado.':'Evento adicionado à agenda.','success');await window.openClassCenterV41(classId,'agenda');
+};
+window.ticClassAgendaStatusV65=async function(eventId,classId){
+ const row=(window.__ticClassAgendaRowsV65||[]).find(x=>x.id===eventId);if(!row)return;
+ const order=['scheduled','in_progress','review','completed','cancelled','rescheduled'],current=String(row.status||'scheduled'),idx=order.indexOf(current),next=order[(idx+1+order.length)%order.length];
+ const labels={scheduled:'Planejada',in_progress:'Em andamento',review:'Revisão',completed:'Concluída',cancelled:'Cancelada',rescheduled:'Reagendada'};
+ const r=await sb.from('tic_events').update({status:next}).eq('id',eventId).eq('teacher_id',session.user.id).eq('class_id',classId);
+ if(r.error)return toast('Não foi possível alterar o status: '+r.error.message,'error');
+ toast('Status atualizado: '+labels[next],'success');await window.openClassCenterV41(classId,'agenda');
+};
+const previous=window.classCenterTabV41;
+if(typeof previous==='function')window.classCenterTabV41=async function(classId,tab){if(tab==='agenda'){renderA(classId);return}return previous.apply(this,arguments)};
+document.addEventListener('DOMContentLoaded',()=>{const old=window.classCenterTabV41;if(typeof old==='function'&&!old.__ticAgendaWrappedV65){const wrapped=async function(classId,tab){if(tab==='agenda'){renderA(classId);return}return old.apply(this,arguments)};wrapped.__ticAgendaWrappedV65=true;window.classCenterTabV41=wrapped;}});
+})();
+</script>
 </body>
 </html>
