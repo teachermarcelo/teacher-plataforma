@@ -3907,11 +3907,11 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
 .v41-card-menu>summary{list-style:none;display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--line,#ded8ee);border-radius:11px;background:var(--surface,#fff);color:var(--text,#29213d);font-size:24px;font-weight:800;line-height:1;cursor:pointer;user-select:none}
 .v41-card-menu>summary::-webkit-details-marker{display:none}
 .v41-card-menu>summary:hover{background:#f4efff;border-color:#b8a5f7}
-.v41-card-menu>summary:focus-visible,.v41-card-menu [role="menuitem"]:focus-visible{outline:3px solid #f59e0b;outline-offset:3px}
+.v41-card-menu>summary:focus-visible,.v41-card-menu button:focus-visible{outline:3px solid #f59e0b;outline-offset:3px}
 .v41-card-menu[open]>summary{background:#eee7ff;border-color:#8d6bea}
 .v41-card-menu-popover{position:absolute;z-index:80;right:0;top:calc(100% + 6px);min-width:190px;padding:6px;border:1px solid var(--line,#ded8ee);border-radius:12px;background:var(--surface,#fff);box-shadow:0 12px 32px rgba(25,18,48,.18);display:grid;gap:3px}
-.v41-card-menu-popover [role="menuitem"]{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;padding:10px 12px;border:0;border-radius:8px;background:transparent;color:var(--text,#29213d);font:600 13px inherit;text-align:left;cursor:pointer}
-.v41-card-menu-popover [role="menuitem"]:hover{background:#f4efff;color:#4d24a8}
+.v41-card-menu-popover button{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;padding:10px 12px;border:0;border-radius:8px;background:transparent;color:var(--text,#29213d);font-family:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
+.v41-card-menu-popover button:hover{background:#f4efff;color:#4d24a8}
 @media(max-width:640px){.v41-class-actions>.btn.primary{white-space:normal}.v41-card-menu-popover{min-width:180px}}
 
 .v41-toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
@@ -4207,9 +4207,9 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
             <button class="btn sm primary" onclick="openClassCenterV41('${c.id}')">🎯 Abrir Class Center</button>
             <details class="v41-card-menu">
               <summary aria-label="Mais ações para ${escV41(c.name||'esta turma')}" title="Mais ações" aria-haspopup="true">⋮</summary>
-              <div class="v41-card-menu-popover" role="menu" aria-label="Ações da turma ${escV41(c.name||'')}">
-                <button type="button" role="menuitem" onclick="this.closest('details').open=false;openClassMembers('${c.id}')">👥 Alunos</button>
-                <button type="button" role="menuitem" onclick="this.closest('details').open=false;openClassFormById('${c.id}')">✏️ Editar turma</button>
+              <div class="v41-card-menu-popover" role="group" aria-label="Ações da turma ${escV41(c.name||'')}">
+                <button type="button" onclick="this.closest('details').open=false;openClassMembers('${c.id}')">👥 Alunos</button>
+                <button type="button" onclick="this.closest('details').open=false;openClassFormById('${c.id}')">✏️ Editar turma</button>
               </div>
             </details>
           </div>
