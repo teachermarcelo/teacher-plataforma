@@ -8905,7 +8905,7 @@ async function render63(classId){
  }
  function tracked(studentId,lessonId){return eventRows.find(function(e){var m=parse63(e.notes);return m&&m.student_id===studentId&&m.lesson_id===lessonId})}
  var cards=0,taught=0,planned=0,review=0;
- var uniqueCurriculum=new Set(lessons.filter(function(l){return l.active!==false&&courseIds.indexOf(l.course_id)>=0}).map(function(l){return l.id}));
+ var uniqueCurriculum=new Set(lessons.filter(function(l){return l.active!==false&&(courseIds.indexOf(l.course_id)>=0||modules.some(function(m){return m.id===l.module_id&&courseIds.indexOf(m.course_id)>=0}))}).map(function(l){return l.id}));
  var blocks=students.map(function(st){
   var my=enroll.filter(function(e){return e.student_id===st.id});
   var courseHtml=my.map(function(en){
