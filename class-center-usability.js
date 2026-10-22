@@ -115,3 +115,42 @@ function enhance(root){
 function scan(){document.querySelectorAll('.class-center-shell.class-center-page[data-class-center]').forEach(enhance)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{scan();new MutationObserver(scan).observe(document.getElementById('content')||document.body,{childList:true,subtree:true})},{once:true});else{scan();new MutationObserver(scan).observe(document.getElementById('content')||document.body,{childList:true,subtree:true})}
 })();
+
+/* Agenda tab routing fix: the tab was reaching the generic renderer without
+   opening the agenda panel. Keep existing routing for every other tab. */
+(function installAgendaTabRouteV66(){
+ 'use strict';
+ function getClassId(id){
+  return id||window.__ticClassCenterV41?.classId||window.__ticClassCenter?.classId||
+   document.querySelector('.v41-class-shell[data-v41-class]')?.getAttribute('data-v41-class')||
+   document.querySelector('.class-center-page[data-class-center]')?.getAttribute('data-class-center')||'';
+ }
+ function install(){
+  const base=window.classCenterTabV41||window.classCenterTab;
+  if(typeof base!=='function'||base.__fiAgendaRouteV66)return false;
+  const wrapped=async function(classId,tab){
+   const selected=String(tab||'').toLowerCase();
+   if(selected==='agenda'){
+    const id=getClassId(classId);
+    if(!id){console.error('[Class Center Agenda] Não foi possível identificar a turma.');return}
+    document.querySelectorAll('.v41-tabs button[data-tab],.class-center-tabs button[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab==='agenda'));
+    if(typeof window.ticClassAgendaRefreshV65!=='function'){
+     const body=document.getElementById('ticV41ClassBody')||document.querySelector('.class-center-body');
+     if(body)body.innerHTML='<section class="v41-panel" role="alert"><h3>Agenda indisponível</h3><p>O módulo da agenda não foi carregado. Atualize a página e tente novamente.</p></section>';
+     console.error('[Class Center Agenda] ticClassAgendaRefreshV65 não foi carregada.');
+     return;
+    }
+    return window.ticClassAgendaRefreshV65(id);
+   }
+   return base.apply(this,arguments);
+  };
+  wrapped.__fiAgendaRouteV66=true;wrapped.__fiAgendaRouteOriginal=base;
+  window.classCenterTabV41=wrapped;
+  window.classCenterTab=wrapped;
+  return true;
+ }
+ if(!install()){
+  let attempts=0;
+  const timer=setInterval(()=>{attempts++;if(install()||attempts>=80)clearInterval(timer)},250);
+ }
+})();
