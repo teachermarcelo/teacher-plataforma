@@ -7851,7 +7851,7 @@ body.fi-premium:not(.fi-light) .class-center-page .cc-studio-shortcut small{colo
 (function(){
  'use strict';
  window.sendMaterialToReadyClassV62=async function(materialId){
-   if(!materialId||!window.sb||!window.session?.user?.id){
+   if(!materialId||typeof sb==='undefined'||typeof session==='undefined'||!session?.user?.id){
      if(typeof toast==='function')toast('Não foi possível identificar o material ou a sessão do professor. Atualize a página e entre novamente.','error');
      return;
    }
