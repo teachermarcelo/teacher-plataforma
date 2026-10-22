@@ -304,7 +304,43 @@ body{overflow:hidden;}
 .v41-board-card-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;padding-top:9px;border-top:1px solid #eee8f7}.v41-board-card-actions .btn{font-size:10px!important;padding:6px 8px!important;border-radius:8px!important;min-height:28px}.v41-board-card-actions .btn.danger{color:#b42335;border-color:#f1cbd1}
 .v41-board-col{background:linear-gradient(180deg,#faf8ff,#f6f3fc)!important;border:1px solid #e7def5!important;border-radius:18px!important;padding:11px!important;min-width:0}.v41-board-head{font-weight:800;font-size:11px;margin-bottom:10px!important}.v41-board-drop{display:grid;align-content:start;gap:10px}
 @media(max-width:650px){.v41-board-toolbar{align-items:flex-start}.v41-board-card-actions .btn{flex:1;min-width:76px}}
-</style></head>
+</style>
+<style id="tic63-visual-polish-v64">
+/* Class Center — visual hierarchy and accessible status colors */
+.tic63-student{margin:16px 0 22px;padding:16px;border:1px solid #e4dcf5;border-radius:18px;background:linear-gradient(145deg,#fff 0%,#fbf9ff 100%);box-shadow:0 7px 22px rgba(58,35,112,.055)}
+.tic63-student-head{display:flex;align-items:center;gap:12px;margin:0 0 16px;padding:4px 2px 14px;border-bottom:1px solid #eee8f8}
+.tic63-student-head h3{margin:0 0 4px;font-size:16px;font-weight:800;letter-spacing:-.25px;color:#27194a}
+.tic63-student-head small{font-size:11px;color:#716586;font-weight:600}
+.tic63-avatar{display:grid;place-items:center;flex:0 0 42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#7c3aed,#5b36d6);color:#fff;font-size:17px;font-weight:800;box-shadow:0 5px 12px #6d4aff2b}
+.tic63-course{overflow:hidden;margin:12px 0;border:1px solid #e4dcf5;border-radius:15px;background:#fff}
+.tic63-course>header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 15px;background:linear-gradient(100deg,#f4efff,#faf8ff 65%,#fff);border-bottom:1px solid #e9e1f8;border-left:4px solid #7650df}
+.tic63-course>header h4{margin:5px 0 3px;font-size:13px;line-height:1.45;font-weight:800;letter-spacing:-.1px;color:#2b1c50}
+.tic63-course>header small{font-size:10px;font-weight:600;color:#76698f}
+.tic63-pill{display:inline-flex;align-items:center;border-radius:7px;padding:4px 8px;background:#e9ddff;color:#5b21b6;font-size:10px;font-weight:800;letter-spacing:.35px}
+.tic63-lessons{display:grid;gap:9px;padding:10px}
+.tic63-lesson{display:grid;grid-template-columns:minmax(170px,1fr) auto;align-items:center;gap:14px;padding:13px 14px;border:1px solid #e7e3ef;border-left:4px solid #a78bfa;border-radius:12px;background:#fff;transition:background .15s,border-color .15s,box-shadow .15s}
+.tic63-lesson:hover{background:#fcfaff;border-color:#d3c4f7;box-shadow:0 4px 13px rgba(65,40,110,.06)}
+.tic63-lesson-title{display:grid;gap:5px;min-width:0}
+.tic63-lesson-title b{font-size:12px;line-height:1.5;font-weight:800;color:#21183b;overflow-wrap:anywhere}
+.tic63-lesson-title small{font-size:10px;color:#756a8c;font-weight:600}
+.tic63-controls{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+.tic63-controls label{display:grid;gap:5px;color:#756a8c;font-size:10px;font-weight:700}
+.tic63-controls select,.tic63-controls input[type=date]{min-height:35px;padding:7px 9px;border:1px solid #d9d1ee;border-radius:9px;background:#fff;color:#29213e;font:600 11px inherit;outline:none}
+.tic63-controls select:focus,.tic63-controls input[type=date]:focus{border-color:#8054e8;box-shadow:0 0 0 3px #8054e81a}
+.tic63-controls .btn{min-height:36px;padding:8px 15px!important;border-radius:10px!important;font-weight:800!important;box-shadow:0 4px 10px #5b36d61c}
+.tic63-lesson:has(.tic63-controls select option:checked[value="taught"]){border-left-color:#16a34a;background:linear-gradient(100deg,#f0fdf4,#fff 65%)}
+.tic63-lesson:has(.tic63-controls select option:checked[value="review"]){border-left-color:#d97706;background:linear-gradient(100deg,#fffbeb,#fff 65%)}
+.tic63-lesson:has(.tic63-controls select option:checked[value="planned"]){border-left-color:#8b5cf6}
+.tic63-saved{display:inline-flex;align-items:center;gap:5px;grid-column:1/-1;margin-top:-2px;padding:6px 9px;border-radius:8px;background:#dcfce7;color:#166534;font-size:10px;font-weight:800}
+.tic63-legend{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px}
+.tic63-legend span{padding:6px 10px;border:1px solid #e8e1f4;border-radius:9px;background:#faf8ff;color:#514366;font-size:10px;font-weight:700}
+#ticV41ClassBody .v41-kpis .v41-kpi{border-radius:14px}
+#ticV41ClassBody .v41-panel>h3{font-weight:800;letter-spacing:-.2px;color:var(--text,#29223d)}
+@media(max-width:850px){.tic63-lesson{grid-template-columns:1fr;gap:12px}.tic63-controls{align-items:stretch}.tic63-controls label{flex:1 1 130px}.tic63-controls select,.tic63-controls input[type=date]{width:100%;box-sizing:border-box}.tic63-controls .btn{align-self:flex-end}}
+@media(max-width:520px){.tic63-student{padding:11px;border-radius:14px}.tic63-course>header{padding:11px}.tic63-lessons{padding:7px}.tic63-lesson{padding:11px}.tic63-controls label{flex-basis:100%}.tic63-controls .btn{width:100%;justify-content:center}.tic63-legend span{flex:1;text-align:center}}
+@media(prefers-reduced-motion:reduce){.tic63-lesson{transition:none}}
+</style>
+</head>
 <body>
 
 <div id="login" class="login">
