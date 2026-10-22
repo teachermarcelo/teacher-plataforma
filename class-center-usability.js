@@ -2,15 +2,15 @@
 window.ticClassAgendaRefreshV65=async function(classId){
  const body=document.getElementById('ticV41ClassBody')||document.getElementById('classCenterBody');if(!body)return;
  const esc=v=>typeof window.escV41==='function'?window.escV41(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
- const user=window.session?.user;
+ const user=(typeof session!=='undefined'?session?.user:null)||window.session?.user;
  const fmt=d=>d?new Date(d).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'Data não definida';
  body.innerHTML='<div class="v41-panel"><p>Carregando a agenda da turma…</p></div>';
  try{
-  if(!window.sb)throw Error('Conexão com o banco indisponível. Recarregue a página.');
+  const db=(typeof sb!=='undefined'?sb:window.sb);if(!db)throw Error('Conexão com o banco indisponível. Recarregue a página.');
   if(!user?.id)throw Error('Sua sessão expirou. Entre novamente.');
-  const {data:cls,error:ce}=await sb.from('tic_classes').select('id,name').eq('id',classId).eq('teacher_id',user.id).maybeSingle();
+  const {data:cls,error:ce}=await db.from('tic_classes').select('id,name').eq('id',classId).eq('teacher_id',user.id).maybeSingle();
   if(ce)throw ce;if(!cls)throw Error('Turma não encontrada ou sem permissão.');
-  const {data,error}=await sb.from('tic_events').select('id,title,event_type,starts_at,ends_at,notes,meeting_url,status,created_at').eq('class_id',classId).eq('teacher_id',user.id).order('starts_at',{ascending:true});
+  const {data,error}=await db.from('tic_events').select('id,title,event_type,starts_at,ends_at,notes,meeting_url,status,created_at').eq('class_id',classId).eq('teacher_id',user.id).order('starts_at',{ascending:true});
   if(error)throw error;
   const events=data||[],now=Date.now(),up=events.filter(x=>x.starts_at&&new Date(x.starts_at).getTime()>=now),past=events.filter(x=>!x.starts_at||new Date(x.starts_at).getTime()<now);
   const card=x=>'<article class="cc-agenda-event"><div class="cc-agenda-date"><b>'+esc(x.starts_at?new Date(x.starts_at).toLocaleDateString('pt-BR',{day:'2-digit'}):'—')+'</b><span>'+esc(x.starts_at?new Date(x.starts_at).toLocaleDateString('pt-BR',{month:'short'}):'sem data')+'</span></div><div class="cc-agenda-main"><b>'+esc(x.title||'Aula')+'</b><small>'+esc(fmt(x.starts_at))+' · '+esc(x.event_type||'Aula')+(x.ends_at?' – '+esc(new Date(x.ends_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})):'')+'</small>'+(x.notes?'<p>'+esc(x.notes)+'</p>':'')+(x.meeting_url?'<a href="'+esc(x.meeting_url)+'" target="_blank" rel="noopener noreferrer">Abrir link da aula ↗</a>':'')+'</div><span class="cc-agenda-status '+((String(x.event_type).includes('next')||x.status==='scheduled')?'is-planned':'is-done')+'">'+((String(x.event_type).includes('next')||x.status==='scheduled')?'Planejada':'Registrada')+'</span></article>';
