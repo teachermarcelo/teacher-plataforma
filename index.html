@@ -1020,6 +1020,13 @@ async function teacherMaterialsPageV53(){
  <select id="tm53Cat" onchange="renderTeacherMaterialsV53()" aria-label="Filtrar por categoria"><option value="">Todas as categorias</option><option value="website">🌐 Website</option><option value="tool">🛠️ Ferramenta</option><option value="ai">🤖 IA</option><option value="pdf">📄 PDF</option><option value="video">🎬 Vídeo</option><option value="audio">🎧 Áudio</option><option value="worksheet">📝 Worksheet</option><option value="book">📚 Livro</option><option value="other">📦 Outros</option></select>
  <input id="tm53Theme" placeholder="Filtrar tema (ex.: Daily Routines)" oninput="renderTeacherMaterialsV53()">
  <select id="tm53Group" onchange="renderTeacherMaterialsV53()" aria-label="Organização dos materiais"><option value="all">Todos juntos</option><option value="level">Agrupar por nível</option><option value="category">Agrupar por categoria</option></select>
+ <details class="tm53-advanced-filter"><summary>⚙️ Filtros avançados</summary><div class="tm53-advanced-grid">
+ <div><label for="tm53HasLinks">Recursos</label><select id="tm53HasLinks" onchange="renderTeacherMaterialsV53()"><option value="">Com e sem links</option><option value="yes">Com links/arquivos</option><option value="no">Sem links/arquivos</option></select></div>
+ <div><label for="tm53Sort">Ordenar por</label><select id="tm53Sort" onchange="renderTeacherMaterialsV53()"><option value="newest">Mais recentes</option><option value="oldest">Mais antigos</option><option value="title">Título A–Z</option><option value="level">Nível CEFR</option><option value="resources">Mais recursos</option></select></div>
+ <div><label for="tm53DateFrom">Criado a partir de</label><input id="tm53DateFrom" type="date" onchange="renderTeacherMaterialsV53()"></div>
+ <div><label for="tm53DateTo">Criado até</label><input id="tm53DateTo" type="date" onchange="renderTeacherMaterialsV53()"></div>
+ <div><label for="tm53TagSearch">Palavra-chave / habilidade</label><input id="tm53TagSearch" placeholder="speaking, grammar, listening..." oninput="renderTeacherMaterialsV53()"></div>
+ <button type="button" class="btn secondary" onclick="clearTeacherMaterialAdvancedFiltersV66()">Limpar filtros avançados</button></div></details>
  </div><div class="fi-media-activefilters" id="tm53FilterSummary"></div>
  <div id="tm53Grid" class="fi-media-groups"></div>
  </section>`;
@@ -1041,13 +1048,15 @@ function renderTeacherMaterialsV53(){
  const q=($('tm53Search')?.value||'').toLowerCase().trim(),cat=$('tm53Cat')?.value||'',level=$('tm53Level')?.value||'',theme=($('tm53Theme')?.value||'').toLowerCase().trim(),group=$('tm53Group')?.value||'all';
  const all=window.__teacherMaterialsV53||[];
  const tab=window.__tm53Tab||'library';
- const data=all.filter(x=>{
-  if(tab==='drive'){
-   const rs=Array.isArray(x.resource_items)?x.resource_items:[];
-   return x.category==='pdf'||rs.some(r=>/drive\.google\.com|docs\.google\.com/i.test(String(r?.url||r?.value||'')));
-  }
+ const hasLinks=$('tm53HasLinks')?.value||'',sort=$('tm53Sort')?.value||'newest',from=$('tm53DateFrom')?.value||'',to=$('tm53DateTo')?.value||'',tagq=($('tm53TagSearch')?.value||'').toLowerCase().trim();
+ let data=all.filter(x=>{
+  if(tab==='drive'){const rs=Array.isArray(x.resource_items)?x.resource_items:[];return x.category==='pdf'||rs.some(r=>/drive\.google\.com|docs\.google\.com/i.test(String(r?.url||r?.value||'')));}
   return true;
- }).filter(x=>!cat||x.category===cat).filter(x=>!level||String(x.level||'')===level).filter(x=>!theme||tm53Theme(x).toLowerCase().includes(theme)||String(x.tags||'').toLowerCase().includes(theme)).filter(x=>!q||[x.title,x.description,x.notes,x.tags,...(Array.isArray(x.resource_items)?x.resource_items.map(r=>[r.title,r.url,r.description].join(' ')):[])].join(' ').toLowerCase().includes(q));
+ }).filter(x=>!cat||x.category===cat).filter(x=>!level||String(x.level||'')===level).filter(x=>!theme||tm53Theme(x).toLowerCase().includes(theme)||String(x.tags||'').toLowerCase().includes(theme)).filter(x=>!q||[x.title,x.description,x.notes,x.tags,...(Array.isArray(x.resource_items)?x.resource_items.map(r=>[r.title,r.url,r.description].join(' ')):[])].join(' ').toLowerCase().includes(q))
+ .filter(x=>{const rs=Array.isArray(x.resource_items)?x.resource_items:[],has=rs.some(r=>r&&(r.url||r.value));return !hasLinks||(hasLinks==='yes'?has:!has)})
+ .filter(x=>{const d=String(x.created_at||'').slice(0,10);return (!from||d>=from)&&(!to||d<=to)})
+ .filter(x=>!tagq||[x.tags,x.skill,x.description,x.title].join(' ').toLowerCase().includes(tagq));
+ data.sort((a,b)=>sort==='title'?String(a.title||'').localeCompare(String(b.title||''),'pt-BR'):sort==='oldest'?new Date(a.created_at||0)-new Date(b.created_at||0):sort==='level'?String(a.level||'').localeCompare(String(b.level||''),'pt-BR'):sort==='resources'?(b.resource_items||[]).length-(a.resource_items||[]).length:new Date(b.created_at||0)-new Date(a.created_at||0));
  const stat=$('tm53Stats');if(stat)stat.innerHTML=[['Materiais',all.length],['Com links',all.filter(x=>(x.resource_items||[]).some(r=>r?.url)).length],['Níveis',new Set(all.map(x=>x.level).filter(Boolean)).size],['Favoritos de organização','CEFR A0–C2']].map((z,i)=>`<div class="fi-media-stat"><span>${['📚','🔗','🎓','✨'][i]} ${z[0]}</span><b>${z[1]}</b></div>`).join('');
  const sum=$('tm53FilterSummary');if(sum)sum.textContent=tab==='models'?`Modelos seus: ${data.length} · abra um cartão para pré-visualizar antes de reutilizar`:tab==='drive'?`PDFs/links do Drive: ${data.length} · links privados até você atribuir`:`${data.length} de ${all.length} materiais · ${group==='level'?'agrupados por nível':group==='category'?'agrupados por categoria':'visualização em cartões'}`;
  document.querySelectorAll('[data-tm53-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tm53Tab===tab));
@@ -1061,6 +1070,7 @@ function renderTeacherMaterialsV53(){
  return `<article class="fi-media-card"><div class="fi-media-cover"><span class="fi-media-format">${esc(catName)}</span><span class="fi-media-level">${esc(x.level||'Todos os níveis')}</span><div class="fi-media-covericon">${x.category==='video'?'▶':x.category==='pdf'?'▤':x.category==='audio'?'♫':x.category==='ai'?'✦':x.category==='worksheet'?'✎':'↗'}</div><small>${esc(host)}</small></div><div class="fi-media-cardbody"><div class="fi-media-tags"><span>${esc(x.level||'Sem nível')}</span>${th?`<span>⌁ ${esc(th)}</span>`:''}</div><h3>${esc(x.title||'Material sem título')}</h3><p>${esc(x.description||'Sem descrição adicionada.')}</p>${x.tags?`<div class="fi-media-keywords">${esc(tm53Tags(x))}</div>`:''}<div class="fi-media-resourcecount">🔗 ${rs.length} recurso(s)</div><div class="fi-media-actions"><button class="btn primary" onclick="openTeacherMaterialViewV53('${x.id}')">Abrir</button>${first?`<button class="btn secondary" onclick="copyTeacherMaterialLinkV1('${x.id}')">Copiar link</button>`:''}<button class="btn secondary" onclick="assignTeacherMaterialV1('${x.id}')">Atribuir</button><button class="btn secondary" onclick="editTeacherMaterialV1('${x.id}')" aria-label="Editar material">✎</button></div></div></article>`;
  }).join('')}</div></section>`).join('');
 }
+function clearTeacherMaterialAdvancedFiltersV66(){['tm53HasLinks','tm53DateFrom','tm53DateTo','tm53TagSearch'].forEach(id=>{const e=$(id);if(e)e.value=''});const s=$('tm53Sort');if(s)s.value='newest';renderTeacherMaterialsV53();}
 function editTeacherMaterialV1(id){const x=(window.__teacherMaterialsV53||[]).find(z=>z.id===id);if(x)openTeacherMaterialFormV53(x)}
 async function copyTeacherMaterialLinkV1(id){
  const x=(window.__teacherMaterialsV53||[]).find(z=>z.id===id);const r=(x?.resource_items||[]).find(v=>/^https?:\/\//i.test(v?.url||''));
@@ -4217,8 +4227,8 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
     if(!hiddenResult.error) hiddenAssignmentIds=(hiddenResult.data||[]).map(x=>x.source_id);
     window.__ticClassCenterV41={classId,cls,students:students||[],tasks:assignments||[],evs:events||[],boardItems,hiddenAssignmentIds};
     const tabs=[
-      ['overview','📊 Visão geral'],['board','📌 Board'],['lessons','📚 Lessons'],
-      ['students','👥 Alunos'],['tasks','📝 Tasks'],['materials','🔗 Materiais'],
+      ['overview','📊 Visão geral'],['agenda','📅 Agenda'],['board','📌 Board'],['lessons','📚 Lessons'],
+      ['library','🗂️ Biblioteca'],['students','👥 Alunos'],['tasks','📝 Tasks'],['materials','🔗 Materiais'],
       ['resources','🧰 Resources'],['notes','💬 Observações'],['progress','📈 Progresso']
     ];
     window.$('content').innerHTML=`<div class="v41-class-shell" data-v41-class="${escV41(classId)}">
@@ -4333,6 +4343,14 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
     if(tab==='lessons'){
       body.innerHTML=kpis+`<div class="v41-panel"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3>📚 Aulas</h3><p>Registre aulas ministradas e próximas aulas.</p></div><button class="btn primary" onclick="openClassLessonForm('${classId}')">+ Registrar aula</button></div><div class="v41-list">${evs.map(e=>`<div class="v41-list-row"><div><b>${escV41(e.title)}</b><small>${escV41(e.event_type||'aula')} · ${escV41(e.notes||'')}</small></div><small>${fmtV41(e.starts_at||e.created_at)}</small></div>`).join('')||'<div class="v41-empty">Nenhuma aula registrada.</div>'}</div></div>`;
       return;
+    }
+    if(tab==='agenda'){
+      if(typeof window.ticClassAgendaRefreshV65==='function'){await window.ticClassAgendaRefreshV65(classId);return;}
+      body.innerHTML=kpis+'<div class="v41-empty">A agenda ainda não carregou. Atualize a página.</div>';return;
+    }
+    if(tab==='library'){
+      if(typeof window.renderClassTeacherLibraryV66==='function'){await window.renderClassTeacherLibraryV66(classId);return;}
+      body.innerHTML=kpis+'<div class="v41-empty">A biblioteca está carregando. Atualize a aba.</div>';return;
     }
     if(tab==='students'){
       body.innerHTML=kpis+`<div class="v41-panel"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h3>👥 Alunos da Class</h3><p>Veja último login, última atividade e tempo ativo. A Class pode existir sem alunos.</p></div><button class="btn primary" onclick="openClassMembers('${classId}')">👥 Gerenciar alunos</button></div><div id="ticV41StudentsBody" class="v41-student-grid" style="margin-top:14px"><div class="v41-loading">Carregando atividade...</div></div></div>`;
@@ -8961,6 +8979,67 @@ window.ticClassAgendaStatusV65=async function(eventId,classId){
 const previous=window.classCenterTabV41;
 if(typeof previous==='function')window.classCenterTabV41=async function(classId,tab){if(tab==='agenda'){renderA(classId);return}return previous.apply(this,arguments)};
 document.addEventListener('DOMContentLoaded',()=>{const old=window.classCenterTabV41;if(typeof old==='function'&&!old.__ticAgendaWrappedV65){const wrapped=async function(classId,tab){if(tab==='agenda'){renderA(classId);return}return old.apply(this,arguments)};wrapped.__ticAgendaWrappedV65=true;window.classCenterTabV41=wrapped;}});
+})();
+</script>
+
+<style id="tic-class-library-v66">
+.tm53-advanced-filter{grid-column:1/-1;border:1px solid #d9d0ef;background:#fbfaff;border-radius:12px;padding:10px 12px;min-width:0}.tm53-advanced-filter summary{cursor:pointer;color:#5535a4;font-size:12px;font-weight:850}.tm53-advanced-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin-top:12px}.tm53-advanced-grid>div{display:grid;gap:5px}.tm53-advanced-grid label{font-size:10px;font-weight:800;color:#52627a}.tm53-advanced-grid input,.tm53-advanced-grid select{width:100%;min-width:0}
+.tic-library-toolbar{display:grid;grid-template-columns:minmax(180px,1fr) repeat(2,minmax(135px,190px));gap:9px;margin:14px 0}.tic-library-toolbar input,.tic-library-toolbar select{min-width:0;width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#172033}.tic-library-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:12px}.tic-library-card{border:1px solid #dce3ef;border-radius:15px;background:#fff;overflow:hidden;min-width:0;box-shadow:0 4px 14px #31204a08}.tic-library-card-head{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:12px 14px;background:linear-gradient(120deg,#f3edff,#fff);border-bottom:1px solid #e8e2f4}.tic-library-card-head span{font-size:10px;font-weight:850;color:#5835a6}.tic-library-card-body{padding:13px}.tic-library-card h4{margin:0 0 6px;font-size:14px;font-weight:850;color:#172033;overflow-wrap:anywhere}.tic-library-card p{font-size:11px;line-height:1.5;color:#52627a;margin:0 0 9px;overflow-wrap:anywhere}.tic-library-tags{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0}.tic-library-tags span{font-size:9px;font-weight:800;padding:4px 7px;border-radius:7px;background:#eef2ff;color:#4338a3}.tic-library-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}.tic-library-actions .btn{font-size:10px!important;padding:8px 9px!important}.tic-library-empty{padding:24px;text-align:center;border:1px dashed #cbd5e1;border-radius:13px;color:#64748b;background:#f8fafc}
+body.fi-premium:not(.fi-light) .tm53-advanced-filter{background:#172338;border-color:#34445c}body.fi-premium:not(.fi-light) .tm53-advanced-filter summary,body.fi-premium:not(.fi-light) .tm53-advanced-grid label{color:#d8ccff}body.fi-premium:not(.fi-light) .tm53-advanced-grid input,body.fi-premium:not(.fi-light) .tm53-advanced-grid select,body.fi-premium:not(.fi-light) .tic-library-toolbar input,body.fi-premium:not(.fi-light) .tic-library-toolbar select{background:#0b1728;color:#f8fafc;border-color:#465873}body.fi-premium:not(.fi-light) .tic-library-card{background:#151f31;border-color:#34445c}body.fi-premium:not(.fi-light) .tic-library-card-head{background:linear-gradient(120deg,#202039,#18263a);border-color:#34445c}body.fi-premium:not(.fi-light) .tic-library-card-head span{color:#d8ccff}body.fi-premium:not(.fi-light) .tic-library-card h4{color:#f8fafc}body.fi-premium:not(.fi-light) .tic-library-card p{color:#c4cede}body.fi-premium:not(.fi-light) .tic-library-tags span{background:#292344;color:#e9ddff}body.fi-premium:not(.fi-light) .tic-library-empty{background:#111c2d;color:#c4cede;border-color:#465873}@media(max-width:650px){.tic-library-toolbar{grid-template-columns:1fr}.tic-library-actions .btn{flex:1 1 40%}}
+</style>
+<script id="tic-class-library-v66">
+(function(){
+'use strict';
+const escL=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const themeL=x=>{const part=String(x.tags||'').split('|').map(s=>s.trim()).find(s=>/^Theme:/i.test(s));return part?part.replace(/^Theme:/i,'').trim():''};
+const catL=x=>({website:'Website',tool:'Ferramenta',ai:'IA',pdf:'PDF',video:'Vídeo',audio:'Áudio',worksheet:'Worksheet',book:'Livro',other:'Outro'})[x.category]||x.category||'Material';
+window.renderClassTeacherLibraryV66=async function(classId){
+ const st=window.__ticClassCenterV41||{};if(st.classId!==classId)return;
+ const body=document.getElementById('ticV41ClassBody');if(!body)return;
+ body.innerHTML='<div class="v41-panel"><div class="v41-loading">Carregando a biblioteca de materiais...</div></div>';
+ const r=await sb.from('tic_teacher_materials').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
+ if(r.error){body.innerHTML='<div class="v41-panel"><h3>🗂️ Biblioteca do Teacher</h3><div class="v41-empty">Não foi possível carregar os materiais: '+escL(r.error.message)+'</div></div>';return}
+ window.__ticClassLibraryItemsV66=r.data||[];
+ body.innerHTML='<div class="v41-panel"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><h3>🗂️ Biblioteca do Teacher</h3><p>Todos os materiais criados na Media Library, com acesso rápido para atribuir à turma/aluno ou planejar na agenda.</p></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn secondary" onclick="loadView(\'teacherMaterials\')">Abrir Media Library</button><button class="btn primary" onclick="openTeacherMaterialFormV53()">＋ Criar material</button></div></div><div class="tic-library-toolbar"><input id="ticLibrarySearchV66" placeholder="Buscar título, tema, tags, link..." oninput="filterClassTeacherLibraryV66(\''+classId+'\')"><select id="ticLibraryCatV66" onchange="filterClassTeacherLibraryV66(\''+classId+'\')"><option value="">Todas as categorias</option>'+['website','tool','ai','pdf','video','audio','worksheet','book','other'].map(v=>'<option value="'+v+'">'+catL({category:v})+'</option>').join('')+'</select><select id="ticLibraryLevelV66" onchange="filterClassTeacherLibraryV66(\''+classId+'\')"><option value="">Todos os níveis</option>'+['A0','A1','A2','B1','B2','C1','C2'].map(v=>'<option>'+v+'</option>').join('')+'</select></div><div id="ticLibraryGridV66"></div>';
+ window.filterClassTeacherLibraryV66(classId);
+};
+window.filterClassTeacherLibraryV66=function(classId){
+ const all=window.__ticClassLibraryItemsV66||[],q=(document.getElementById('ticLibrarySearchV66')?.value||'').toLowerCase().trim(),cat=document.getElementById('ticLibraryCatV66')?.value||'',level=document.getElementById('ticLibraryLevelV66')?.value||'';
+ const rows=all.filter(x=>(!cat||x.category===cat)&&(!level||x.level===level)&&(!q||[x.title,x.description,x.notes,x.tags,themeL(x),...(x.resource_items||[]).map(y=>[y.title,y.url,y.description].join(' '))].join(' ').toLowerCase().includes(q)));
+ const grid=document.getElementById('ticLibraryGridV66');if(!grid)return;
+ if(!rows.length){grid.innerHTML='<div class="tic-library-empty">Nenhum material corresponde aos filtros. Crie um material ou ajuste a busca na Media Library.</div>';return}
+ grid.innerHTML='<div class="tic-library-grid">'+rows.map(x=>{const rs=(Array.isArray(x.resource_items)?x.resource_items:[]).filter(z=>z&&(z.url||z.value));const url=rs.find(z=>String(z.url||'').startsWith('http'))?.url||'';const th=themeL(x);return '<article class="tic-library-card"><div class="tic-library-card-head"><span>'+escL(catL(x))+'</span><span>'+escL(x.level||'Todos os níveis')+'</span></div><div class="tic-library-card-body"><h4>'+escL(x.title||'Material sem título')+'</h4><p>'+escL(x.description||'Sem descrição.')+'</p><div class="tic-library-tags">'+(th?'<span>'+escL(th)+'</span>':'')+'<span>'+rs.length+' link(s)/arquivo(s)</span></div>'+(url?'<a class="tic-agenda-event-link" href="'+escL(url)+'" target="_blank" rel="noopener">↗ Abrir recurso</a>':'')+'<div class="tic-library-actions"><button class="btn sm secondary" onclick="openTeacherMaterialViewV53(\''+x.id+'\')">👁 Ver</button><button class="btn sm primary" onclick="openClassLibraryAssignV66(\''+classId+'\',\''+x.id+'\')">👤 Atribuir</button><button class="btn sm secondary" onclick="planClassLibraryMaterialV66(\''+classId+'\',\''+x.id+'\')">📅 Planejar aula</button><button class="btn sm ghost" onclick="editTeacherMaterialV1(\''+x.id+'\')">✏️ Editar</button></div></div></article>'}).join('')+'</div>';
+};
+window.openClassLibraryAssignV66=async function(classId,materialId){
+ const x=(window.__ticClassLibraryItemsV66||[]).find(z=>z.id===materialId);if(!x)return;
+ const m=await sb.from('tic_class_students').select('student_id,status').eq('class_id',classId).eq('status','active');
+ if(m.error)return toast('Não foi possível carregar os alunos: '+m.error.message,'error');
+ const ids=[...new Set((m.data||[]).map(y=>y.student_id))];if(!ids.length){toast('Adicione alunos à turma antes de atribuir materiais.','info');return openClassMembers(classId)}
+ const sr=await sb.from('tic_students').select('id,display_name,current_level').in('id',ids).order('display_name');
+ if(sr.error)return toast('Não foi possível carregar os alunos: '+sr.error.message,'error');
+ const students=sr.data||[],resources=(x.resource_items||[]).filter(z=>z&&(z.url||z.value));
+ if(!resources.length)return toast('Este material ainda não tem links/arquivos. Edite-o na biblioteca antes de atribuir.','error');
+ openModal('👤 Atribuir material a aluno(s)',`<form class="form" onsubmit="saveClassLibraryAssignV66(event,'${classId}','${materialId}')"><div class="notice"><b>${escL(x.title)}</b><br>Selecione um ou mais alunos desta turma. O material original continuará na biblioteca.</div><div class="field"><label>Alunos</label><div style="display:grid;gap:8px;max-height:260px;overflow:auto;padding:8px;border:1px solid var(--border);border-radius:12px">${students.map(y=>'<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="ticLibraryStudentsV66" value="'+y.id+'"> <span><b>'+escL(y.display_name)+'</b> · '+escL(y.current_level||'Nível não definido')+'</span></label>').join('')}</div></div><div class="field"><label>Mensagem para o aluno (opcional)</label><textarea id="ticLibraryMessageV66" rows="3" placeholder="Ex.: Faça a atividade antes da próxima aula."></textarea></div><div class="field"><label>Prazo (opcional)</label><input id="ticLibraryDueV66" type="datetime-local"></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary">📤 Atribuir material</button></div></form>`);
+};
+window.saveClassLibraryAssignV66=async function(ev,classId,materialId){
+ ev.preventDefault();const x=(window.__ticClassLibraryItemsV66||[]).find(z=>z.id===materialId);if(!x)return;
+ const selected=[...document.querySelectorAll('input[name="ticLibraryStudentsV66"]:checked')].map(e=>e.value);if(!selected.length)return toast('Selecione pelo menos um aluno.','error');
+ const resources=(x.resource_items||[]).filter(z=>z&&(z.url||z.value));
+ const payload={teacher_id:session.user.id,lesson_id:null,class_id:classId,title:x.title||'Material da biblioteca',instructions:document.getElementById('ticLibraryMessageV66')?.value.trim()||x.description||'',assignment_type:'material',due_at:document.getElementById('ticLibraryDueV66')?.value?new Date(document.getElementById('ticLibraryDueV66').value).toISOString():null,points:0,priority:'normal',resource_items:resources.map(z=>({type:z.type||'link',title:z.title||x.title,url:z.url||z.value,description:z.description||x.description||''})),cover_image_url:x.cover_image_url||null,source_type:'teacher_material',source_id:x.id};
+ const ar=await sb.from('tic_assignments').insert(payload).select().single();if(ar.error)return toast('Não foi possível criar a atribuição: '+ar.error.message,'error');
+ const tr=await sb.from('tic_task_assignments').insert(selected.map(student_id=>({assignment_id:ar.data.id,student_id,status:'pending'})));
+ if(tr.error){await sb.from('tic_assignments').delete().eq('id',ar.data.id);return toast('Não foi possível atribuir aos alunos: '+tr.error.message,'error')}
+ closeModal();toast('Material atribuído para '+selected.length+' aluno(s).','success');await window.openClassCenterV41(classId,'library');
+};
+window.planClassLibraryMaterialV66=async function(classId,materialId){
+ const x=(window.__ticClassLibraryItemsV66||[]).find(z=>z.id===materialId);if(!x)return;
+ if(typeof window.ticClassAgendaFormV65!=='function')return toast('A agenda da turma ainda não carregou. Abra a aba Agenda e tente novamente.','error');
+ await window.ticClassAgendaFormV65(classId);
+ const title=document.getElementById('ticAgTitleV65'),link=document.getElementById('ticAgLinkV65'),notes=document.getElementById('ticAgNotesV65');
+ if(title)title.value=x.title||'Lesson';
+ const first=(x.resource_items||[]).find(z=>String(z?.url||'').startsWith('http'));if(link&&first)link.value=first.url;
+ if(notes)notes.value='Material da Media Library: '+(x.title||'')+'\n'+(x.description||'')+'\nSource ID: '+x.id;
+};
 })();
 </script>
 </body>
