@@ -2797,6 +2797,46 @@ async function saveFeedback(e,submissionId,taskAssignmentId,studentId){
 /* ===== TIC v11 — ORDERED CURRICULUM ===== */
 .tic-order-panel{margin:0 0 16px}.tic-order-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}.tic-order-list{display:grid;gap:8px;margin-top:12px;max-height:62vh;overflow:auto}.tic-order-item{display:grid;grid-template-columns:28px 38px 1fr auto;gap:9px;align-items:center;border:1px solid var(--line);border-radius:13px;background:#fff;padding:10px;cursor:grab}.tic-order-item.dragging{opacity:.4}.tic-order-handle{color:#aaa;font-size:18px}.tic-order-num{width:30px;height:30px;border-radius:9px;background:#eee8ff;color:var(--p);display:grid;place-items:center;font-weight:900;font-size:11px}.tic-order-copy b{font-size:12px}.tic-order-copy small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.tic-order-actions{display:flex;gap:5px;flex-wrap:wrap}.tic-curriculum-sort{display:grid;gap:10px;margin-top:12px}.tic-module-sort{border:1px solid var(--line);border-radius:15px;background:#fff;overflow:hidden}.tic-module-sort-head{display:grid;grid-template-columns:28px 32px 1fr auto;gap:8px;align-items:center;padding:12px;background:#faf9fd;cursor:grab}.tic-module-sort-head.dragging{opacity:.45}.tic-module-lessons-sort{padding:8px 12px 12px;display:grid;gap:6px;min-height:44px}.tic-lesson-sort{display:grid;grid-template-columns:24px 28px 1fr auto;gap:8px;align-items:center;border:1px solid #eeeaf4;border-radius:10px;padding:8px;background:#fff;cursor:grab}.tic-lesson-sort.dragging{opacity:.45}.tic-drop-zone{outline:2px dashed #a98be9;outline-offset:-3px;background:#faf7ff}.tic-sort-muted{color:var(--muted);font-size:10px}.tic-course-track-badge{margin-top:5px}.tic-student-course-order{display:grid;gap:12px}.tic-student-course-order .student-course-hero{order:initial}.tic-course-order-chip{font-size:10px;color:var(--p);font-weight:800;background:#f0eaff;border-radius:99px;padding:5px 8px;white-space:nowrap}
 @media(max-width:760px){.tic-order-item{grid-template-columns:22px 30px 1fr}.tic-order-item>.badge{grid-column:3}.tic-order-actions{grid-column:3}.tic-module-sort-head{grid-template-columns:22px 28px 1fr}.tic-lesson-sort{grid-template-columns:20px 25px 1fr}.tic-lesson-sort .tic-order-actions{grid-column:3}}
+
+/* V69 — cleaner Courses page, responsive course rows and direct module creation */
+.course-dashboard:has(.tic-course-page-v68){display:block;min-width:0}
+.tic-course-page-v68{display:flex;flex-direction:column;gap:18px;min-width:0}
+.tic-course-hero-v68{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;padding:24px 26px;border-radius:20px;background:linear-gradient(125deg,#3f2194,#7046d7 65%,#8b68ef);color:#fff;box-shadow:0 12px 28px rgba(76,36,168,.14)}
+.tic-course-eyebrow-v68{font-size:10px;font-weight:800;letter-spacing:1.3px;opacity:.86}
+.tic-course-hero-v68 h1{margin:6px 0 3px;font-size:clamp(25px,3vw,34px);line-height:1.15}
+.tic-course-hero-v68 p{margin:0;font-size:13px;opacity:.9}
+.tic-course-hero-stats-v68{display:flex;gap:10px}
+.tic-course-hero-stats-v68>div{min-width:76px;padding:10px 13px;border:1px solid rgba(255,255,255,.25);border-radius:13px;background:rgba(255,255,255,.12);text-align:center}
+.tic-course-hero-stats-v68 b,.tic-course-hero-stats-v68 span{display:block}
+.tic-course-hero-stats-v68 b{font-size:22px;line-height:1.2}
+.tic-course-hero-stats-v68 span{margin-top:3px;font-size:10px;opacity:.9}
+.tic-course-management-v68{padding:20px;min-width:0}
+.tic-course-toolbar-v68{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.tic-course-toolbar-v68 h2{margin:9px 0 5px;font-size:21px}
+.tic-course-toolbar-v68 p{margin:0;color:var(--muted);font-size:12px;line-height:1.6}
+.tic-course-global-actions-v68{display:flex;gap:8px;flex-wrap:wrap}
+.tic-course-list-v68{display:grid;gap:10px;padding-top:16px}
+.tic-course-row-v68{display:grid;grid-template-columns:34px 46px minmax(150px,1fr) auto;gap:12px;align-items:center;padding:13px 14px;border:1px solid var(--line);border-radius:15px;background:var(--card,#fff);transition:border-color .15s,box-shadow .15s}
+.tic-course-row-v68:hover{border-color:#b9a5f2;box-shadow:0 5px 16px rgba(44,25,90,.06)}
+.tic-course-index-v68{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:#eee8ff;color:#5532b7;font-size:12px;font-weight:800}
+.tic-course-level-v68{display:inline-flex;align-items:center;justify-content:center;min-width:42px;min-height:32px;padding:0 8px;border-radius:999px;background:#283d60;color:#fff;font-size:11px;font-weight:800}
+.tic-course-info-v68{min-width:0}
+.tic-course-info-v68 h3{margin:0 0 5px;font-size:14px;line-height:1.35;overflow-wrap:anywhere}
+.tic-course-meta-v68{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:11px}
+.tic-course-actions-v68{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.tic-course-actions-v68 .btn{min-height:40px}
+.tic-course-more-v68{position:relative;flex:0 0 auto}
+.tic-course-more-v68>summary{list-style:none;display:grid;place-items:center;width:42px;height:42px;border:1px solid var(--line);border-radius:11px;background:var(--card,#fff);color:var(--text);font-size:23px;font-weight:800;cursor:pointer}
+.tic-course-more-v68>summary::-webkit-details-marker{display:none}
+.tic-course-more-v68>summary:hover,.tic-course-more-v68[open]>summary{background:#f1ebff;border-color:#b8a5f7}
+.tic-course-more-pop-v68{position:absolute;z-index:90;right:0;top:calc(100% + 5px);display:grid;gap:3px;min-width:190px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--card,#fff);box-shadow:0 12px 30px rgba(20,15,40,.17)}
+.tic-course-more-pop-v68 button{min-height:42px;padding:9px 11px;border:0;border-radius:8px;background:transparent;color:var(--text);font:inherit;font-size:12px;font-weight:600;text-align:left;cursor:pointer}
+.tic-course-more-pop-v68 button:hover{background:#f3efff}
+.tic-course-more-pop-v68 .tic-course-delete-v68{color:#b42336}
+.tic-course-more-v68 summary:focus-visible,.tic-course-more-pop-v68 button:focus-visible{outline:3px solid #f59e0b;outline-offset:2px}
+@media(max-width:900px){.tic-course-row-v68{grid-template-columns:32px 42px minmax(0,1fr)}.tic-course-actions-v68{grid-column:1/-1;justify-content:flex-start;padding-left:0}.tic-course-toolbar-v68{display:grid}.tic-course-global-actions-v68{width:100%}}
+@media(max-width:560px){.tic-course-hero-v68{padding:19px}.tic-course-hero-stats-v68{width:100%}.tic-course-hero-stats-v68>div{flex:1;min-width:0}.tic-course-management-v68{padding:13px}.tic-course-row-v68{grid-template-columns:30px 42px minmax(0,1fr);gap:9px;padding:12px}.tic-course-actions-v68{gap:6px}.tic-course-actions-v68 .btn{flex:1;min-width:calc(50% - 6px)}.tic-course-more-v68{flex:0 0 42px}.tic-course-more-pop-v68{right:0}}
+@media(prefers-reduced-motion:reduce){.tic-course-row-v68{transition:none}}
 </style>
 <script>
 /* ================================================================
@@ -2889,7 +2929,24 @@ openCourseForm=openCourseFormV11;
 /* Teacher Courses page — ordered, no recursion, no dependency on the old wrapper. */
 async function coursesPageV11(){
  try{await __loadCourseData();const {track,courses}=await ticGetOrderedCoursesV11();window.__ticCourses=courses;const ls=window.__ticLessons||[],ms=window.__ticModules||[];const memberCounts={};if(courses.length){const r=await sb.from('tic_course_students').select('course_id,status').in('course_id',courses.map(c=>c.id));if(!r.error)(r.data||[]).forEach(x=>{if(x.status!=='inactive')memberCounts[x.course_id]=(memberCounts[x.course_id]||0)+1})}
- $('content').innerHTML=`<div class="course-dashboard"><div class="card tic-order-panel"><div class="tic-order-header"><div><span class="badge purple">🛤️ COURSE TRACK</span><h2 style="margin:6px 0 2px">Sequência dos cursos</h2><p style="margin:0;color:var(--muted);font-size:11px">${esc(track.name)} · crie novos cursos e reposicione A0 → A1 → A2 → B1... quando quiser.</p></div><div class="actions"><button class="btn primary" onclick="ticOpenCourseOrderV11()">↕️ Reordenar cursos</button><button class="btn secondary" onclick="ticOpenMultiCourseEnrollmentV11()">👤 Atribuir múltiplos cursos</button><button class="btn ghost" onclick="openCourseFormV11()">+ Novo curso</button></div></div><div class="tic-order-list" style="max-height:none">${courses.map((c,i)=>`<div class="tic-order-item" style="cursor:default"><span class="tic-order-num">${i+1}</span><span class="badge blue">${esc(c.level||'—')}</span><div class="tic-order-copy"><b>${esc(c.title||'Curso')}</b><small>${ls.filter(l=>l.course_id===c.id).length} lessons · ${ms.filter(m=>m.course_id===c.id).length} módulos</small></div><div class="tic-order-actions"><button class="btn sm secondary" onclick="openCourseCurriculum('${c.id}')">📚 Currículo</button><button class="btn sm secondary" onclick="openCourseEnrollment('${c.id}')">👥 Alunos</button><button class="btn sm ghost" onclick='openCourseFormV11(${JSON.stringify(c)})'>Editar</button><button class="btn sm danger" onclick="deleteCourseSafe('${c.id}')">Excluir</button></div></div>`).join('')||'<div class="empty">Nenhum curso criado.</div>'}</div></div></div>`;
+ $('content').innerHTML=`<div class="course-dashboard tic-course-page-v68">
+  <section class="tic-course-hero-v68">
+    <div><span class="tic-course-eyebrow-v68">TEACHER COMMAND CENTER · CURRICULUM</span><h1>Courses</h1><p>Organize cursos, módulos e lessons por nível CEFR.</p></div>
+    <div class="tic-course-hero-stats-v68"><div><b>${courses.length}</b><span>Cursos</span></div><div><b>${ms.length}</b><span>Módulos</span></div><div><b>${ls.length}</b><span>Lessons</span></div></div>
+  </section>
+  <section class="card tic-course-management-v68">
+    <div class="tic-course-toolbar-v68"><div><span class="badge purple">🛤️ COURSE TRACK</span><h2>Sequência dos cursos</h2><p>${esc(track.name)} · Organize a progressão A0 → A1 → A2 → B1 → B2 → C1 → C2.</p></div><div class="tic-course-global-actions-v68"><button class="btn primary" onclick="ticOpenCourseOrderV11()">↕️ Reordenar cursos</button><button class="btn secondary" onclick="ticOpenMultiCourseEnrollmentV11()">👤 Atribuir cursos</button><button class="btn ghost" onclick="openCourseFormV11()">＋ Novo curso</button></div></div>
+    <div class="tic-course-list-v68">${courses.map((c,i)=>`<article class="tic-course-row-v68">
+      <div class="tic-course-index-v68">${i+1}</div><div class="tic-course-level-v68">${esc(c.level||'—')}</div>
+      <div class="tic-course-info-v68"><h3>${esc(c.title||'Curso')}</h3><div class="tic-course-meta-v68"><span>📚 ${ls.filter(l=>l.course_id===c.id).length} lessons</span><span>📁 ${ms.filter(m=>m.course_id===c.id).length} módulos</span></div></div>
+      <div class="tic-course-actions-v68">
+        <button class="btn sm primary" onclick="openCourseCurriculumV11('${c.id}')">📚 Currículo</button>
+        <button class="btn sm secondary" onclick="openModuleForm('${c.id}')">＋ Módulo</button>
+        <details class="tic-course-more-v68"><summary aria-label="Mais ações para ${esc(c.title||'curso')}" title="Mais ações">⋮</summary><div class="tic-course-more-pop-v68" role="group" aria-label="Ações de ${esc(c.title||'curso')}"><button type="button" onclick="this.closest('details').open=false;openCourseEnrollment('${c.id}')">👥 Alunos do curso</button><button type="button" onclick='this.closest("details").open=false;openCourseFormV11(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✏️ Editar curso</button><button type="button" class="tic-course-delete-v68" onclick="this.closest('details').open=false;deleteCourseSafe('${c.id}')">🗑️ Excluir curso</button></div></details>
+      </div>
+    </article>`).join('')||'<div class="empty">Nenhum curso criado. Clique em “Novo curso” para começar.</div>'}</div>
+  </section>
+</div>`;
  }catch(e){$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar os cursos.</b><p>${esc(e.message||e)}</p><button class="btn primary" onclick="coursesPageV11()">Tentar novamente</button></div>`}
 }
 coursesPage=coursesPageV11;
