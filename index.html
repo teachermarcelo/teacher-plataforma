@@ -1748,7 +1748,7 @@ window.addEventListener('message',async e=>{
 
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return toast('Conta de aluno não encontrada.','error');
- const {data:lesson}=await sb.from('tic_lessons').select('id,title,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();
+ const {data:lesson}=await sb.from('tic_lessons').select('id,title,allow_student_response,active,student_visible').eq('id',lessonId).eq('active',true).eq('student_visible',true).maybeSingle();
  if(!lesson)return toast('Lesson não encontrada ou desativada.','error');
  if(lesson.allow_student_response===false)return toast('Esta Lesson está disponível para estudo, mas o Teacher não ativou respostas.','info');
  const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();
@@ -1876,7 +1876,7 @@ async function openStudentCourse(courseId){
 
 /* ---------- Interactive Lesson opening ---------- */
 async function viewStudentLessonInteractive(id){
- const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).maybeSingle();
+ const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).eq('student_visible',true).maybeSingle();
  if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
  const s=await studentRecord();
  const {data:resp}=await sb.from('tic_lesson_responses').select('id,attempt,status,score,teacher_comment,improvement_skill,improvement_link,reviewed_at,created_at').eq('lesson_id',id).eq('student_id',s.id).order('attempt',{ascending:false});
@@ -2150,7 +2150,7 @@ async function markLessonCompleted(lessonId){
  toast('Lesson concluída. Você poderá abri-la e refazê-la novamente.','success');viewStudentLessonInteractive(lessonId);
 }
 async function viewStudentLessonInteractive(id){
- const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
+ const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).eq('student_visible',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
  const s=await studentRecord();if(!s)return;
  const {data:lp}=await sb.from('tic_lesson_progress').select('*').eq('lesson_id',id).eq('student_id',s.id).maybeSingle();
  if(lp)await sb.from('tic_lesson_progress').update({last_opened_at:new Date().toISOString(),open_count:Number(lp.open_count||0)+1,updated_at:new Date().toISOString()}).eq('id',lp.id);else await sb.from('tic_lesson_progress').insert({lesson_id:id,student_id:s.id,last_opened_at:new Date().toISOString(),open_count:1});
@@ -2384,7 +2384,7 @@ async function saveFeedback(e,submissionId,taskAssignmentId,studentId){
 
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return;
- const {data:l,error}=await sb.from('tic_lessons').select('id,title,allow_student_response,active').eq('id',lessonId).eq('active',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
+ const {data:l,error}=await sb.from('tic_lessons').select('id,title,allow_student_response,active,student_visible').eq('id',lessonId).eq('active',true).eq('student_visible',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
  if(l.allow_student_response===false)return toast('Esta Lesson está disponível para estudo, mas o Teacher não ativou respostas.','info');
  const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
  const r=await sb.from('tic_lesson_responses').insert({lesson_id:lessonId,student_id:s.id,attempt,response_data:payload.fields||{},response_text:payload.text||null,status:'submitted'});if(r.error)return toast('Não foi possível enviar sua resposta: '+r.error.message,'error');
@@ -2490,7 +2490,7 @@ async function markLessonCompleted(lessonId){
  viewStudentLessonInteractive(lessonId);
 }
 async function viewStudentLessonInteractive(id){
- const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).maybeSingle();
+ const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).eq('student_visible',true).maybeSingle();
  if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
  const s=await studentRecord();if(!s)return;
  const {data:courseAccess}=l.course_id?await sb.from('tic_course_students').select('id').eq('course_id',l.course_id).eq('student_id',s.id).eq('status','active').maybeSingle():{data:null};
@@ -2566,7 +2566,7 @@ async function saveFeedback(e,submissionId,taskAssignmentId,studentId){
 
 /* Student lesson: one real viewer, all resources, response, feedback, first completion. */
 async function viewStudentLessonInteractive(id){
- const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).maybeSingle();
+ const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).eq('student_visible',true).maybeSingle();
  if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
  const s=await studentRecord();if(!s)return;
  const {data:access}=await sb.from('tic_course_students').select('id').eq('student_id',s.id).eq('course_id',l.course_id).eq('status','active').maybeSingle();
@@ -2724,7 +2724,7 @@ async function markLessonCompleted(lessonId){
  viewStudentLessonInteractive(lessonId);
 }
 async function viewStudentLessonInteractive(id){
- const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).maybeSingle();
+ const {data:l,error}=await sb.from('tic_lessons').select('*').eq('id',id).eq('active',true).eq('student_visible',true).maybeSingle();
  if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');
  const s=await studentRecord();if(!s)return;
  const {data:courseAccess}=l.course_id?await sb.from('tic_course_students').select('id').eq('course_id',l.course_id).eq('student_id',s.id).eq('status','active').maybeSingle():{data:null};
@@ -3003,7 +3003,7 @@ async function ticRecalculateStudentProgressV18(studentId){
     const ids=(enroll||[]).map(x=>x.course_id).filter(Boolean);
     if(!ids.length)return;
     const [{data:lessons,error:le},{data:done,error:pe}]=await Promise.all([
-      sb.from('tic_lessons').select('id,level,skill,course_id').in('course_id',ids).eq('active',true),
+      sb.from('tic_lessons').select('id,level,skill,course_id,student_visible').in('course_id',ids).eq('active',true).eq('student_visible',true),
       sb.from('tic_lesson_progress').select('lesson_id,first_completed_at').eq('student_id',studentId)
     ]);
     if(le||pe)return;
@@ -3048,7 +3048,7 @@ async function studentLessons(){
     const ids=courses.map(c=>c.id);
     const [{data:ms,error:me},{data:ls,error:le},{data:lp,error:pe},{data:direct,error:de}]=await Promise.all([
       ids.length?sb.from('tic_modules').select('*').in('course_id',ids).order('position',{ascending:true}):Promise.resolve({data:[],error:null}),
-      ids.length?sb.from('tic_lessons').select('*').in('course_id',ids).eq('active',true).order('position',{ascending:true}).order('created_at',{ascending:true}):Promise.resolve({data:[],error:null}),
+      ids.length?sb.from('tic_lessons').select('*').in('course_id',ids).eq('active',true).eq('student_visible',true).order('position',{ascending:true}).order('created_at',{ascending:true}):Promise.resolve({data:[],error:null}),
       sb.from('tic_lesson_progress').select('lesson_id,first_completed_at').eq('student_id',s.id),
       sb.from('tic_lesson_assignments').select('lesson_id,assigned_at,note,tic_lessons(*)').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false})
     ]);
@@ -3579,7 +3579,7 @@ async function ticRecalculateStudentProgressV19(studentId){
     const ids=(enroll||[]).map(x=>x.course_id).filter(Boolean);
     if(!ids.length)return {overall:0,total:0,done:0,currentLevel:0};
     const [{data:lessons,error:le},{data:done,error:pe}]=await Promise.all([
-      sb.from('tic_lessons').select('id,level,skill,course_id').in('course_id',ids).eq('active',true),
+      sb.from('tic_lessons').select('id,level,skill,course_id,student_visible').in('course_id',ids).eq('active',true).eq('student_visible',true),
       sb.from('tic_lesson_progress').select('lesson_id,first_completed_at').eq('student_id',studentId)
     ]);
     if(le)throw le;if(pe)throw pe;
@@ -3628,7 +3628,7 @@ window.studentLessons=async function(){
     const courses=await ticGetStudentOrderedCoursesV19(s.id),ids=courses.map(c=>c.id);
     const [{data:ms,error:me},{data:ls,error:le},{data:lp,error:pe},{data:direct,error:de}]=await Promise.all([
       ids.length?sb.from('tic_modules').select('*').in('course_id',ids).order('position',{ascending:true}):Promise.resolve({data:[],error:null}),
-      ids.length?sb.from('tic_lessons').select('*').in('course_id',ids).eq('active',true).order('position',{ascending:true}).order('created_at',{ascending:true}):Promise.resolve({data:[],error:null}),
+      ids.length?sb.from('tic_lessons').select('*').in('course_id',ids).eq('active',true).eq('student_visible',true).order('position',{ascending:true}).order('created_at',{ascending:true}):Promise.resolve({data:[],error:null}),
       sb.from('tic_lesson_progress').select('lesson_id,first_completed_at').eq('student_id',s.id),
       sb.from('tic_lesson_assignments').select('lesson_id,assigned_at,note,tic_lessons(*)').eq('student_id',s.id).eq('active',true).order('assigned_at',{ascending:false})
     ]);
