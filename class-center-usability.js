@@ -42,7 +42,7 @@ window.ticAgendaOpenFormV66=function(classId,eventData=null){
 };
 
 window.ticClassAgendaRefreshV65=async function(classId){
- const body=document.getElementById('ticV41ClassBody')||document.getElementById('classCenterBody');if(!body)return;
+ const body=document.getElementById('ticV41ClassBody')||document.getElementById('classCenterBody')||document.querySelector('.class-center-body');if(!body)return;
  const esc=v=>typeof window.escV41==='function'?window.escV41(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
  const user=(typeof session!=='undefined'?session?.user:null)||window.session?.user;
  const fmt=d=>d?new Date(d).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'Data não definida';
@@ -153,4 +153,32 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   let attempts=0;
   const timer=setInterval(()=>{attempts++;if(install()||attempts>=80)clearInterval(timer)},250);
  }
+})();
+
+/* Capture-phase tab handler: prevents legacy tab handlers from stealing Agenda clicks. */
+(function installAgendaClickCaptureV67(){
+ 'use strict';
+ if(window.__fiAgendaClickCaptureV67)return;
+ window.__fiAgendaClickCaptureV67=true;
+ document.addEventListener('click',function(ev){
+  const btn=ev.target.closest?.('.v41-tabs button[data-tab="agenda"],.class-center-tabs button[data-tab="agenda"]');
+  if(!btn)return;
+  const shell=btn.closest('[data-v41-class],[data-class-center],.v41-class-shell,.class-center-page');
+  const id=shell?.getAttribute('data-v41-class')||shell?.getAttribute('data-class-center')||
+    window.__ticClassCenterV41?.classId||window.__ticClassCenter?.classId||'';
+  if(!id){console.error('[Class Center Agenda] ID da turma não encontrado.',shell);return}
+  ev.preventDefault();ev.stopImmediatePropagation();
+  document.querySelectorAll('.v41-tabs button[data-tab],.class-center-tabs button[data-tab]').forEach(b=>{
+    const active=b.dataset.tab==='agenda';
+    b.classList.toggle('active',active);
+    b.setAttribute('aria-selected',String(active));
+  });
+  const body=document.getElementById('ticV41ClassBody')||document.getElementById('classCenterBody')||shell?.querySelector('.class-center-body');
+  if(body)body.scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(typeof window.ticClassAgendaRefreshV65==='function'){
+    window.ticClassAgendaRefreshV65(id).catch(err=>console.error('[Class Center Agenda] Falha ao abrir:',err));
+  }else if(body){
+    body.innerHTML='<section class="v41-panel" role="alert"><h3>Agenda não carregada</h3><p>O módulo da Agenda não foi inicializado. Atualize a página e tente novamente.</p></section>';
+  }
+ },true);
 })();
