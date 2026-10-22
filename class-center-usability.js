@@ -1,4 +1,46 @@
 /* Missing Agenda renderer: the previous tab called this function without defining it. */
+
+function ticAgendaGetUser(){
+ try{if(typeof session!=='undefined'&&session?.user)return session.user}catch(_){}
+ return window.session?.user||window.__session?.user||window.supabaseSession?.user||null;
+}
+function ticAgendaEsc(v){return typeof window.escV41==='function'?window.escV41(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function ticAgendaLocalValue(value){
+ if(!value)return '';
+ const d=new Date(value);if(Number.isNaN(d.getTime()))return '';
+ const pad=n=>String(n).padStart(2,'0');
+ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+}
+window.ticAgendaOpenFormV66=function(classId,eventData=null){
+ const old=document.getElementById('tic-agenda-form-overlay');if(old)old.remove();
+ const e=eventData||{};
+ const overlay=document.createElement('div');overlay.id='tic-agenda-form-overlay';overlay.className='tic-agenda-overlay';
+ overlay.innerHTML='<section class="tic-agenda-modal" role="dialog" aria-modal="true" aria-labelledby="tic-agenda-form-title"><header class="tic-agenda-modal-head"><div><span class="tic-agenda-eyebrow">CLASS CENTER · AGENDA</span><h3 id="tic-agenda-form-title">'+(e.id?'Editar compromisso':'Agendar nova aula')+'</h3><p>Preencha os dados e salve para registrar na agenda da turma.</p></div><button type="button" class="tic-agenda-close" data-agenda-close aria-label="Fechar">×</button></header><form class="tic-agenda-form"><div class="tic-agenda-form-grid"><label class="tic-agenda-field tic-agenda-field-wide"><span>Título da aula *</span><input name="title" required maxlength="140" placeholder="Ex.: English conversation — Unit 3" value="'+ticAgendaEsc(e.title||'')+'"></label><label class="tic-agenda-field"><span>Data e horário de início *</span><input name="starts_at" type="datetime-local" required value="'+ticAgendaLocalValue(e.starts_at)+'"></label><label class="tic-agenda-field"><span>Data e horário de término</span><input name="ends_at" type="datetime-local" value="'+ticAgendaLocalValue(e.ends_at)+'"></label><label class="tic-agenda-field"><span>Tipo de compromisso</span><select name="event_type"><option value="class">Aula</option><option value="meeting">Reunião</option><option value="assessment">Avaliação</option><option value="next_class">Próxima aula</option><option value="other">Outro</option></select></label><label class="tic-agenda-field"><span>Status</span><select name="status"><option value="scheduled">Agendada</option><option value="completed">Realizada</option><option value="cancelled">Cancelada</option><option value="postponed">Adiada</option></select></label><label class="tic-agenda-field tic-agenda-field-wide"><span>Link da aula / reunião</span><input name="meeting_url" type="url" placeholder="https://..." value="'+ticAgendaEsc(e.meeting_url||'')+'"></label><label class="tic-agenda-field tic-agenda-field-wide"><span>Observações</span><textarea name="notes" rows="3" maxlength="2000" placeholder="Conteúdo, preparação, materiais ou lembretes…">'+ticAgendaEsc(e.notes||'')+'</textarea></label></div><div class="tic-agenda-form-error" role="alert" hidden></div><footer class="tic-agenda-form-footer"><button type="button" class="btn secondary" data-agenda-close>Cancelar</button><button type="submit" class="btn primary"><span data-agenda-save-label>'+(e.id?'Salvar alterações':'Salvar agendamento')+'</span></button></footer></form></section>';
+ document.body.appendChild(overlay);
+ const form=overlay.querySelector('form'),type=form.elements.event_type,status=form.elements.status;
+ type.value=e.event_type||'class';status.value=e.status||'scheduled';
+ overlay.querySelectorAll('[data-agenda-close]').forEach(b=>b.addEventListener('click',()=>overlay.remove()));
+ overlay.addEventListener('click',ev=>{if(ev.target===overlay)overlay.remove()});
+ document.addEventListener('keydown',function escClose(ev){if(ev.key==='Escape'&&document.getElementById('tic-agenda-form-overlay')===overlay){overlay.remove();document.removeEventListener('keydown',escClose)}});
+ form.addEventListener('submit',async ev=>{
+  ev.preventDefault();const submit=form.querySelector('[type="submit"]'),errorBox=form.querySelector('.tic-agenda-form-error');submit.disabled=true;submit.textContent='Salvando…';errorBox.hidden=true;
+  try{
+   const db=(typeof sb!=='undefined'?sb:window.sb),user=ticAgendaGetUser();
+   if(!db)throw Error('Conexão com o banco indisponível. Recarregue a página.');
+   if(!user?.id)throw Error('Não foi possível identificar sua sessão. Entre novamente e tente.');
+   const fd=new FormData(form),start=String(fd.get('starts_at')||''),end=String(fd.get('ends_at')||'');
+   if(!start)throw Error('Informe a data e o horário de início.');
+   if(end&&new Date(end).getTime()<new Date(start).getTime())throw Error('O término não pode ser anterior ao início.');
+   const payload={class_id:classId,teacher_id:user.id,title:String(fd.get('title')||'').trim(),event_type:String(fd.get('event_type')||'class'),starts_at:new Date(start).toISOString(),ends_at:end?new Date(end).toISOString():null,meeting_url:String(fd.get('meeting_url')||'').trim()||null,notes:String(fd.get('notes')||'').trim()||null,status:String(fd.get('status')||'scheduled')};
+   if(!payload.title)throw Error('Informe um título para a aula.');
+   let q=e.id?db.from('tic_events').update(payload).eq('id',e.id).eq('class_id',classId).eq('teacher_id',user.id):db.from('tic_events').insert(payload);
+   const {error}=await q;if(error)throw error;
+   overlay.remove();await window.ticClassAgendaRefreshV65(classId);
+  }catch(err){errorBox.textContent=err?.message||'Não foi possível salvar o agendamento.';errorBox.hidden=false;submit.disabled=false;submit.innerHTML='<span data-agenda-save-label>'+(e.id?'Salvar alterações':'Salvar agendamento')+'</span>'}
+ });
+ setTimeout(()=>form.elements.title?.focus(),40);
+};
+
 window.ticClassAgendaRefreshV65=async function(classId){
  const body=document.getElementById('ticV41ClassBody')||document.getElementById('classCenterBody');if(!body)return;
  const esc=v=>typeof window.escV41==='function'?window.escV41(v??''):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -19,15 +61,18 @@ window.ticClassAgendaRefreshV65=async function(classId){
    if(!items.length)return '<div class="v41-empty">Nenhuma aula neste filtro.</div>';
    return [...groups.entries()].map(([key,list])=>{const date=key==='sem-data'?'Data não definida':new Date(key+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});return '<section class="cc-agenda-day-group"><h4 class="cc-agenda-day-heading"><span>📅 '+esc(date)+'</span><span class="cc-agenda-day-count">'+list.length+' '+(list.length===1?'compromisso':'compromissos')+'</span></h4><div class="cc-agenda-day-list">'+list.map(makeCard).join('')+'</div></section>'}).join('');
   };
-  const card=x=>'<article class="cc-agenda-event"><div class="cc-agenda-date"><b>'+esc(x.starts_at?new Date(x.starts_at).toLocaleDateString('pt-BR',{day:'2-digit'}):'—')+'</b><span>'+esc(x.starts_at?new Date(x.starts_at).toLocaleDateString('pt-BR',{month:'short'}):'sem data')+'</span></div><div class="cc-agenda-main"><b>'+esc(x.title||'Aula')+'</b><small>'+esc(fmt(x.starts_at))+' · '+esc(x.event_type||'Aula')+(x.ends_at?' – '+esc(new Date(x.ends_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})):'')+'</small>'+(x.notes?'<p>'+esc(x.notes)+'</p>':'')+(x.meeting_url?'<a href="'+esc(x.meeting_url)+'" target="_blank" rel="noopener noreferrer">Abrir link da aula ↗</a>':'')+'</div><span class="cc-agenda-status '+((String(x.event_type).includes('next')||x.status==='scheduled')?'is-planned':'is-done')+'">'+((String(x.event_type).includes('next')||x.status==='scheduled')?'Planejada':'Registrada')+'</span></article>';
+  const card=x=>'<article class="cc-agenda-event"><div class="cc-agenda-date"><b>'+esc(x.starts_at?new Date(x.starts_at).toLocaleDateString('pt-BR',{day:'2-digit'}):'—')+'</b><span>'+esc(x.starts_at?new Date(x.starts_at).toLocaleDateString('pt-BR',{month:'short'}):'sem data')+'</span></div><div class="cc-agenda-main"><b>'+esc(x.title||'Aula')+'</b><small>'+esc(fmt(x.starts_at))+' · '+esc(x.event_type||'Aula')+(x.ends_at?' – '+esc(new Date(x.ends_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})):'')+'</small>'+(x.notes?'<p>'+esc(x.notes)+'</p>':'')+(x.meeting_url?'<a href="'+esc(x.meeting_url)+'" target="_blank" rel="noopener noreferrer">Abrir link da aula ↗</a>':'')+'<div class="cc-agenda-card-actions"><button type="button" data-agenda-edit="'+esc(x.id)+'">✎ Editar</button><button type="button" data-agenda-delete="'+esc(x.id)+'">Remover</button></div></div><span class="cc-agenda-status '+((x.status==='completed')?'is-done':(x.status==='cancelled'?'is-cancelled':(x.status==='postponed'?'is-postponed':'is-planned'))) +'">'+(x.status==='completed'?'Realizada':(x.status==='cancelled'?'Cancelada':(x.status==='postponed'?'Adiada':'Agendada')))+'</span></article>';
   body.innerHTML='<div class="v41-kpis"><div class="v41-kpi"><span>📅 Eventos</span><b>'+events.length+'</b></div><div class="v41-kpi"><span>🟣 Próximos</span><b>'+up.length+'</b></div><div class="v41-kpi"><span>✓ Anteriores</span><b>'+past.length+'</b></div></div><section class="v41-panel cc-agenda-panel"><div class="cc-agenda-heading"><div><h3>📅 Agenda · '+esc(cls.name)+'</h3><p>Consulte horários, links e registre novas aulas.</p></div><div class="cc-agenda-actions"><button class="btn secondary" data-cc-refresh>↻ Atualizar</button><button class="btn primary" data-cc-create>＋ Agendar aula</button></div></div><div class="cc-agenda-filters"><button class="active" data-cc-filter="all">Todas ('+events.length+')</button><button data-cc-filter="up">Próximas ('+up.length+')</button><button data-cc-filter="past">Anteriores ('+past.length+')</button></div><div class="cc-agenda-events" data-cc-events>'+(events.length?renderGrouped(events,card):'<div class="v41-empty">Ainda não há aulas nesta agenda. Clique em “Agendar aula” para registrar a primeira.</div>')+'</div></section>';
   body.querySelector('[data-cc-refresh]').onclick=()=>window.ticClassAgendaRefreshV65(classId);
-  body.querySelector('[data-cc-create]').onclick=()=>window.openClassLessonForm?.(classId);
+  body.querySelector('[data-cc-create]').onclick=()=>window.ticAgendaOpenFormV66(classId);
   body.querySelectorAll('[data-cc-filter]').forEach(b=>b.onclick=()=>{body.querySelectorAll('[data-cc-filter]').forEach(x=>x.classList.toggle('active',x===b));const arr=b.dataset.ccFilter==='up'?up:b.dataset.ccFilter==='past'?past:events;body.querySelector('[data-cc-events]').innerHTML=renderGrouped(arr,card)});
+  body.querySelectorAll('[data-agenda-edit]').forEach(b=>b.onclick=()=>{const item=events.find(x=>String(x.id)===b.dataset.agendaEdit);if(item)window.ticAgendaOpenFormV66(classId,item)});
+  body.querySelectorAll('[data-agenda-delete]').forEach(b=>b.onclick=async()=>{const item=events.find(x=>String(x.id)===b.dataset.agendaDelete);if(!item||!confirm('Remover este compromisso da agenda? Esta ação não pode ser desfeita.'))return;try{const db=(typeof sb!=='undefined'?sb:window.sb),user=ticAgendaGetUser();if(!db||!user?.id)throw Error('Sessão ou conexão indisponível.');const {error}=await db.from('tic_events').delete().eq('id',item.id).eq('class_id',classId).eq('teacher_id',user.id);if(error)throw error;await window.ticClassAgendaRefreshV65(classId)}catch(err){alert('Não foi possível remover: '+(err?.message||'erro inesperado'))}});
+
  }catch(e){
   body.innerHTML='<section class="v41-panel cc-agenda-error"><h3>Não foi possível carregar a agenda</h3><p>'+esc(e?.message||'Erro inesperado')+'</p><button class="btn secondary" data-cc-retry>↻ Tentar novamente</button><button class="btn primary" data-cc-create>＋ Agendar aula</button></section>';
   body.querySelector('[data-cc-retry]').onclick=()=>window.ticClassAgendaRefreshV65(classId);
-  body.querySelector('[data-cc-create]').onclick=()=>window.openClassLessonForm?.(classId);
+  body.querySelector('[data-cc-create]').onclick=()=>window.ticAgendaOpenFormV66(classId);
  }
 };
 
