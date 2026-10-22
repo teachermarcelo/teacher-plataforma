@@ -3900,6 +3900,20 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
 .v41-class-card .v41-meta span{display:block;color:var(--muted);font-size:10px}
 .v41-class-card .v41-meta b{display:block;margin-top:3px;font-size:12px}
 .v41-class-actions{display:flex;gap:7px;flex-wrap:wrap}
+/* V68 — accessible secondary actions menu on Class Center cards */
+.v41-class-actions{align-items:center;justify-content:space-between;position:relative}
+.v41-class-actions>.btn.primary{flex:1;min-height:44px;white-space:nowrap}
+.v41-card-menu{position:relative;flex:0 0 auto}
+.v41-card-menu>summary{list-style:none;display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--line,#ded8ee);border-radius:11px;background:var(--surface,#fff);color:var(--text,#29213d);font-size:24px;font-weight:800;line-height:1;cursor:pointer;user-select:none}
+.v41-card-menu>summary::-webkit-details-marker{display:none}
+.v41-card-menu>summary:hover{background:#f4efff;border-color:#b8a5f7}
+.v41-card-menu>summary:focus-visible,.v41-card-menu [role="menuitem"]:focus-visible{outline:3px solid #f59e0b;outline-offset:3px}
+.v41-card-menu[open]>summary{background:#eee7ff;border-color:#8d6bea}
+.v41-card-menu-popover{position:absolute;z-index:80;right:0;top:calc(100% + 6px);min-width:190px;padding:6px;border:1px solid var(--line,#ded8ee);border-radius:12px;background:var(--surface,#fff);box-shadow:0 12px 32px rgba(25,18,48,.18);display:grid;gap:3px}
+.v41-card-menu-popover [role="menuitem"]{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;padding:10px 12px;border:0;border-radius:8px;background:transparent;color:var(--text,#29213d);font:600 13px inherit;text-align:left;cursor:pointer}
+.v41-card-menu-popover [role="menuitem"]:hover{background:#f4efff;color:#4d24a8}
+@media(max-width:640px){.v41-class-actions>.btn.primary{white-space:normal}.v41-card-menu-popover{min-width:180px}}
+
 .v41-toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 .v41-toolbar input{flex:1;min-width:240px}
 .v41-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}
@@ -4191,8 +4205,13 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.qu
           <div>${c.status==='active'?'<span class="badge green">Ativa</span>':'<span class="badge gray">'+escV41(c.status||'inactive')+'</span>'}</div>
           <div class="v41-class-actions">
             <button class="btn sm primary" onclick="openClassCenterV41('${c.id}')">🎯 Abrir Class Center</button>
-            <button class="btn sm secondary" onclick="openClassMembers('${c.id}')">👥 Alunos</button>
-            <button class="btn sm ghost" onclick="openClassFormById('${c.id}')">✏️ Editar</button>
+            <details class="v41-card-menu">
+              <summary aria-label="Mais ações para ${escV41(c.name||'esta turma')}" title="Mais ações" aria-haspopup="true">⋮</summary>
+              <div class="v41-card-menu-popover" role="menu" aria-label="Ações da turma ${escV41(c.name||'')}">
+                <button type="button" role="menuitem" onclick="this.closest('details').open=false;openClassMembers('${c.id}')">👥 Alunos</button>
+                <button type="button" role="menuitem" onclick="this.closest('details').open=false;openClassFormById('${c.id}')">✏️ Editar turma</button>
+              </div>
+            </details>
           </div>
         </article>`).join('')||'<div class="v41-empty">Nenhuma Class encontrada. Clique em “Nova Class” para criar a primeira.</div>'}
       </div>
@@ -9090,6 +9109,24 @@ observer.observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
 
+
+<script id="tic-class-card-actions-menu-v68">
+(function(){
+  if(window.__ticClassCardActionsMenuV68)return;
+  window.__ticClassCardActionsMenuV68=true;
+  document.addEventListener('click',function(event){
+    document.querySelectorAll('.v41-card-menu[open]').forEach(function(menu){
+      if(!menu.contains(event.target))menu.open=false;
+    });
+  });
+  document.addEventListener('keydown',function(event){
+    if(event.key==='Escape'){
+      const openMenu=document.querySelector('.v41-card-menu[open]');
+      if(openMenu){openMenu.open=false;const trigger=openMenu.querySelector('summary');if(trigger)trigger.focus();}
+    }
+  });
+})();
+</script>
 
 </body>
 </html>
