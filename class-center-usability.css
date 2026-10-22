@@ -1,0 +1,26 @@
+/* Class Center usability improvements — scoped; no global layout overrides */
+.class-center-shell{--cc-accent:#6d3be8;--cc-accent-2:#9333ea;--cc-ink:#192044;--cc-muted:#7480a3}
+.class-center-shell .class-center-top{position:sticky;top:0;z-index:20;background:var(--surface,#fff);border:1px solid var(--border,#e6e8f3);border-radius:16px;box-shadow:0 8px 24px #25205a0a;padding:16px;margin-bottom:14px}
+.class-center-shell .class-center-title{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.class-center-shell .class-center-title h2{font-size:clamp(21px,2vw,29px);letter-spacing:-.6px;margin:8px 0 4px;color:var(--cc-ink)}
+.class-center-shell .class-center-actions{display:flex;gap:8px;flex-wrap:wrap}
+.class-center-shell .class-center-actions .btn{min-height:38px;border-radius:10px;font-weight:700}
+.class-center-shell .cc-quickbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:15px 0 12px;padding:12px;border-radius:13px;background:linear-gradient(110deg,#f5f0ff,#faf8ff 55%,#f0f5ff);border:1px solid #e8ddff}
+.class-center-shell .cc-quickbar-label{font-size:10px;font-weight:900;letter-spacing:.8px;color:#7564a7;margin-right:4px}
+.class-center-shell .cc-quick-link{border:1px solid #e0d6ff;background:#fff;color:#4f358c;border-radius:9px;padding:8px 11px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;transition:transform .15s,box-shadow .15s}
+.class-center-shell .cc-quick-link:hover{transform:translateY(-1px);box-shadow:0 5px 13px #5d35c51c;border-color:#bba8ff}
+.class-center-shell .cc-quick-link.cc-primary{background:linear-gradient(105deg,#6238e8,#8d38ef);border-color:transparent;color:#fff}
+.class-center-shell .cc-tab-tools{display:flex;gap:8px;align-items:center;margin:10px 0 0}
+.class-center-shell .cc-tab-search{min-width:150px;max-width:270px;width:100%;height:36px;padding:0 11px;border:1px solid #e1e4f3;border-radius:10px;background:var(--surface,#fff);color:var(--text,#202744);font-size:11px;outline-color:#8c6cf4}
+.class-center-shell .class-center-tabs{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin;padding:3px 1px 8px;scroll-behavior:smooth}
+.class-center-shell .class-center-tabs button{flex:0 0 auto;min-height:35px;border:1px solid transparent;border-radius:10px;padding:8px 11px;font-size:11px;font-weight:750;white-space:nowrap;transition:background .15s,color .15s,border-color .15s}
+.class-center-shell .class-center-tabs button:not(.active){background:#f6f5fc;color:#505b83}
+.class-center-shell .class-center-tabs button:not(.active):hover{background:#eee9ff;color:#5533bb}
+.class-center-shell .class-center-tabs button.active{background:linear-gradient(105deg,#6039e8,#7e42eb);color:#fff;box-shadow:0 5px 12px #6c42df2b}
+.class-center-shell .class-center-body{min-height:220px;position:relative;scroll-margin-top:165px}
+.class-center-shell .cc-empty-load{margin:14px 0;padding:24px;border:1px dashed #d8d4eb;border-radius:13px;text-align:center;color:#737fa2;background:#fff;font-size:12px}
+.class-center-shell .cc-empty-load button{display:block;margin:12px auto 0}
+.class-center-shell .class-center-float{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;padding:10px 0}
+@media(min-width:900px){.class-center-shell .class-center-tabs{mask-image:linear-gradient(to right,#000 0%,#000 96%,transparent 100%)}}
+@media(max-width:760px){.class-center-shell .class-center-top{padding:12px;top:0}.class-center-shell .class-center-title{align-items:flex-start}.class-center-shell .class-center-actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.class-center-shell .class-center-actions .btn{width:100%;padding:8px 6px;font-size:11px}.class-center-shell .cc-quickbar{gap:6px;padding:9px}.class-center-shell .cc-quickbar-label{width:100%}.class-center-shell .cc-quick-link{flex:1 1 calc(50% - 6px);text-align:center}.class-center-shell .cc-tab-tools{width:100%}.class-center-shell .cc-tab-search{max-width:none}.class-center-shell .class-center-tabs button{padding:8px 10px}.class-center-shell .class-center-float{justify-content:stretch}.class-center-shell .class-center-float .btn{flex:1}}
+@media(prefers-reduced-motion:reduce){.class-center-shell *{scroll-behavior:auto!important;transition:none!important}}
