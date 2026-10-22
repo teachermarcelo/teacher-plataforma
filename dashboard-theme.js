@@ -804,5 +804,108 @@ function addClassCenterPremiumPolish(){if(document.getElementById('fiClassCenter
 function addTeacherMaterialsWorkspaceV54(){if(document.getElementById('fiTeacherMaterialsWorkspaceV54'))return;const s=document.createElement('style');s.id='fiTeacherMaterialsWorkspaceV54';s.textContent="\n.fi-teacher-material-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 10px;padding:7px;background:#f0edff;border:1px solid #e2dafa;border-radius:14px}\n.fi-teacher-material-tabs button{border:1px solid transparent!important;border-radius:10px!important;padding:11px 15px!important;min-height:42px;font-weight:800!important;color:#49318b!important;background:transparent!important;cursor:pointer}\n.fi-teacher-material-tabs button.active{background:linear-gradient(100deg,#6d3fe8,#8b5cf6)!important;color:#fff!important;box-shadow:0 5px 14px #6d3fe82e}\n.fi-teacher-material-tip{padding:12px 14px;margin-bottom:14px;border:1px solid #dce3ef;border-radius:12px;background:#fff;color:#52617a;font-size:13px;line-height:1.55}\nbody.fi-premium:not(.fi-light) .fi-teacher-material-tabs{background:#151d2e;border-color:#34415c}\nbody.fi-premium:not(.fi-light) .fi-teacher-material-tabs button{color:#dce5f7!important}\nbody.fi-premium:not(.fi-light) .fi-teacher-material-tabs button.active{background:linear-gradient(100deg,#8b5cf6,#a855f7)!important;color:#fff!important}\nbody.fi-premium:not(.fi-light) .fi-teacher-material-tip{background:#151d2e;border-color:#34415c;color:#c3cee0}\n.fi-media-library .fi-media-hero{gap:18px;align-items:center}\n.fi-media-library .fi-media-hero h2{letter-spacing:-.035em}\n.fi-media-library .fi-media-filterbar{align-items:center}\n.fi-media-library .fi-media-filterbar input,.fi-media-library .fi-media-filterbar select{min-height:42px;border-radius:11px}\n.fi-media-library .fi-media-card{overflow:hidden;border-radius:16px;box-shadow:0 8px 24px rgba(24,30,52,.07)}\n.fi-media-library .fi-media-cardbody{gap:10px}\n.fi-media-library .fi-media-actions{display:flex;gap:7px;flex-wrap:wrap}\n.fi-media-library .fi-media-actions .btn{min-height:36px}\nbody.fi-premium:not(.fi-light) .fi-media-library .fi-media-card{background:#151d2e;border-color:#34415c;color:#f4f7ff}\nbody.fi-premium:not(.fi-light) .fi-media-library .fi-media-card h3{color:#fff}\nbody.fi-premium:not(.fi-light) .fi-media-library .fi-media-card p,body.fi-premium:not(.fi-light) .fi-media-library .fi-media-card small{color:#c0cce0}\nbody.fi-premium:not(.fi-light) .fi-media-library .fi-media-cover{background:linear-gradient(145deg,#251943,#332354)}\n@media(max-width:700px){.fi-teacher-material-tabs{display:grid;grid-template-columns:1fr}.fi-teacher-material-tabs button{text-align:left}.fi-media-library .fi-media-hero{align-items:flex-start;flex-direction:column}.fi-media-library .fi-media-hero .btn{width:100%}}\n";document.head.appendChild(s);}
 addTeacherMaterialsWorkspaceV54();
 addClassCenterPremiumPolish();
+
+function addAccessibleContrastV65(){
+ if(document.getElementById('fiContrastAccessibilityV65'))return;
+ const st=document.createElement('style');st.id='fiContrastAccessibilityV65';
+ st.textContent=String.raw`
+ /* Accessible contrast pass: shared controls, cards, labels, tables and status colors */
+ body.fi-premium:not(.fi-light){--fi-bg:#0b1220;--fi-panel:#111c2d;--fi-panel2:#17253a;--fi-line:#34445c;--fi-text:#f8fafc;--fi-muted:#c0ccdc}
+ body.fi-premium:not(.fi-light) #content label,
+ body.fi-premium:not(.fi-light) #content .field label,
+ body.fi-premium:not(.fi-light) #content .mini span,
+ body.fi-premium:not(.fi-light) #content .section-head,
+ body.fi-premium:not(.fi-light) #content .section-head small{color:#d8e2f0!important}
+ body.fi-premium:not(.fi-light) #content input,
+ body.fi-premium:not(.fi-light) #content select,
+ body.fi-premium:not(.fi-light) #content textarea,
+ body.fi-premium:not(.fi-light) .modal-card input,
+ body.fi-premium:not(.fi-light) .modal-card select,
+ body.fi-premium:not(.fi-light) .modal-card textarea{background:#0b1728!important;color:#f8fafc!important;border-color:#465873!important}
+ body.fi-premium:not(.fi-light) #content input::placeholder,
+ body.fi-premium:not(.fi-light) #content textarea::placeholder{color:#aabbd0!important;opacity:1}
+ body.fi-premium:not(.fi-light) #content .badge,
+ body.fi-premium:not(.fi-light) #content .badge.gray{background:#2a3a52!important;color:#f4f7fb!important}
+ body.fi-premium:not(.fi-light) #content .btn.secondary,
+ body.fi-premium:not(.fi-light) #content .btn.ghost{background:#1c2b40!important;color:#f3f6fc!important;border-color:#465873!important}
+ body.fi-premium:not(.fi-light) #content .btn.danger{background:#4a1e2b!important;color:#ffe5e8!important;border-color:#9e3c52!important}
+ body.fi-premium:not(.fi-light) #content .table th{background:#17263a!important;color:#e6eef9!important}
+ body.fi-premium:not(.fi-light) #content .table td{color:#edf3fb!important}
+ body.fi-premium.fi-light{--fi-bg:#f4f6fb;--fi-panel:#fff;--fi-panel2:#f8faff;--fi-line:#d4ddea;--fi-text:#172033;--fi-muted:#52627a}
+ body.fi-premium.fi-light #content .card,
+ body.fi-premium.fi-light #content .stat,
+ body.fi-premium.fi-light #content .quick,
+ body.fi-premium.fi-light #content .table-wrap,
+ body.fi-premium.fi-light #content .empty,
+ body.fi-premium.fi-light #content .attention{background:#fff!important;color:#172033!important;border-color:#d4ddea!important}
+ body.fi-premium.fi-light #content .card h1,
+ body.fi-premium.fi-light #content .card h2,
+ body.fi-premium.fi-light #content .card h3,
+ body.fi-premium.fi-light #content .card b,
+ body.fi-premium.fi-light #content .card strong,
+ body.fi-premium.fi-light #content .section-head,
+ body.fi-premium.fi-light #content label,
+ body.fi-premium.fi-light #content .mini span{color:#172033!important}
+ body.fi-premium.fi-light #content .card p,
+ body.fi-premium.fi-light #content .card small,
+ body.fi-premium.fi-light #content .row small,
+ body.fi-premium.fi-light #content .stat-note,
+ body.fi-premium.fi-light #content .page-head p{color:#52627a!important}
+ body.fi-premium.fi-light #content input,
+ body.fi-premium.fi-light #content select,
+ body.fi-premium.fi-light #content textarea,
+ body.fi-premium.fi-light .modal-card input,
+ body.fi-premium.fi-light .modal-card select,
+ body.fi-premium.fi-light .modal-card textarea{background:#fff!important;color:#172033!important;border-color:#b9c7d9!important}
+ body.fi-premium.fi-light #content input::placeholder,
+ body.fi-premium.fi-light #content textarea::placeholder{color:#64748b!important;opacity:1}
+ body.fi-premium.fi-light #content .badge.gray{background:#e8edf5!important;color:#334155!important}
+ body.fi-premium.fi-light #content .btn.secondary,
+ body.fi-premium.fi-light #content .btn.ghost{background:#f1edff!important;color:#4c2e91!important;border-color:#d4c7fb!important}
+ body.fi-premium.fi-light #content .btn.danger{background:#fff0f1!important;color:#a61b35!important;border-color:#efb7bf!important}
+ body.fi-premium.fi-light #content .table th{background:#eef2f8!important;color:#334155!important}
+ body.fi-premium.fi-light #content .table td{color:#243247!important}
+ /* The class overview keeps semantic colors readable in either theme. */
+ body.fi-premium:not(.fi-light) .tic-class-overview-card{background:#111c2d!important;border-color:#34445c!important;color:#f8fafc!important}
+ body.fi-premium:not(.fi-light) .tic-class-name,
+ body.fi-premium:not(.fi-light) .tic-class-overview-card .section-head,
+ body.fi-premium:not(.fi-light) .tic-class-overview-card .section-head h2{color:#f8fafc!important}
+ body.fi-premium:not(.fi-light) .tic-class-schedule{color:#c0ccdc!important}
+ body.fi-premium:not(.fi-light) .tic-kpi-taught{background:#12372d!important;border-color:#237b5a!important;color:#baf7d5!important}
+ body.fi-premium:not(.fi-light) .tic-kpi-planned{background:#172f50!important;border-color:#3b6cb0!important;color:#d7e8ff!important}
+ body.fi-premium:not(.fi-light) .tic-next-active{background:#3a2b12!important;border-color:#9a6b20!important}
+ body.fi-premium:not(.fi-light) .tic-next-empty{background:#202a3a!important;border-color:#3e4b61!important}
+ body.fi-premium:not(.fi-light) .tic-next-content b{color:#fff!important}
+ body.fi-premium:not(.fi-light) .tic-next-content small{color:#d0d9e7!important}
+ body.fi-premium:not(.fi-light) .tic-next-content>span{color:#ffd479!important}
+ body.fi-premium:not(.fi-light) .tic-class-info-grid .mini{background:#17253a!important;border-color:#34445c!important}
+ body.fi-premium:not(.fi-light) .tic-class-info-grid .mini span,
+ body.fi-premium:not(.fi-light) .tic-class-info-grid .mini b{color:#e6edf7!important}
+ body.fi-premium.fi-light .tic-class-overview-card{background:#fff!important;border-color:#d4ddea!important;color:#172033!important}
+ body.fi-premium.fi-light .tic-class-name,
+ body.fi-premium.fi-light .tic-class-overview-card .section-head h2{color:#172033!important}
+ body.fi-premium.fi-light .tic-class-schedule{color:#52627a!important}
+ body.fi-premium.fi-light .tic-kpi-taught{background:#e6f8ed!important;border-color:#9bdcb6!important;color:#14532d!important}
+ body.fi-premium.fi-light .tic-kpi-planned{background:#eaf2ff!important;border-color:#b4cefa!important;color:#1e40af!important}
+ body.fi-premium.fi-light .tic-next-active{background:#fff5dc!important;border-color:#e7c56c!important}
+ body.fi-premium.fi-light .tic-next-empty{background:#f1f4f9!important;border-color:#d4ddea!important}
+ body.fi-premium.fi-light .tic-next-content b{color:#172033!important}
+ body.fi-premium.fi-light .tic-next-content small{color:#52627a!important}
+ body.fi-premium.fi-light .tic-next-content>span{color:#855400!important}
+ body.fi-premium.fi-light .tic-class-info-grid .mini{background:#f5f8fc!important;border-color:#d4ddea!important}
+ body.fi-premium.fi-light .tic-class-info-grid .mini span,
+ body.fi-premium.fi-light .tic-class-info-grid .mini b{color:#334155!important}
+ body.fi-premium.fi-light .tic-overview-eyebrow{color:#5b36b8!important}
+ body.fi-premium:not(.fi-light) .tic-class-overview-head{background:linear-gradient(115deg,#17172e,#202a43)!important;border-color:#3d4560!important}
+ body.fi-premium:not(.fi-light) .tic-class-overview-head h2{color:#f8fafc!important}
+ body.fi-premium:not(.fi-light) .tic-class-overview-head p{color:#c5d0df!important}
+ body.fi-premium:not(.fi-light) .tic-overview-total{background:#202a43!important;border-color:#51427d!important;color:#e8ddff!important}
+ body.fi-premium.fi-light .tic-class-overview-head{background:linear-gradient(115deg,#f0eaff,#fff)!important;border-color:#d8cdf6!important}
+ @media(prefers-reduced-motion:reduce){body.fi-premium *{transition:none!important;animation:none!important}}
+ `;
+ document.head.appendChild(st);
+}
+addAccessibleContrastV65();
+addAccessibleContrastV65();
 window.fiPremiumRefresh=init;
 })();
