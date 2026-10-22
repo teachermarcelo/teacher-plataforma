@@ -94,3 +94,39 @@
 .cc-agenda-day-count{font-size:10px!important;font-weight:750!important;color:#786a9c!important;background:#fff;padding:4px 8px;border-radius:999px;border:1px solid #e8e0fa;white-space:nowrap}
 .cc-agenda-day-list{display:grid;gap:8px;min-width:0}
 @media(prefers-color-scheme:dark){body:not(.fi-light) .cc-agenda-day-heading{background:#211b39;color:#f0eaff;border-color:#9878ff}body:not(.fi-light) .cc-agenda-day-count{background:#302849;color:#ded2ff;border-color:#4a3a70}}
+
+
+/* Agenda productivity controls + scheduling dialog. Scoped to agenda UI only. */
+.cc-agenda-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0}
+.cc-agenda-toolbar .cc-agenda-filters{margin:0!important;flex:0 1 auto}
+.cc-agenda-search{display:flex;align-items:center;gap:8px;min-width:220px;max-width:360px;flex:1 1 240px;height:38px;padding:0 11px;border:1px solid #e3def1;border-radius:10px;background:var(--surface,#fff);color:#766a92}
+.cc-agenda-search span{font-size:18px;line-height:1}
+.cc-agenda-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--text,#202744);font-size:12px}
+.cc-agenda-card-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px}
+.cc-agenda-card-actions button{appearance:none;border:1px solid #e2dafa;background:#faf8ff;color:#5635a0;border-radius:8px;padding:6px 9px;font-size:10px;font-weight:800;cursor:pointer}
+.cc-agenda-card-actions button:hover{background:#eee8ff;border-color:#c6b4ff}
+.cc-agenda-card-actions button[data-agenda-delete]{color:#a33c58;background:#fff8fa;border-color:#f0d7df}
+.cc-agenda-status.is-cancelled{background:#fff0f2!important;color:#b4233f!important;border-color:#ffd4dd!important}
+.cc-agenda-status.is-postponed{background:#fff5e8!important;color:#975a09!important;border-color:#f7dfb9!important}
+.tic-agenda-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(18,14,36,.62);backdrop-filter:blur(5px);overflow:auto}
+.tic-agenda-modal{width:min(720px,100%);max-height:min(92vh,900px);overflow:auto;border:1px solid #e6def8;border-radius:20px;background:#fff;color:#24213b;box-shadow:0 24px 90px rgba(10,6,30,.35)}
+.tic-agenda-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:22px 24px 18px;background:linear-gradient(125deg,#f6f1ff,#fff 65%,#f1f5ff);border-bottom:1px solid #ece6f8}
+.tic-agenda-eyebrow{font-size:10px;letter-spacing:1.2px;font-weight:900;color:#7750d9}
+.tic-agenda-modal-head h3{margin:7px 0 5px;font-size:22px;line-height:1.25;font-weight:900;letter-spacing:-.5px;color:#251b49}
+.tic-agenda-modal-head p{margin:0;color:#79728f;font-size:12px;line-height:1.5}
+.tic-agenda-close{flex:none;width:34px;height:34px;border:1px solid #e7dff6;border-radius:10px;background:#fff;color:#625779;font-size:24px;line-height:1;cursor:pointer}
+.tic-agenda-form{padding:20px 24px 22px}
+.tic-agenda-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.tic-agenda-field{display:grid;gap:7px;min-width:0}
+.tic-agenda-field-wide{grid-column:1/-1}
+.tic-agenda-field>span{font-size:11px;font-weight:850;color:#51466d}
+.tic-agenda-field input,.tic-agenda-field select,.tic-agenda-field textarea{width:100%;min-width:0;box-sizing:border-box;border:1px solid #ded8ed;border-radius:10px;background:#fff;color:#29243e;padding:10px 11px;font:inherit;font-size:12px;outline:none;transition:border-color .15s,box-shadow .15s}
+.tic-agenda-field input,.tic-agenda-field select{height:41px}
+.tic-agenda-field textarea{resize:vertical;min-height:82px;line-height:1.5}
+.tic-agenda-field input:focus,.tic-agenda-field select:focus,.tic-agenda-field textarea:focus{border-color:#8b6af0;box-shadow:0 0 0 3px rgba(123,87,230,.13)}
+.tic-agenda-form-error{margin-top:14px;padding:10px 12px;border:1px solid #f1c5d1;border-radius:10px;background:#fff4f6;color:#a32243;font-size:12px;line-height:1.5}
+.tic-agenda-form-footer{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid #eee9f6}
+.tic-agenda-form-footer .btn{min-height:40px;border-radius:10px;padding:10px 15px;font-size:12px;font-weight:850}
+.tic-agenda-form-footer button:disabled{opacity:.65;cursor:wait}
+@media(prefers-color-scheme:dark){body:not(.fi-light) .cc-agenda-search{background:#182438;border-color:#34445c;color:#d5c9f8}body:not(.fi-light) .cc-agenda-search input{color:#f4f2ff}body:not(.fi-light) .cc-agenda-card-actions button{background:#251d3d;border-color:#473667;color:#e3d8ff}body:not(.fi-light) .tic-agenda-modal{background:#151e30;color:#f4f3fb;border-color:#3a4560}body:not(.fi-light) .tic-agenda-modal-head{background:linear-gradient(125deg,#211b39,#182438);border-color:#34445c}body:not(.fi-light) .tic-agenda-modal-head h3{color:#f8f6ff}body:not(.fi-light) .tic-agenda-modal-head p,body:not(.fi-light) .tic-agenda-field>span{color:#c8c4dc}body:not(.fi-light) .tic-agenda-field input,body:not(.fi-light) .tic-agenda-field select,body:not(.fi-light) .tic-agenda-field textarea{background:#101a2a;color:#f4f3fb;border-color:#3b4963}body:not(.fi-light) .tic-agenda-close{background:#1b263b;color:#f4f3fb;border-color:#3b4963}body:not(.fi-light) .tic-agenda-form-footer{border-color:#34445c}}
+@media(max-width:620px){.cc-agenda-toolbar{align-items:stretch}.cc-agenda-search{min-width:0;max-width:none;flex-basis:100%}.tic-agenda-overlay{align-items:flex-start;padding:8px}.tic-agenda-modal{max-height:calc(100vh - 16px);border-radius:15px}.tic-agenda-modal-head{padding:17px 16px 14px}.tic-agenda-modal-head h3{font-size:19px}.tic-agenda-form{padding:16px}.tic-agenda-form-grid{grid-template-columns:minmax(0,1fr);gap:12px}.tic-agenda-field-wide{grid-column:auto}.tic-agenda-form-footer{display:grid;grid-template-columns:1fr 1fr}.tic-agenda-form-footer .btn{width:100%;padding:9px 7px}.cc-agenda-card-actions button{font-size:10px}}
