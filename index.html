@@ -8904,24 +8904,28 @@ async function render63(classId){
   courses=rr[0].data||[];modules=rr[1].data||[];lessons=rr[2].data||[];
  }
  function tracked(studentId,lessonId){return eventRows.find(function(e){var m=parse63(e.notes);return m&&m.student_id===studentId&&m.lesson_id===lessonId})}
- var cards=0,taught=0;
+ var cards=0,taught=0,planned=0,review=0;
+ var uniqueCurriculum=new Set(lessons.filter(function(l){return l.active!==false&&courseIds.indexOf(l.course_id)>=0}).map(function(l){return l.id}));
  var blocks=students.map(function(st){
   var my=enroll.filter(function(e){return e.student_id===st.id});
   var courseHtml=my.map(function(en){
    var c=courses.find(function(x){return x.id===en.course_id});if(!c)return '';
    var ms=modules.filter(function(m){return m.course_id===c.id});
    var ls=lessons.filter(function(l){return l.active!==false&&(l.course_id===c.id||(l.module_id&&ms.some(function(m){return m.id===l.module_id})))}).sort(function(a,b){return (a.position||0)-(b.position||0)});
+   var courseTaught=0,coursePlanned=0,courseReview=0;
    var lessonHtml=ls.map(function(l){
-    cards++;var ev=tracked(st.id,l.id),meta=ev?parse63(ev.notes):{},status=meta.status||'planned';if(status==='taught')taught++;
+    cards++;var ev=tracked(st.id,l.id),meta=ev?parse63(ev.notes):{},status=meta.status||'planned';if(status==='taught'){taught++;courseTaught++}else if(status==='review'){review++;courseReview++}else{planned++;coursePlanned++;}
     var savedDate=ev?date63(ev.starts_at||meta.taught_at):'';
     return '<article class="tic63-lesson"><div class="tic63-lesson-title"><b>'+esc63(l.title)+'</b><small>'+esc63(l.level||c.level||'')+' · '+esc63(l.skill||'lesson')+'</small></div><div class="tic63-controls"><label>Status<select id="tic63-status-'+st.id+'-'+l.id+'"><option value="planned" '+(status==='planned'?'selected':'')+'>Planejada</option><option value="taught" '+(status==='taught'?'selected':'')+'>Ministrada</option><option value="review" '+(status==='review'?'selected':'')+'>Revisão</option></select></label><label>Data da aula<input type="date" id="tic63-date-'+st.id+'-'+l.id+'" value="'+esc63(savedDate)+'" required></label><button class="btn primary" onclick="ticSaveLessonTrackingV63(\''+classId+'\',\''+st.id+'\',\''+l.id+'\')">Salvar</button></div>'+(ev&&status==='taught'?'<small class="tic63-saved">✓ Ministrada em '+esc63(savedDate)+'</small>':'')+'</article>';
    }).join('');
-   return '<section class="tic63-course"><header><div><span class="tic63-pill">'+esc63(c.level||st.current_level||'—')+'</span><h4>'+esc63(c.title)+'</h4><small>'+ls.length+' lesson(s) · Matrícula ativa</small></div></header>'+(ls.length?'<div class="tic63-lessons">'+lessonHtml+'</div>':'<div class="v41-empty">Este curso ainda não tem lessons ativas vinculadas.</div>')+'</section>';
+   var pct=ls.length?Math.round(courseTaught/ls.length*100):0;
+   return '<section class="tic63-course"><header><div><span class="tic63-pill">'+esc63(c.level||st.current_level||'—')+'</span><h4>'+esc63(c.title)+'</h4><small>'+ls.length+' aula(s) no currículo · '+courseTaught+' ministrada(s)</small></div><div class="tic63-course-progress"><strong>'+pct+'%</strong><span>concluído</span></div></header><div class="tic63-progress-track" role="progressbar" aria-label="Progresso do curso '+esc63(c.title)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"><span style="width:'+pct+'%"></span></div><div class="tic63-progress-meta"><span>🟢 '+courseTaught+' ministradas</span><span>🔵 '+coursePlanned+' planejadas</span><span>🟡 '+courseReview+' em revisão</span><span>'+ls.length+' total</span></div>'+(ls.length?'<div class="tic63-lessons">'+lessonHtml+'</div>':'<div class="v41-empty">Este curso ainda não tem lessons ativas vinculadas.</div>')+'</section>';
   }).join('');
   return '<section class="tic63-student"><header class="tic63-student-head"><div class="tic63-avatar">'+esc63((st.display_name||'?').trim().slice(0,1).toUpperCase())+'</div><div><h3>'+esc63(st.display_name||'Aluno')+'</h3><small>'+esc63(st.current_level||'Nível não definido')+' · '+my.length+' curso(s) matriculado(s)</small></div></header>'+(courseHtml||'<div class="v41-empty">Este aluno não possui cursos matriculados. Matricule-o em Courses para exibir seu currículo aqui.</div>')+'</section>';
  }).join('');
+ var overallPct=cards?Math.round(taught/cards*100):0;
  var oldEvents=(s.evs||[]).filter(function(e){return !parse63(e.notes)});
- body.innerHTML='<div class="v41-kpis"><div class="v41-kpi"><span>👥 Alunos</span><b>'+students.length+'</b></div><div class="v41-kpi"><span>🎓 Matrículas ativas</span><b>'+enroll.length+'</b></div><div class="v41-kpi"><span>📚 Lessons no currículo</span><b>'+cards+'</b></div><div class="v41-kpi"><span>✅ Ministradas</span><b>'+taught+'</b></div></div><div class="v41-panel"><h3>📚 Lessons e cursos matriculados</h3><p>O status e a data de cada aula são registrados por aluno, separadamente do conteúdo original e das tarefas.</p><div class="tic63-legend"><span>⚪ Planejada</span><span>🟢 Ministrada</span><span>🟡 Revisão</span></div>'+(blocks||'<div class="v41-empty">Nenhum aluno nesta Class.</div>')+'</div><div class="v41-panel"><h3>🗓️ Aulas e eventos registrados</h3><p>Histórico existente da turma, separado do acompanhamento individual das lessons.</p><div class="v41-list">'+oldEvents.map(function(e){return '<div class="v41-list-row"><div><b>'+esc63(e.title)+'</b><small>'+esc63(e.event_type||'aula')+' · '+esc63(e.notes||'')+'</small></div><small>'+esc63(date63(e.starts_at||e.created_at))+'</small></div>'}).join('')+'</div></div>';
+ body.innerHTML='<div class="v41-kpis"><div class="v41-kpi"><span>👥 Alunos</span><b>'+students.length+'</b></div><div class="v41-kpi"><span>🎓 Matrículas ativas</span><b>'+enroll.length+'</b></div><div class="v41-kpi"><span>📚 Lessons únicas no currículo</span><b>'+uniqueCurriculum.size+'</b></div><div class="v41-kpi"><span>✅ Ministradas</span><b>'+taught+'</b></div></div><div class="v41-panel"><h3>📈 Acompanhamento e progresso dos cursos</h3><p>O total de lessons é calculado a partir do currículo ativo. O progresso é individual por aluno e curso, usando o status de cada lesson registrado nesta Class.</p><div class="tic63-overall"><div><b>Progresso geral da Class</b><span>'+taught+' de '+cards+' aulas/aluno ministradas · '+overallPct+'%</span></div><div class="tic63-progress-track" role="progressbar" aria-label="Progresso geral da Class" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+overallPct+'"><span style="width:'+overallPct+'%"></span></div></div><div class="tic63-legend"><span>⚪ Planejada</span><span>🟢 Ministrada</span><span>🟡 Revisão</span></div>'+(blocks||'<div class="v41-empty">Nenhum aluno nesta Class.</div>')+'</div><div class="v41-panel"><h3>🗓️ Aulas e eventos registrados</h3><p>Histórico existente da turma, separado do acompanhamento individual das lessons.</p><div class="v41-list">'+oldEvents.map(function(e){return '<div class="v41-list-row"><div><b>'+esc63(e.title)+'</b><small>'+esc63(e.event_type||'aula')+' · '+esc63(e.notes||'')+'</small></div><small>'+esc63(date63(e.starts_at||e.created_at))+'</small></div>'}).join('')+'</div></div>';
 }
 window.ticSaveLessonTrackingV63=async function(classId,studentId,lessonId){
  var s=window.__ticClassCenterV41||{};
@@ -8949,6 +8953,31 @@ if(typeof previous==='function')window.classCenterTabV41=function(classId,tab){i
 </style>
 
 
+<style id="tic-course-progress-tracking-v70">
+.tic63-course{border:1px solid #e2d9f5;border-radius:15px;padding:13px;margin-top:12px;background:#fff}
+.tic63-course>header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.tic63-course>header h4{margin:5px 0;font-size:15px;color:#182238}
+.tic63-course>header small{display:block;color:#526078;font-size:11px}
+.tic63-course-progress{display:flex;align-items:baseline;gap:5px;color:#5934c7}
+.tic63-course-progress strong{font-size:23px;font-weight:900}
+.tic63-course-progress span{font-size:11px;font-weight:700}
+.tic63-progress-track{height:10px;overflow:hidden;border-radius:99px;background:#ece8f5;margin-top:11px}
+.tic63-progress-track>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#6941d9,#22a66f);transition:width .2s ease}
+.tic63-progress-meta{display:flex;gap:8px 14px;flex-wrap:wrap;margin-top:8px;color:#526078;font-size:10px;font-weight:650}
+.tic63-overall{border:1px solid #ded4f8;background:#faf8ff;border-radius:13px;padding:13px;margin:12px 0}
+.tic63-overall>div:first-child{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#34205e;font-size:12px}
+.tic63-overall>div:first-child span{color:#5f5573}
+.tic63-overall .tic63-progress-track{height:12px}
+body.fi-premium:not(.fi-light) .tic63-course{background:#151f31;border-color:#34445c}
+body.fi-premium:not(.fi-light) .tic63-course>header h4{color:#f8fafc}
+body.fi-premium:not(.fi-light) .tic63-course>header small,body.fi-premium:not(.fi-light) .tic63-progress-meta{color:#c4cede}
+body.fi-premium:not(.fi-light) .tic63-progress-track{background:#303a50}
+body.fi-premium:not(.fi-light) .tic63-overall{background:#1c2036;border-color:#41435f}
+body.fi-premium:not(.fi-light) .tic63-overall>div:first-child{color:#f8fafc}
+body.fi-premium:not(.fi-light) .tic63-overall>div:first-child span{color:#c4cede}
+@media(max-width:600px){.tic63-course{padding:10px}.tic63-progress-meta{gap:7px 10px}.tic63-course-progress strong{font-size:20px}}
+@media(prefers-reduced-motion:reduce){.tic63-progress-track>span{transition:none}}
+</style>
 <style id="tic-class-agenda-v65">
 .tic-class-agenda{display:grid;gap:14px}
 .tic-agenda-hero{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:18px;border-radius:16px;border:1px solid #ddd2fa;background:linear-gradient(120deg,#f3edff,#fff)}
