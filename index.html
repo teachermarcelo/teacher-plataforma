@@ -2895,7 +2895,7 @@ async function sendStudentMessageV18(e){
 
   function renderMaterialCards(items,folderMap){
     if(!items.length)return '<div class="material-empty">📂 Nenhum material encontrado com esses filtros.<br><button class="btn primary" style="margin-top:12px" onclick="openMaterialForm()">+ Criar material</button></div>';
-    return `<div class="materials-grid">${items.map(m=>{const folder=folderMap.get(m.folder_id);const folderName=folder?.name||m.folder||'Sem pasta';const folderColor=folder?.color||m.color||'#6d4aff';const url=m.external_url||m.file_url||((m.resource_items||[])[0]?.url);return `<article class="material-card" data-material-level="${escm(m.level||'')}" data-material-type="${escm(m.material_type||'')}"><div class="material-cover" style="border-top:5px solid ${escm(folderColor)}">${m.cover_image_url?`<img src="${escm(m.cover_image_url)}" alt="">`:`<span class="material-icon">${materialIcon(m.material_type)}</span>`}</div><div class="material-card-body"><div class="material-meta"><span class="badge blue">${escm(m.material_type||'material')}</span>${m.level?`<span class="badge gray">${escm(m.level)}</span>`:''}</div><div class="material-card-title">${escm(m.title)}</div><div class="material-card-desc">${escm(m.description||'Sem descrição')}</div><div><span class="material-folder-dot" style="background:${escm(folderColor)}"></span><small>${escm(folderName)}</small></div><div class="material-created">Criado em ${safeDate(m.created_at)}${m.updated_at&&m.updated_at!==m.created_at?' · atualizado '+safeDate(m.updated_at):''}</div><div class="material-actions">${url?`<a class="btn secondary" href="${escm(url)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}<button class="btn secondary" onclick='openMaterialForm(${JSON.stringify(m)})'>✏️ Editar</button><button class="btn secondary" onclick='openMaterialAssignV52(${JSON.stringify(m)})'>📤 Atribuir</button><button class="btn danger" onclick="deleteMaterialV38('${escm(m.id)}')">🗑️ Remover</button></div></div></article>`}).join('')}</div>`;
+    return `<div class="materials-grid">${items.map(m=>{const folder=folderMap.get(m.folder_id);const folderName=folder?.name||m.folder||'Sem pasta';const folderColor=folder?.color||m.color||'#6d4aff';const url=m.external_url||m.file_url||((m.resource_items||[])[0]?.url);return `<article class="material-card" data-material-level="${escm(m.level||'')}" data-material-type="${escm(m.material_type||'')}"><div class="material-cover" style="border-top:5px solid ${escm(folderColor)}">${m.cover_image_url?`<img src="${escm(m.cover_image_url)}" alt="">`:`<span class="material-icon">${materialIcon(m.material_type)}</span>`}</div><div class="material-card-body"><div class="material-meta"><span class="badge blue">${escm(m.material_type||'material')}</span>${m.level?`<span class="badge gray">${escm(m.level)}</span>`:''}</div><div class="material-card-title">${escm(m.title)}</div><div class="material-card-desc">${escm(m.description||'Sem descrição')}</div><div><span class="material-folder-dot" style="background:${escm(folderColor)}"></span><small>${escm(folderName)}</small></div><div class="material-created">Criado em ${safeDate(m.created_at)}${m.updated_at&&m.updated_at!==m.created_at?' · atualizado '+safeDate(m.updated_at):''}</div><div class="material-actions">${url?`<a class="btn secondary" href="${escm(url)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}<button class="btn secondary" onclick='openMaterialForm(${JSON.stringify(m)})'>✏️ Editar</button><button class="btn secondary" onclick='openMaterialAssignV52(${JSON.stringify(m)})'>📤 Atribuir</button><button class="btn secondary" onclick="sendMaterialToReadyClassV62('${escm(m.id)}')">🎬 Enviar para Ready Class</button><button class="btn danger" onclick="deleteMaterialV38('${escm(m.id)}')">🗑️ Remover</button></div></div></article>`}).join('')}</div>`;
   }
 
   function renderFolderAdmin(allFolders,realFolders,materials){
@@ -7846,5 +7846,62 @@ body.fi-premium:not(.fi-light) .class-center-page .cc-studio-shortcut small{colo
 #caSource{width:100%;border:1px solid var(--line,#ddd);border-radius:11px;padding:8px;background:var(--surface,#fff);color:var(--text,#222)}
 #caSource option{padding:7px}
 </style>
+
+<script id="tic-material-ready-class-safe-v62">
+(function(){
+ 'use strict';
+ window.sendMaterialToReadyClassV62=async function(materialId){
+   if(!materialId||!window.sb||!window.session?.user?.id){
+     if(typeof toast==='function')toast('Não foi possível identificar o material ou a sessão do professor. Atualize a página e entre novamente.','error');
+     return;
+   }
+   const {data:source,error}=await sb.from('tic_materials')
+     .select('id,title,level,material_type,description,resource_items,external_url,file_url,cover_image_url')
+     .eq('id',materialId).eq('teacher_id',session.user.id).maybeSingle();
+   if(error){
+     if(typeof toast==='function')toast('Não foi possível carregar o material: '+error.message,'error');
+     return;
+   }
+   if(!source){
+     if(typeof toast==='function')toast('Este material não foi encontrado na sua biblioteca. Atualize a lista e tente novamente.','error');
+     return;
+   }
+   const resources=Array.isArray(source.resource_items)?source.resource_items.filter(r=>r&&r.url):[];
+   if(!resources.length&&(source.external_url||source.file_url)){
+     resources.push({type:source.material_type||'link',title:source.title,url:source.external_url||source.file_url});
+   }
+   const skillByType={video:'listening',audio:'listening',pdf:'reading',worksheet:'writing',quiz:'grammar'};
+   const lesson={
+     title:source.title||'New lesson',
+     level:source.level||'A1',
+     skill:skillByType[String(source.material_type||'').toLowerCase()]||'vocabulary',
+     lesson_type:'lesson',
+     position:1,
+     content:source.description||'',
+     description:source.description||'',
+     video_url:resources.find(r=>/video|youtube/i.test(String(r.type||'')))?.url||'',
+     pdf_url:resources.find(r=>/pdf|document|worksheet/i.test(String(r.type||'')))?.url||'',
+     resource_items:resources,
+     cover_image_url:source.cover_image_url||'',
+     course_id:'',
+     module_id:''
+   };
+   if(typeof openLessonForm!=='function'){
+     if(typeof toast==='function')toast('O editor do Ready Class não está disponível. Atualize a página e tente novamente.','error');
+     return;
+   }
+   /* Open the existing lesson editor prefilled. No database write occurs until
+      the teacher reviews and saves, and the source library record is untouched. */
+   openLessonForm(lesson,false,'');
+   if(typeof toast==='function')toast('Material carregado no editor do Ready Class. Revise e salve para criar a lesson.','success');
+ };
+})();
+</script>
+<style id="tic-material-ready-class-safe-v62-css">
+.material-card .material-actions{display:flex;gap:7px;flex-wrap:wrap}
+.material-card .material-actions .btn{min-height:34px}
+@media(max-width:650px){.material-card .material-actions .btn{flex:1 1 42%;justify-content:center}}
+</style>
+
 </body>
 </html>
