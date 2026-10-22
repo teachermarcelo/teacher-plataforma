@@ -86,3 +86,11 @@
   .cc-agenda-date b{font-size:18px!important}
   .cc-agenda-status{grid-column:2!important;justify-self:start!important;margin:0!important}
 }
+
+
+/* Agenda date groups: organize existing appointments without merging or deleting records. */
+.cc-agenda-day-group{display:grid;gap:8px;margin:14px 0 18px;min-width:0}
+.cc-agenda-day-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0!important;padding:9px 12px;border-left:3px solid #7650e8;border-radius:0 9px 9px 0;background:#f7f4ff;color:#44326f;font-size:12px!important;font-weight:850!important;text-transform:capitalize}
+.cc-agenda-day-count{font-size:10px!important;font-weight:750!important;color:#786a9c!important;background:#fff;padding:4px 8px;border-radius:999px;border:1px solid #e8e0fa;white-space:nowrap}
+.cc-agenda-day-list{display:grid;gap:8px;min-width:0}
+@media(prefers-color-scheme:dark){body:not(.fi-light) .cc-agenda-day-heading{background:#211b39;color:#f0eaff;border-color:#9878ff}body:not(.fi-light) .cc-agenda-day-count{background:#302849;color:#ded2ff;border-color:#4a3a70}}
