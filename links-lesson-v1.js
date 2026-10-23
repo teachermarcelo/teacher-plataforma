@@ -46,7 +46,19 @@ root.querySelectorAll('[data-ll-review]').forEach(function(b){b.onclick=async fu
 root.querySelectorAll('[data-ll-view]').forEach(function(b){b.onclick=async function(){var r=await db().from('ll_answers').select('*').eq('attempt_id',b.dataset.llView);if(r.error){msg(r.error.message,false);return}var m=document.createElement('div');m.className='ll-modal';m.innerHTML='<div class="ll-modalbox"><h2>Respostas do aluno</h2>'+(r.data||[]).map(function(a){return '<div class="ll-row"><b>'+esc(a.question_id)+'</b><p>'+esc(a.answer_text||JSON.stringify(a.answer_data||{}))+'</p></div>'}).join('')+'<button class="ll-btn" data-close>Fechar</button> <button class="ll-btn ll-primary" onclick="window.print()">Imprimir / salvar PDF</button></div>';document.body.appendChild(m);m.querySelector('[data-close]').onclick=function(){m.remove()}}});
 }
 async function activate(){style();var host=document.querySelector('.main > .container')||document.querySelector('#content')||document.querySelector('main');if(!host)host=document.body;root=document.getElementById('links-lesson-workspace');if(!root){root=document.createElement('section');root.id='links-lesson-workspace';root.className='ll-shell'}restoreView();Array.from(host.children).forEach(function(ch){if(ch!==root){hiddenEls.push({el:ch,display:ch.style.display});ch.style.display='none'}});if(root.parentElement!==host)host.appendChild(root);root.style.display='block';root.scrollIntoView({behavior:'smooth',block:'start'});root.innerHTML='<div class="ll-card"><div class="ll-body">Carregando Links Lesson…</div></div>';try{await load();draw()}catch(e){root.innerHTML='<div class="ll-card"><div class="ll-body"><h3>Não foi possível abrir Links Lesson</h3><p>'+esc(e.message)+'</p><button class="ll-btn" data-retry>Tentar novamente</button></div></div>';root.querySelector('[data-retry]').onclick=activate}}
-function install(){var candidates=Array.from(document.querySelectorAll('a,button,[role=button]')).filter(function(el){return /Class Center/i.test((el.innerText||el.textContent||'').trim())});for(var i=0;i<candidates.length;i++){var el=candidates[i];if(el.dataset.llAdded)return;el.dataset.llAdded='1';var b=document.createElement('button');b.type='button';b.dataset.llAdded='1';b.className=el.className||'';b.style.cssText='display:block;width:100%;text-align:left;cursor:pointer';b.textContent='🔗 Links Lesson';b.addEventListener('click',function(e){e.preventDefault();activate()});el.insertAdjacentElement('afterend',b);break}}
+function install(){
+ var nav=document.querySelector('.sidebar .nav')||document.querySelector('.sidebar nav')||document.querySelector('#sidebar .nav')||document.querySelector('aside .nav');
+ if(!nav)return;
+ // Remove stale copies previously injected into page content or repeated navigation fragments.
+ document.querySelectorAll('[data-ll-added]').forEach(function(x){if(!nav.contains(x))x.remove()});
+ if(nav.querySelector('[data-ll-added]'))return;
+ var items=Array.from(nav.querySelectorAll('a,button,[role=button]'));
+ var anchor=items.find(function(el){return /Class Center/i.test((el.innerText||el.textContent||'').trim())});
+ if(!anchor)return;
+ var b=document.createElement('button');b.type='button';b.dataset.llAdded='1';b.className=anchor.className||'';b.style.cssText='display:block;width:100%;text-align:left;cursor:pointer';b.textContent='🔗 Links Lesson';
+ b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();activate()});
+ anchor.insertAdjacentElement('afterend',b);
+}
 function scan(){install()}
 function navExit(){document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-ll-added]');if(!b)restoreView()},true)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){scan();navExit();new MutationObserver(scan).observe(document.body,{childList:true,subtree:true})},{once:true});else{scan();navExit();new MutationObserver(scan).observe(document.body,{childList:true,subtree:true})}
