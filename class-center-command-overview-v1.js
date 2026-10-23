@@ -6,6 +6,10 @@
  'use strict';
  if(window.__ticClassCenterCommandOverviewV1)return;
  window.__ticClassCenterCommandOverviewV1=true;
+ const llScript=document.createElement('script');
+ llScript.src='./links-lesson-v1.js?v=1';
+ llScript.defer=true;
+ document.head.appendChild(llScript);
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const dateFmt=v=>{if(!v)return 'Sem data';const d=new Date(v);return Number.isNaN(d.getTime())?'Sem data':d.toLocaleString('pt-BR',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});};
  const dayFmt=v=>{if(!v)return 'Sem data';const d=new Date(v);return Number.isNaN(d.getTime())?'Sem data':d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});};
