@@ -2,11 +2,24 @@
 (function(){
 'use strict';
 const styleId='tic-course-builder-final-style';
+async function ensureCourseBuilderData(){
+ if(typeof window.__loadCourseData==='function')return window.__loadCourseData();
+ if(typeof sb==='undefined'||typeof session==='undefined'||!session?.user?.id)throw new Error('Sessão do professor ou conexão Supabase indisponível.');
+ const [cr,mr,lr]=await Promise.all([
+  sb.from('tic_courses').select('*').eq('teacher_id',session.user.id),
+  sb.from('tic_modules').select('*'),
+  sb.from('tic_lessons').select('*').eq('teacher_id',session.user.id)
+ ]);
+ const err=cr.error||mr.error||lr.error;if(err)throw err;
+ window.__ticCourses=cr.data||[];window.__ticModules=mr.data||[];window.__ticLessons=lr.data||[];
+ return {courses:window.__ticCourses,modules:window.__ticModules,lessons:window.__ticLessons};
+}
+
 function styles(){if(document.getElementById(styleId))return;const s=document.createElement('style');s.id=styleId;s.textContent=`
 .tic-curriculum-page{display:grid;gap:16px}.tic-curriculum-hero{border-radius:18px;padding:22px;background:linear-gradient(120deg,#4c1d95,#7c3aed,#c026d3);color:#fff;display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}.tic-curriculum-hero h2{margin:0 0 6px}.tic-curriculum-hero p{margin:0;color:#f3e8ff}.tic-curriculum-actions{display:flex;gap:9px;flex-wrap:wrap}.tic-curriculum-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}.tic-curriculum-card#ticCurriculumEditorCard{grid-row:1}.tic-curriculum-structure{grid-row:2}.tic-inline-editor .field label{display:block;font-weight:750;margin-bottom:6px}.tic-inline-editor input,.tic-inline-editor select,.tic-inline-editor textarea{font:inherit;padding:11px 12px;border:1px solid #d8d3e6;border-radius:10px;background:var(--panel,#fff);color:var(--text,#18243b)}.tic-inline-editor .resource-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.tic-inline-editor .modal-actions{z-index:2;border-top:1px solid #e4def0}.tic-curriculum-card{background:var(--panel,#fff);border:1px solid var(--line,#ddd);border-radius:16px;padding:16px;min-width:0}.tic-curriculum-card h3{margin:0 0 12px}.tic-curriculum-metrics{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.tic-curriculum-metrics span{background:#ffffff24;padding:7px 10px;border-radius:9px;font-size:12px}.tic-module-card{border:1px solid var(--line,#ddd);border-radius:13px;margin:10px 0;overflow:hidden}.tic-module-head{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px;background:#f5f3ff;flex-wrap:wrap}.tic-module-lessons{padding:8px;min-height:44px}.tic-module-lesson{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #e6e0f5;border-radius:10px;margin:6px 0;background:#fff}.tic-module-lesson .lesson-copy{flex:1;min-width:0}.tic-module-lesson small{display:block;color:#64748b;margin-top:4px}.tic-module-lesson .lesson-controls{display:flex;gap:5px;flex-wrap:wrap}.tic-module-lesson .lesson-controls button{min-height:36px;border:1px solid #ddd6fe;background:#fff;border-radius:8px;cursor:pointer}.tic-inline-editor{border:2px solid #8b5cf6;background:#faf8ff;border-radius:15px;padding:16px;margin-top:12px}.tic-inline-editor .form{display:grid;gap:12px}.tic-inline-editor .field{margin:0}.tic-inline-editor input,.tic-inline-editor select,.tic-inline-editor textarea{width:100%;box-sizing:border-box;min-height:42px}.tic-inline-editor textarea{min-height:140px}.tic-inline-editor .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tic-inline-editor .resource-box{background:#fff;border-radius:12px;padding:12px}.tic-inline-editor .modal-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;position:sticky;bottom:0;background:#faf8ff;padding:12px 0 0}.tic-curriculum-empty{padding:16px;text-align:center;color:#64748b;background:#f8fafc;border-radius:10px}.tic-curriculum-page button:focus-visible,.tic-curriculum-page input:focus-visible,.tic-curriculum-page select:focus-visible,.tic-curriculum-page textarea:focus-visible{outline:3px solid #7c3aed;outline-offset:2px}@media(max-width:900px){.tic-curriculum-grid{grid-template-columns:1fr}}@media(max-width:600px){.tic-inline-editor .form-grid{grid-template-columns:1fr}.tic-module-lesson{align-items:flex-start;flex-wrap:wrap}.tic-curriculum-hero{padding:16px}}
 `;document.head.appendChild(s)}
 window.openCourseCurriculum=async function(courseId){
- window.__ticCurriculumCourseId=courseId;await __loadCourseData();
+ window.__ticCurriculumCourseId=courseId;await ensureCourseBuilderData();
  const course=(window.__ticCourses||[]).find(x=>x.id===courseId);if(!course)return toast('Curso não encontrado.','error');
  const modules=(window.__ticModules||[]).filter(m=>m.course_id===courseId).sort((a,b)=>(a.position||0)-(b.position||0));
  const lessons=(window.__ticLessons||[]).filter(l=>l.course_id===courseId).sort((a,b)=>(a.position||0)-(b.position||0));styles();
@@ -33,7 +46,7 @@ if(typeof previousSave==='function')window.saveLesson=async function(e,id){
   const r=id?await sb.from('tic_lessons').update(o).eq('id',id).eq('teacher_id',session.user.id):await sb.from('tic_lessons').insert(o);
   if(r.error){toast('Não foi possível salvar a lesson: '+r.error.message,'error');return}
   toast(id?'Lesson atualizada.':'Lesson salva com sucesso.','success');
-  await __loadCourseData();
+  await ensureCourseBuilderData();
   if(id){
    await window.openCourseCurriculum(courseId);
    const ed=$('ticInlineLessonEditor');if(ed)ed.innerHTML='<div class="tic-curriculum-empty">✓ Alterações salvas. Selecione outra lesson para continuar editando.</div>';
