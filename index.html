@@ -8662,7 +8662,7 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
   ]);
   const studentOptions=(students||[]).map(s=>'<option value="'+s.id+'" '+(item?.student_id===s.id?'selected':'')+'>'+esc(s.display_name)+' · '+esc(s.current_level||'')+'</option>').join('');
   const classOptions='<option value="">Sem Class</option>'+(classes||[]).map(c=>'<option value="'+c.id+'" '+(item?.class_id===c.id?'selected':'')+'>'+esc(c.name)+' · '+esc(c.level||'')+'</option>').join('');
-  const date=item?.scheduled_at?new Date(item.scheduled_at).toISOString().slice(0,16):'';
+  const date=item?.scheduled_at?(()=>{const d=new Date(item.scheduled_at);if(Number.isNaN(d.getTime()))return '';const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes())})():'';
   const html='<form class="form" onsubmit="window.saveTeacherPlanningItem(event,\''+(item?.id||'')+'\')"><div class="notice">🔒 Área exclusiva do Teacher. Não publica tarefa para o aluno.</div><div class="field"><label>Aluno</label><select id="tpStudent" required>'+studentOptions+'</select></div><div class="field"><label>Class (opcional)</label><select id="tpClass">'+classOptions+'</select></div><div class="form-grid"><div class="field"><label>Categoria</label><select id="tpCategory">'+[['material','📂 Material'],['resource','🔗 Resource'],['lesson','📚 Aula / Lesson'],['agenda','🗓️ Agenda']].map(o=>'<option value="'+o[0]+'" '+(item?.category===o[0]?'selected':'')+'>'+o[1]+'</option>').join('')+'</select></div><div class="field"><label>Status</label><select id="tpStatus">'+[['planned','Planejado'],['in_progress','Em preparação'],['done','Ministrado / concluído']].map(o=>'<option value="'+o[0]+'" '+((item?.status||'planned')===o[0]?'selected':'')+'>'+o[1]+'</option>').join('')+'</select></div></div><div class="field"><label>Título</label><input id="tpTitle" required maxlength="180" value="'+esc(item?.title||'')+'"></div><div class="field"><label>Orientações / notas</label><textarea id="tpNotes" rows="3">'+esc(item?.notes||'')+'</textarea></div><div class="field"><label>Link (opcional)</label><input id="tpUrl" type="url" value="'+esc(item?.resource_url||'')+'" placeholder="https://..."></div><div class="field"><label>Data prevista</label><input id="tpDate" type="datetime-local" value="'+date+'"></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button type="submit" class="btn primary" id="tpSave">💾 Salvar</button></div></form>';
   openModal(item?'✏️ Editar acompanhamento':'＋ Novo acompanhamento',html);
  };
@@ -9497,6 +9497,6 @@ observer.observe(document.documentElement,{childList:true,subtree:true});
 @media(prefers-reduced-motion:reduce){.fi-lesson-card-v2,.fi-course-primary,.fi-course-tab,.fi-lesson-open-v2{transition:none!important}}
 </style>
 <script src="class-center-usability.js?v=1"></script>
-<script src="class-center-command-overview-v1.js?v=2"></script>
+<script src="class-center-command-overview-v1.js?v=3"></script>
 </body>
 </html>
