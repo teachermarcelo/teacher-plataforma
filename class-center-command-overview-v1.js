@@ -98,7 +98,7 @@
   const results=await Promise.all([
    database.from('tic_events').select('*').eq('teacher_id',u.id).order('starts_at',{ascending:true}).limit(100),
    database.from('tic_teacher_planning_items').select('*').eq('teacher_id',u.id).order('scheduled_at',{ascending:true,nullsFirst:false}).limit(100),
-   database.from('tic_assignments').select('id,title,name,description,instructions,due_at,due_date,created_at').eq('teacher_id',u.id).order('created_at',{ascending:false}).limit(100),
+   database.from('tic_assignments').select('*').eq('teacher_id',u.id).order('created_at',{ascending:false}).limit(100),
    database.from('tic_students').select('id,display_name,name,current_level').eq('teacher_id',u.id),
    database.from('tic_classes').select('id,name,level').eq('teacher_id',u.id),
    database.from('tic_class_students').select('class_id,student_id,status')
