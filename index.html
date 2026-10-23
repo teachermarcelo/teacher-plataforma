@@ -668,7 +668,7 @@ async function loadView(v){
  if(v==='overview')return overview();
  if(v==='students')return studentsPage();
  if(v==='classes')return classesPage();
- if(v==='courses')return genericTable('courses');
+ if(v==='courses')return (typeof coursesPageV11==='function'?coursesPageV11():coursesPage());
  if(v==='lessons'||v==='plans')return lessonsPage(v==='plans');
  if(v==='assignments')return assignmentsPage();
  if(v==='feedback')return feedbackPage();
