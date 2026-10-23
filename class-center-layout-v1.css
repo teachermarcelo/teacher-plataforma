@@ -196,3 +196,21 @@ html,body{max-width:100%;overflow-x:hidden}
  .class-center-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
  .fi-bc-board{grid-template-columns:repeat(4,minmax(78vw,78vw))}
 }
+
+
+/* Class Center — overview polish: category colors, readable cards and responsive spacing */
+.tic-cc-command{gap:16px!important}
+.tic-cc-command .tic-cc-command-kpi{position:relative;overflow:hidden;border-radius:15px;box-shadow:0 5px 18px rgba(50,30,100,.05)}
+.tic-cc-command .tic-cc-command-kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#8b5cf6,#d946ef)}
+.tic-cc-command .tic-cc-command-card{border-radius:17px!important;box-shadow:0 8px 24px rgba(35,22,70,.06)!important}
+.tic-cc-command .tic-cc-command-card-head{background:linear-gradient(110deg,#fff,#faf8ff)}
+.tic-cc-command .tic-cc-command-filters button{transition:background .15s,border-color .15s,transform .15s}
+.tic-cc-command .tic-cc-command-filters button:hover{transform:translateY(-1px);border-color:#b8a2ff}
+.tic-cc-command .tic-cc-command-item-actions button{transition:background .15s,border-color .15s}
+.tic-cc-command .tic-cc-command-item-actions button:hover{background:#f2edff;border-color:#bca8ff}
+@media(max-width:700px){
+ .tic-cc-command{margin:12px 0 18px!important}
+ .tic-cc-command .tic-cc-command-item{grid-template-columns:40px minmax(0,1fr);gap:8px;padding:10px}
+ .tic-cc-command .tic-cc-command-title{font-size:12px}
+ .tic-cc-command .tic-cc-command-kpis{gap:7px}
+}
