@@ -75,7 +75,7 @@
   const notes=item.notes||item.instructions||'';
   let actions='';
   const resourceUrl=kind==='event'?(item.meeting_url||item.resource_url||item.url):(kind==='planning'?(item.resource_url||item.meeting_url||item.url):'');
-  const safeUrl=typeof resourceUrl==='string'&&/^https?:\\/\\//i.test(resourceUrl.trim())?resourceUrl.trim():'';
+  const trimmedUrl=typeof resourceUrl==='string'?resourceUrl.trim():'';const safeUrl=trimmedUrl.startsWith('https://')||trimmedUrl.startsWith('http://')?trimmedUrl:'';
   const linkHtml=safeUrl?'<p class="tic-cc-command-note"><a class="tic-cc-resource-link" href="'+esc(safeUrl)+'" target="_blank" rel="noopener noreferrer">🔗 Abrir link da aula / material ↗</a></p>':'';
   if(kind==='event'){
    actions='<div class="tic-cc-command-item-actions">'+(item.class_id?'<button type="button" data-tic-cc-edit-event="'+esc(item.id)+'" data-class-id="'+esc(item.class_id)+'">✎ Editar</button>':'')+'<button type="button" data-tic-cc-delete-event="'+esc(item.id)+'">Remover</button>'+'</div>';
