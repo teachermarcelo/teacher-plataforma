@@ -2452,9 +2452,9 @@ function ticResponsiveSrcdoc(content){
 <script id="tic-course-data-recovery-v2">
 /* Recovery guard: expose the course data loader globally for all course views. */
 window.__loadCourseData = async function(){
-  if(!window.sb || !window.session || !window.session.user) throw new Error('Sessão do professor indisponível. Entre novamente na plataforma.');
+  if(typeof sb==='undefined' || typeof session==='undefined' || !session.user) throw new Error('Sessão do professor indisponível. Entre novamente na plataforma.');
   const [cr,lr,mr]=await Promise.all([
-    window.sb.from('tic_courses').select('*').eq('teacher_id',window.session.user.id).order('created_at',{ascending:false}),
+    sb.from('tic_courses').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false}),
     window.sb.from('tic_lessons').select('*').eq('teacher_id',window.session.user.id).order('position').order('created_at'),
     window.sb.from('tic_modules').select('*').order('position').order('created_at')
   ]);
