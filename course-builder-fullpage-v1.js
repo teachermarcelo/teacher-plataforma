@@ -30,6 +30,7 @@ if(typeof previousSave==='function')window.saveLesson=async function(e,id){
  toast(id?'Lesson atualizada.':'Lesson salva.','success');await window.openCourseCurriculum(courseId);const ed=$('ticInlineLessonEditor');if(ed)ed.innerHTML='<div class="tic-curriculum-empty">✓ Lesson salva. Você pode criar outra sem sair do currículo.</div>';
  }catch(err){toast('Erro ao salvar lesson: '+(err.message||err),'error')}finally{if(btn&&btn.isConnected){btn.disabled=false;btn.textContent='💾 Salvar e continuar'}}
 };
-window.__ticOriginalOpenLessonForm=window.__ticOriginalOpenLessonForm||window.openLessonForm;
-window.openLessonForm=function(x=null,forcePlan=false,courseId=null){if(courseId){window.ticShowInlineLessonForm(courseId,x?.id||'');return}return window.__ticOriginalOpenLessonForm?.(x,forcePlan)};
+const ticPreviousOpenLessonForm=window.openLessonForm;
+window.__ticOriginalOpenLessonForm=window.__ticOriginalOpenLessonForm||ticPreviousOpenLessonForm;
+window.openLessonForm=function(x=null,forcePlan=false,courseId=null){if(courseId){window.ticShowInlineLessonForm(courseId,x?.id||'');return}return ticPreviousOpenLessonForm?.(x,forcePlan)};
 })();
