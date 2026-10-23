@@ -8754,7 +8754,8 @@ body.fi-premium:not(.fi-light) .fi-media-tags span{background:#332548;color:#e3d
     var navButton=e.target&&e.target.closest?e.target.closest('#teacherNav [data-view]'):null;
     if(!navButton)return;
     var view=navButton.getAttribute('data-view');
-    /* Route teacher sidebar through the final window.loadView wrapper. Legacy onclick handlers close over the original loadView and bypass later feature-specific wrappers. */
+    /* Only intercept Ready Class. Other teacher tabs have their own onclick/loadView handlers; intercepting every click here can suppress them and make the sidebar appear unresponsive. */
+    if(view!=='readyClass')return;
     try{
       sessionStorage.setItem('tic-current-view',view);localStorage.setItem('tic-current-view-v2',view);
       if(view==='readyClass')sessionStorage.setItem('tic-last-view','readyClass');
