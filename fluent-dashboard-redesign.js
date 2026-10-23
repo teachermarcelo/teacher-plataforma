@@ -133,6 +133,14 @@ async function render(){
 }
 function init(){
  style();
+ // Additive Links Lesson student tab; does not replace existing dashboard routes.
+ if(!document.querySelector('script[data-links-lesson-student]')){
+  const ll=document.createElement('script');
+  ll.src='./links-lesson-student-v1.js?v=2';
+  ll.dataset.linksLessonStudent='1';
+  ll.defer=true;
+  document.head.appendChild(ll);
+ }
  // Hook the existing navigation itself: the app may call the lexical loadView/studentDashboard
  // bindings rather than the window properties, so we also listen for the actual student-nav click.
  document.addEventListener('click',ev=>{
