@@ -2481,8 +2481,6 @@ window.openCourseCurriculumV11 = async function(courseId){
 };
 window.openCourseCurriculum=window.openCourseCurriculumV11;
 </script>
-</body></html>';
-}
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active,student_visible').eq('id',lessonId).eq('active',true).eq('student_visible',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
  const {data:last}=await sb.from('tic_lesson_responses').select('attempt').eq('lesson_id',lessonId).eq('student_id',s.id).order('attempt',{ascending:false}).limit(1).maybeSingle();const attempt=Number(last?.attempt||0)+1;
