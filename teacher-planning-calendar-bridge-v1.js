@@ -70,25 +70,24 @@
   const parsed=unpackNotes(item.notes),stamp=new Date(item.scheduled_at);
   if(Number.isNaN(stamp.getTime()))return {skipped:true};
   const marker=MARK+item.id+']';
-  const {data:events,error}=await database.from('tic_events').select('*').eq('teacher_id',u.id).eq('class_id',item.class_id).order('starts_at',{ascending:false}).limit(300);
-  if(error)throw error;
-  let event=(events||[]).find(e=>String(e.notes||'').includes(marker));
-  if(!event)event=(events||[]).find(e=>String(e.title||'').trim().toLowerCase()===String(item.title||'').trim().toLowerCase()&&e.starts_at&&Math.abs(new Date(e.starts_at).getTime()-stamp.getTime())<120000);
+  const base=database.from('tic_events').select('id,title,notes,starts_at,meeting_url,class_id,teacher_id,event_type,status,ends_at');
+  let event=null;
+  const marked=await base.eq('teacher_id',u.id).eq('class_id',item.class_id).ilike('notes','%'+marker+'%').limit(1).maybeSingle();
+  if(marked.error)throw marked.error;
+  event=marked.data||null;
+  if(!event){
+   const lower=new Date(stamp.getTime()-120000).toISOString(),upper=new Date(stamp.getTime()+120000).toISOString();
+   const matched=await database.from('tic_events').select('id,title,notes,starts_at,meeting_url,class_id,teacher_id,event_type,status,ends_at').eq('teacher_id',u.id).eq('class_id',item.class_id).eq('title',item.title).gte('starts_at',lower).lte('starts_at',upper).limit(5);
+   if(matched.error)throw matched.error;
+   event=(matched.data||[]).find(e=>String(e.title||'').trim().toLowerCase()===String(item.title||'').trim().toLowerCase())||null;
+  }
   const existingLinks=event?(window.ticV63GetEventLinks?window.ticV63GetEventLinks(event):[event.meeting_url,...parseUrls(unpackNotes(event.notes).links.join('\n'))].filter(Boolean)):[];
   const mergedLinks=[...new Set([...links,...existingLinks])];
   const main=links[0]||event?.meeting_url||null;
   const extra=mergedLinks.filter(x=>x!==main);
   const oldEventNotes=event?unpackNotes(event.notes).clean:'';
   const noteText=parsed.clean||oldEventNotes;
-  const payload={
-   teacher_id:u.id,class_id:item.class_id,title:item.title,
-   event_type:(item.category==='agenda'?'meeting':'lesson'),
-   starts_at:stamp.toISOString(),
-   ends_at:new Date(stamp.getTime()+60*60000).toISOString(),
-   meeting_url:main,
-   notes:packNotes(noteText,extra,item.id),
-   status:item.status==='done'?'completed':'scheduled'
-  };
+  const payload={teacher_id:u.id,class_id:item.class_id,title:item.title,event_type:(item.category==='agenda'?'meeting':'lesson'),starts_at:stamp.toISOString(),ends_at:new Date(stamp.getTime()+60*60000).toISOString(),meeting_url:main,notes:packNotes(noteText,extra,item.id),status:item.status==='done'?'completed':'scheduled'};
   if(event){
    const {error:updateError}=await database.from('tic_events').update(payload).eq('id',event.id).eq('teacher_id',u.id);
    if(updateError)throw updateError;
@@ -98,14 +97,6 @@
   if(insertError)throw insertError;
   return {created:true};
  }
- async function syncAllExisting(){
-  const database=db(),u=usr();if(!database||!u?.id)return;
-  const {data,error}=await database.from('tic_teacher_planning_items').select('*').eq('teacher_id',u.id).not('class_id','is',null).not('scheduled_at','is',null).limit(300);
-  if(error){console.warn('[Planning bridge] Could not inspect existing planning items:',error.message);return}
-  for(const item of data||[]){
-   try{await syncOne(item)}catch(e){console.warn('[Planning bridge] Sync skipped for '+item.id+':',e.message)}
-  }
- }
  function install(){
   if(typeof window.openTeacherPlanningForm==='function'&&!window.openTeacherPlanningForm.__bridgeV1){
    const original=window.openTeacherPlanningForm;
@@ -114,32 +105,48 @@
   }
   if(typeof window.saveTeacherPlanningItem==='function'&&!window.saveTeacherPlanningItem.__bridgeV1){
    window.saveTeacherPlanningItem=async function(e,itemId){
-    e.preventDefault();const btn=document.getElementById('tpSave');if(btn){btn.disabled=true;btn.textContent='Salvando…'}
-    const database=db(),u=usr();if(!database||!u?.id){if(btn)btn.disabled=false;return (window.toast||alert)('Sessão indisponível. Entre novamente e tente.','error')}
-    const studentId=document.getElementById('tpStudent')?.value,classId=document.getElementById('tpClass')?.value||null;
-    const category=document.getElementById('tpCategory')?.value,title=document.getElementById('tpTitle')?.value.trim();
-    const notes=String(document.getElementById('tpNotes')?.value||'').trim(),urls=parseUrls(document.getElementById('tpUrl')?.value||'');
-    const date=document.getElementById('tpDate')?.value||'',status=document.getElementById('tpStatus')?.value||'planned';
-    if(!studentId||!title){if(btn)btn.disabled=false;return (window.toast||alert)('Selecione o aluno e informe o título.','error')}
-    const payload={teacher_id:u.id,student_id:studentId,class_id:classId,category,title,notes,resource_url:urls[0]||null,scheduled_at:date?new Date(date).toISOString():null,status};
-    let q=itemId?database.from('tic_teacher_planning_items').update(payload).eq('id',itemId).eq('teacher_id',u.id):database.from('tic_teacher_planning_items').insert(payload).select('*').single();
-    const {data,error}=await q;
-    if(error){if(btn)btn.disabled=false;return (window.toast||alert)('Falha ao salvar planejamento: '+error.message,'error')}
-    let saved=data;
-    if(itemId){const r=await database.from('tic_teacher_planning_items').select('*').eq('id',itemId).eq('teacher_id',u.id).maybeSingle();saved=r.data}
-    if(saved){
-     const extras=urls.slice(1);
-     const storedNotes=notes+(extras.length?EXTRA+extras.join('\n'):'');
+    e.preventDefault();const btn=document.getElementById('tpSave');const originalText=btn?.textContent||'Salvar planejamento';
+    if(btn){btn.disabled=true;btn.textContent='Salvando…';btn.setAttribute('aria-busy','true')}
+    const notify=(message,type)=>{if(typeof window.toast==='function')window.toast(message,type);else alert(message)};
+    try{
+     const database=db(),u=usr();if(!database||!u?.id)throw Error('Sessão indisponível. Entre novamente e tente.');
+     const studentId=document.getElementById('tpStudent')?.value,classId=document.getElementById('tpClass')?.value||null;
+     const category=document.getElementById('tpCategory')?.value,title=document.getElementById('tpTitle')?.value.trim();
+     const notes=String(document.getElementById('tpNotes')?.value||'').trim(),urls=parseUrls(document.getElementById('tpUrl')?.value||'');
+     const date=document.getElementById('tpDate')?.value||'',status=document.getElementById('tpStatus')?.value||'planned';
+     if(!studentId||!title)throw Error('Selecione o aluno e informe o título.');
+     const payload={teacher_id:u.id,student_id:studentId,class_id:classId,category,title,notes,resource_url:urls[0]||null,scheduled_at:date?new Date(date).toISOString():null,status};
+     if(btn)btn.textContent='Salvando no banco…';
+     let query=itemId?database.from('tic_teacher_planning_items').update(payload).eq('id',itemId).eq('teacher_id',u.id).select('*').single():database.from('tic_teacher_planning_items').insert(payload).select('*').single();
+     const result=await query;
+     if(result.error)throw result.error;
+     let saved=result.data;
+     if(!saved?.id)throw Error('O banco não confirmou o registro salvo. Atualize a lista antes de tentar novamente.');
+     const extras=urls.slice(1),storedNotes=notes+(extras.length?EXTRA+extras.join('\n'):'');
      if(storedNotes!==String(saved.notes||'')){
+      if(btn)btn.textContent='Salvando links…';
       const up=await database.from('tic_teacher_planning_items').update({notes:storedNotes}).eq('id',saved.id).eq('teacher_id',u.id);
-      if(up.error){if(btn)btn.disabled=false;return (window.toast||alert)('Planejamento salvo, mas não foi possível guardar todos os links: '+up.error.message,'error')}
+      if(up.error)throw Error('Planejamento salvo, mas não foi possível guardar todos os links: '+up.error.message);
       saved.notes=storedNotes;
      }
-     try{if(saved.class_id&&saved.scheduled_at)await syncOne(saved)}catch(err){console.error('[Planning bridge] Calendar sync failed:',err);if(typeof window.toast==='function')window.toast('Planejamento salvo, mas a sincronização com Calendar falhou: '+err.message,'error')}
+     notify('Planejamento salvo. Atualizando agenda e calendário…','success');
+     let calendarOk=true;
+     if(saved.class_id&&saved.scheduled_at){
+      try{if(btn)btn.textContent='Atualizando agenda…';await syncOne(saved)}
+      catch(err){calendarOk=false;console.error('[Planning bridge] Calendar sync failed:',err);notify('Planejamento salvo, mas a agenda não foi sincronizada: '+(err?.message||err),'error')}
+     }
+     if(typeof window.closeModal==='function')window.closeModal();
+     if(typeof window.loadTeacherPlanningItems==='function'){
+      if(btn)btn.textContent='Atualizando lista…';
+      try{await window.loadTeacherPlanningItems()}catch(err){console.warn('[Planning bridge] List refresh failed:',err);notify('Planejamento salvo, mas a lista não atualizou automaticamente. Recarregue a seção.','error')}
+     }
+     if(calendarOk)notify(saved.class_id&&saved.scheduled_at?'Concluído! Planejamento salvo e agenda atualizada.':'Concluído! Planejamento salvo.','success');
+    }catch(err){
+     console.error('[Planning bridge] Save failed:',err);
+     notify('Não foi possível concluir o salvamento: '+(err?.message||String(err)),'error');
+    }finally{
+     if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.textContent=originalText}
     }
-    if(typeof window.closeModal==='function')window.closeModal();
-    if(typeof window.toast==='function')window.toast('Planejamento salvo e sincronizado com a turma/Calendar.','success');
-    if(typeof window.loadTeacherPlanningItems==='function')await window.loadTeacherPlanningItems();
    };
    window.saveTeacherPlanningItem.__bridgeV1=true;
   }
@@ -172,7 +179,7 @@
    window.deleteTeacherPlanningItem.__bridgeV1=true;
   }
   if(typeof window.loadTeacherPlanningItems==='function')window.loadTeacherPlanningItems.__bridgeV1=true;
-  syncAllExisting();
+  // Deliberately do not bulk-sync existing records at page load: syncing happens only after an explicit save/status change.
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
