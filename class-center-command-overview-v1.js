@@ -34,6 +34,17 @@
   .tic-cc-command-list{padding:5px 12px}
   .tic-cc-command-item{padding:12px 3px;border-bottom:1px solid #f0edf6;display:grid;grid-template-columns:45px minmax(0,1fr);gap:10px;align-items:start}
   .tic-cc-command-item:last-child{border-bottom:0}
+  .tic-cc-command-item{position:relative;border:1px solid #e8e5f2;border-left:4px solid #8b5cf6;border-radius:13px;margin:8px 0;padding:12px;background:linear-gradient(110deg,#fff 0%,#fcfbff 100%);transition:transform .16s,box-shadow .16s,border-color .16s}
+  .tic-cc-command-item:hover{transform:translateY(-1px);box-shadow:0 8px 20px #38216b12;border-color:#d4c7ff}
+  .tic-cc-command-item.kind-meeting{border-left-color:#0ea5e9;background:linear-gradient(110deg,#f0f9ff,#fff)}
+  .tic-cc-command-item.kind-assessment{border-left-color:#f59e0b;background:linear-gradient(110deg,#fffbeb,#fff)}
+  .tic-cc-command-item.kind-class{border-left-color:#8b5cf6;background:linear-gradient(110deg,#f5f3ff,#fff)}
+  .tic-cc-command-item.kind-cancelled{border-left-color:#ef4444;background:linear-gradient(110deg,#fff1f2,#fff)}
+  .tic-cc-command-title{border:0;background:transparent;padding:0;color:#21143d;font:inherit;font-size:13px;font-weight:850;text-align:left;cursor:pointer;line-height:1.35}
+  .tic-cc-command-title:hover{color:#6d28d9;text-decoration:underline}
+  .tic-cc-command-type{display:inline-flex;margin-left:6px;padding:3px 7px;border-radius:99px;font-size:9px;font-weight:850;vertical-align:middle;background:#ede9fe;color:#5b21b6}
+  .tic-cc-command-type.meeting{background:#e0f2fe;color:#075985}.tic-cc-command-type.assessment{background:#fef3c7;color:#92400e}.tic-cc-command-type.cancelled{background:#fee2e2;color:#991b1b}
+  .tic-cc-command-date{background:#ede9fe;color:#5b21b6}
   .tic-cc-command-date{border-radius:10px;background:#f1eaff;color:#5427bc;padding:8px 3px;text-align:center;font-size:10px;font-weight:800;line-height:1.25}
   .tic-cc-command-date b{display:block;font-size:17px}
   .tic-cc-command-item-main{min-width:0}.tic-cc-command-item-main h4{font-size:12px;margin:0 0 5px;overflow-wrap:anywhere}
@@ -80,6 +91,10 @@
   const trimmedUrl=typeof resourceUrl==='string'?resourceUrl.trim():'';
   const allUrls=[...new Set([trimmedUrl,...parseExtraLinks(item.notes)].filter(u=>/^https?:\/\//i.test(u)))];
   const linkHtml=allUrls.length?'<div class="tic-cc-command-note" style="display:flex;flex-direction:column;gap:6px">'+allUrls.map((url,i)=>'<a class="tic-cc-resource-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">🔗 '+(i===0?'Abrir link principal':'Abrir recurso '+(i+1))+' ↗</a>').join('')+'</div>':'';
+  const eventType=String(item.event_type||item.category||'class').toLowerCase();
+  const typeClass=eventType.includes('meet')||eventType.includes('reuni')?'meeting':eventType.includes('assess')||eventType.includes('avali')?'assessment':'class';
+  const cardClass='kind-'+(status==='cancelled'?'cancelled':typeClass);
+  const clickUrl=allUrls[0]||'';
   if(kind==='event'){
    actions='<div class="tic-cc-command-item-actions">'+(item.class_id?'<button type="button" data-tic-cc-edit-event="'+esc(item.id)+'" data-class-id="'+esc(item.class_id)+'">✎ Editar</button>':'')+'<button type="button" data-tic-cc-delete-event="'+esc(item.id)+'">Remover</button>'+'</div>';
   }else if(kind==='planning'){
@@ -87,7 +102,7 @@
   }else{
    actions='<div class="tic-cc-command-item-actions"><button type="button" class="tic-cc-command-link" data-tic-cc-open-tasks>Ver / corrigir tasks ↗</button></div>';
   }
-  return '<article class="tic-cc-command-item"><div class="tic-cc-command-date"><b>'+esc(day)+'</b>'+esc(label)+'</div><div class="tic-cc-command-item-main"><h4>'+esc(title)+'</h4><div class="tic-cc-command-meta">'+esc(details)+'</div><div style="margin-top:6px"><span class="tic-cc-command-pill '+statusClass+'">'+esc(statusLabel)+'</span></div>'+(notes?'<p class="tic-cc-command-note">'+esc(notes)+'</p>':'')+linkHtml+actions+'</div></article>';
+  return '<article class="tic-cc-command-item '+cardClass+'"><div class="tic-cc-command-date"><b>'+esc(day)+'</b>'+esc(label)+'</div><div class="tic-cc-command-item-main"><h4>'+(kind==='event'&&clickUrl?'<a class="tic-cc-command-title" href="'+esc(clickUrl)+'" target="_blank" rel="noopener noreferrer">'+esc(title)+'</a>':'<button type="button" class="tic-cc-command-title" '+(kind==='event'?'data-tic-cc-open-event="'+esc(item.id)+'" data-class-id="'+esc(item.class_id||'')+'"':'')+'>'+esc(title)+'</button>')+' <span class="tic-cc-command-type '+typeClass+'">'+esc(typeClass==='meeting'?'Compromisso':typeClass==='assessment'?'Avaliação':kind==='planning'?'Planejamento':kind==='task'?'Tarefa':'Aula')+'</span><div class="tic-cc-command-meta">'+esc(details)+'</div><div style="margin-top:6px"><span class="tic-cc-command-pill '+statusClass+'">'+esc(statusLabel)+'</span></div>'+(notes?'<p class="tic-cc-command-note">'+esc(notes)+'</p>':'')+linkHtml+actions+'</div></article>';
  }
  function renderList(items,kind,studentMap,classMap,assignmentMap){
   if(!items.length)return '<div class="tic-cc-command-empty">Nada registrado aqui ainda. Os itens existentes aparecerão automaticamente.</div>';
@@ -154,6 +169,8 @@
    if(typeof window.ticAgendaOpenFormV66==='function')window.ticAgendaOpenFormV66(picked.id);else if(typeof window.loadView==='function')window.loadView('calendar');
   });
   panel.addEventListener('click',async ev=>{
+   const openEv=ev.target.closest('[data-tic-cc-open-event]');
+   if(openEv){const item=events.find(x=>String(x.id)===openEv.dataset.ticCcOpenEvent);if(item?.class_id&&typeof window.ticAgendaOpenFormV66==='function'){window.ticAgendaOpenFormV66(item.class_id,item);return;}if(typeof window.loadView==='function')window.loadView('calendar');return;}
    const editEv=ev.target.closest('[data-tic-cc-edit-event]');
    if(editEv){const item=events.find(x=>String(x.id)===editEv.dataset.ticCcEditEvent);if(item&&typeof window.ticAgendaOpenFormV66==='function')window.ticAgendaOpenFormV66(item.class_id,item);else alert('Não foi possível abrir a edição deste compromisso.');return;}
    const delEv=ev.target.closest('[data-tic-cc-delete-event]');
