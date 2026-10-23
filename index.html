@@ -9516,6 +9516,26 @@ observer.observe(document.documentElement,{childList:true,subtree:true});
 <script src="class-center-usability.js?v=1"></script>
 <script src="class-center-command-overview-v1.js?v=4"></script>
 <script src="teacher-planning-calendar-bridge-v1.js?v=2"></script>
-<script src="course-builder-fullpage-v1.js?v=1"></script>
+<script src="course-builder-fullpage-v1.js?v=2"></script>
+<script>
+(function(){
+ const style=document.createElement('style');style.id='tic-curriculum-fullscreen-v2';
+ style.textContent='body.tic-curriculum-fullscreen{overflow:auto!important}.tic-fullscreen-workspace{width:100%;max-width:none;margin:0;padding:clamp(14px,2vw,30px);box-sizing:border-box;display:grid;gap:18px}.tic-workspace-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:22px;border-radius:18px;background:linear-gradient(120deg,#261653,#5632c7,#8b42e8);color:#fff}.tic-workspace-head h1{margin:0;font-size:clamp(22px,2vw,30px)}.tic-workspace-head p{margin:6px 0 0;color:#e9ddff}.tic-workspace-editor{background:var(--panel,#fff);border:1px solid var(--line,#ded8ee);border-radius:16px;padding:clamp(14px,2vw,24px);min-width:0}.tic-fullscreen-workspace .tic-curriculum-sort{display:grid;gap:12px}.tic-fullscreen-workspace .tic-inline-editor{max-width:none}.tic-fullscreen-workspace :is(button,input,select,textarea,a):focus-visible{outline:3px solid #7c3aed;outline-offset:3px}@media(max-width:700px){.tic-fullscreen-workspace{padding:10px}.tic-workspace-head{padding:16px}}';
+ document.head.appendChild(style);
+ window.openCourseCurriculumV11=async function(courseId){
+  document.body.classList.add('tic-curriculum-fullscreen');
+  try{
+   const data=await ticLoadCurriculumV11(courseId);if(!data||!data.course){toast('Curso não encontrado.','error');return}
+   const {course,mods,lessons}=data;window.__ticCurriculumCourseId=courseId;currentTeacherCourseIdV11=courseId;
+   const root=document.getElementById('content');if(!root){toast('Área principal da plataforma não encontrada.','error');return}
+   root.innerHTML='<main class="tic-fullscreen-workspace" aria-label="Construtor de currículo">'
+    +'<header class="tic-workspace-head"><div><h1>📚 '+esc(course.title)+'</h1><p>Área de trabalho · '+esc(course.level||'CEFR')+' · '+lessons.length+' lessons · '+mods.length+' módulos</p></div><div class="actions"><button class="btn secondary" onclick="coursesPage()">← Cursos</button><button class="btn secondary" onclick="openCourseEnrollment(\''+courseId+'\')">👥 Alunos do curso</button><button class="btn primary" onclick="openLessonForm(null,false,\''+courseId+'\')">＋ Nova lesson</button><button class="btn secondary" onclick="openModuleForm(\''+courseId+'\')">＋ Novo módulo</button></div></header>'
+    +'<section class="tic-workspace-editor" aria-labelledby="ticLessonEditorTitle"><h2 id="ticLessonEditorTitle">✍️ Editor da lesson</h2><p>O formulário abre nesta página. Após salvar, continue cadastrando sem sair do currículo.</p><div id="ticInlineLessonEditor"><div class="tic-curriculum-empty">Clique em “Nova lesson” ou em “Editar” para começar.</div></div></section>'
+    +'<section class="tic-workspace-structure" aria-label="Estrutura do currículo">'+ticCurriculumHtmlV11(course,mods,lessons)+'</section></main>';
+  }catch(err){toast(err.message||'Não foi possível abrir o currículo.','error')}
+ };
+ window.openCourseCurriculum=window.openCourseCurriculumV11;
+})();
+</script>
 </body>
 </html>
