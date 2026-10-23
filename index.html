@@ -3079,7 +3079,7 @@ async function saveCourseV11(e,id){
 openCourseForm=openCourseFormV11;
 
 /* Teacher Courses page — ordered, no recursion, no dependency on the old wrapper. */
-async function coursesPageV11(){
+async async function coursesPageV11(){
  try{await window.__loadCourseData();const {track,courses}=await ticGetOrderedCoursesV11();window.__ticCourses=courses;const ls=window.__ticLessons||[],ms=window.__ticModules||[];const memberCounts={};if(courses.length){const r=await sb.from('tic_course_students').select('course_id,status').in('course_id',courses.map(c=>c.id));if(!r.error)(r.data||[]).forEach(x=>{if(x.status!=='inactive')memberCounts[x.course_id]=(memberCounts[x.course_id]||0)+1})}
  $('content').innerHTML=`<div class="course-dashboard tic-course-page-v68">
   <section class="tic-course-hero-v68">
