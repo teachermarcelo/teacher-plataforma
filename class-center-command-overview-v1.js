@@ -11,7 +11,7 @@
  const dayFmt=v=>{if(!v)return 'Sem data';const d=new Date(v);return Number.isNaN(d.getTime())?'Sem data':d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});};
  const db=()=>window.sb||(typeof sb!=='undefined'?sb:null);
  const user=()=>window.session?.user||(typeof session!=='undefined'?session?.user:null)||window.__session?.user||null;
- const parseExtraLinks=value=>{const s=String(value||''),i=s.indexOf('[FI_EXTRA_LINKS]');if(i<0)return [];return [...new Set(s.slice(i+'[FI_EXTRA_LINKS]'.length).split(/[\\n\\r,;]+/).map(x=>x.trim()).filter(x=>/^https?:\\/\\//i.test(x)))];};
+ const parseExtraLinks=value=>{const s=String(value||''),i=s.indexOf('[FI_EXTRA_LINKS]');if(i<0)return [];return [...new Set(s.slice(i+'[FI_EXTRA_LINKS]'.length).split(/[\n\r,;]+/).map(x=>x.trim()).filter(x=>/^https?:\/\//i.test(x)))];};
  const cleanNotes=value=>String(value||'').split('[FI_EXTRA_LINKS]')[0].replace(/\\n?\\[TEACHER_PLANNING_ITEM:[^\\]]+\\]/g,'').trim();
  function addStyles(){
   if(document.getElementById('tic-cc-command-overview-css'))return;
@@ -78,7 +78,7 @@
   let actions='';
   const resourceUrl=kind==='event'?(item.meeting_url||item.resource_url||item.url):(kind==='planning'?(item.resource_url||item.meeting_url||item.url):'');
   const trimmedUrl=typeof resourceUrl==='string'?resourceUrl.trim():'';
-  const allUrls=[...new Set([trimmedUrl,...parseExtraLinks(item.notes)].filter(u=>/^https?:\\/\\//i.test(u)))];
+  const allUrls=[...new Set([trimmedUrl,...parseExtraLinks(item.notes)].filter(u=>/^https?:\/\//i.test(u)))];
   const linkHtml=allUrls.length?'<div class="tic-cc-command-note" style="display:flex;flex-direction:column;gap:6px">'+allUrls.map((url,i)=>'<a class="tic-cc-resource-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">🔗 '+(i===0?'Abrir link principal':'Abrir recurso '+(i+1))+' ↗</a>').join('')+'</div>':'';
   if(kind==='event'){
    actions='<div class="tic-cc-command-item-actions">'+(item.class_id?'<button type="button" data-tic-cc-edit-event="'+esc(item.id)+'" data-class-id="'+esc(item.class_id)+'">✎ Editar</button>':'')+'<button type="button" data-tic-cc-delete-event="'+esc(item.id)+'">Remover</button>'+'</div>';
