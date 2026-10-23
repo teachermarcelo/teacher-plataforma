@@ -46,6 +46,8 @@
   .tic-cc-command-filters button{border:1px solid #e4def2;border-radius:99px;background:#fff;padding:6px 9px;color:#655b7c;font-size:10px;cursor:pointer}
   .tic-cc-command-filters button.active{background:#ede5ff;color:#5225b4;border-color:#cfc0ff;font-weight:800}
   .tic-cc-command-link{border:0!important;background:transparent!important;color:#6338c7!important;padding:0!important;text-align:left;font-weight:800}
+  .tic-cc-resource-link{display:inline-flex;align-items:center;gap:6px;color:#6338c7;font-size:11px;font-weight:800;text-decoration:none;overflow-wrap:anywhere}
+  .tic-cc-resource-link:hover{text-decoration:underline}
   @media(max-width:900px){.tic-cc-command-grid{grid-template-columns:1fr}.tic-cc-command-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media(max-width:520px){.tic-cc-command-head h2{font-size:17px}.tic-cc-command-kpi{padding:10px}.tic-cc-command-kpi b{font-size:21px}.tic-cc-command-card-head{align-items:flex-start;flex-direction:column}.tic-cc-command-actions{width:100%}.tic-cc-command-actions button{flex:1}}
   `;
@@ -72,14 +74,17 @@
   const details=[studentName,className,item.event_type?({class:'Aula',meeting:'Reunião',assessment:'Avaliação',next_class:'Próxima aula',other:'Outro'}[item.event_type]||item.event_type):'',valid?dateFmt(d):'Sem data'].filter(Boolean).join(' · ');
   const notes=item.notes||item.instructions||'';
   let actions='';
+  const resourceUrl=kind==='event'?(item.meeting_url||item.resource_url||item.url):(kind==='planning'?(item.resource_url||item.meeting_url||item.url):'');
+  const safeUrl=typeof resourceUrl==='string'&&/^https?:\\/\\//i.test(resourceUrl.trim())?resourceUrl.trim():'';
+  const linkHtml=safeUrl?'<p class="tic-cc-command-note"><a class="tic-cc-resource-link" href="'+esc(safeUrl)+'" target="_blank" rel="noopener noreferrer">🔗 Abrir link da aula / material ↗</a></p>':'';
   if(kind==='event'){
-   actions='<div class="tic-cc-command-item-actions">'+(item.class_id?'<button type="button" data-tic-cc-edit-event="'+esc(item.id)+'" data-class-id="'+esc(item.class_id)+'">✎ Editar</button>':'')+'<button type="button" data-tic-cc-delete-event="'+esc(item.id)+'">Remover</button>'+(item.meeting_url?'<button type="button" data-tic-cc-open-url="'+esc(item.meeting_url)+'">Abrir link ↗</button>':'')+'</div>';
+   actions='<div class="tic-cc-command-item-actions">'+(item.class_id?'<button type="button" data-tic-cc-edit-event="'+esc(item.id)+'" data-class-id="'+esc(item.class_id)+'">✎ Editar</button>':'')+'<button type="button" data-tic-cc-delete-event="'+esc(item.id)+'">Remover</button>'+'</div>';
   }else if(kind==='planning'){
    actions='<div class="tic-cc-command-item-actions"><button type="button" data-tic-cc-edit-planning="'+esc(item.id)+'">✎ Editar</button><button type="button" data-tic-cc-delete-planning="'+esc(item.id)+'">Remover</button></div>';
   }else{
    actions='<div class="tic-cc-command-item-actions"><button type="button" class="tic-cc-command-link" data-tic-cc-open-tasks>Ver / corrigir tasks ↗</button></div>';
   }
-  return '<article class="tic-cc-command-item"><div class="tic-cc-command-date"><b>'+esc(day)+'</b>'+esc(label)+'</div><div class="tic-cc-command-item-main"><h4>'+esc(title)+'</h4><div class="tic-cc-command-meta">'+esc(details)+'</div><div style="margin-top:6px"><span class="tic-cc-command-pill '+statusClass+'">'+esc(statusLabel)+'</span></div>'+(notes?'<p class="tic-cc-command-note">'+esc(notes)+'</p>':'')+actions+'</div></article>';
+  return '<article class="tic-cc-command-item"><div class="tic-cc-command-date"><b>'+esc(day)+'</b>'+esc(label)+'</div><div class="tic-cc-command-item-main"><h4>'+esc(title)+'</h4><div class="tic-cc-command-meta">'+esc(details)+'</div><div style="margin-top:6px"><span class="tic-cc-command-pill '+statusClass+'">'+esc(statusLabel)+'</span></div>'+(notes?'<p class="tic-cc-command-note">'+esc(notes)+'</p>':'')+linkHtml+actions+'</div></article>';
  }
  function renderList(items,kind,studentMap,classMap,assignmentMap){
   if(!items.length)return '<div class="tic-cc-command-empty">Nada registrado aqui ainda. Os itens existentes aparecerão automaticamente.</div>';
