@@ -1021,16 +1021,19 @@ function tm53EscapeAttr(v){return esc(String(v??''))}
 async function teacherMaterialsPageV53(){
  const contentHost=$('content');
  if(!contentHost){console.error('[Media Library] #content não encontrado');return}
- contentHost.innerHTML=`<section class="fi-media-loading" role="status" style="padding:24px;border:1px solid #e2daf5;border-radius:14px;background:#fff"><b>Carregando sua biblioteca…</b><p style="font-size:12px;color:#777;margin-top:8px">Seus materiais estão sendo consultados. Aguarde.</p></section>`;
+ const requestId=(window.__tm53LoadRequestId||0)+1;window.__tm53LoadRequestId=requestId;
+ contentHost.innerHTML=`<section class="fi-media-loading" role="status" style="padding:24px;border:1px solid #e2daf5;border-radius:14px;background:var(--card,#fff);color:var(--text,#28213d)"><b>Carregando sua biblioteca…</b><p style="font-size:12px;color:var(--muted,#777);margin-top:8px">Seus materiais estão sendo consultados. Aguarde.</p></section>`;
  let data=null,error=null;
  try{
   if(!session?.user?.id)throw new Error('Sua sessão não foi identificada. Saia da conta e entre novamente.');
+  if(!sb)throw new Error('O cliente Supabase não foi inicializado. Recarregue a plataforma e confirme se a biblioteca supabase-js carregou.');
   const result=await Promise.race([
    sb.from('tic_teacher_materials').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false}),
    new Promise((_,reject)=>setTimeout(()=>reject(new Error('A consulta ao Supabase excedeu 15 segundos. Verifique a conexão e tente novamente.')),15000))
   ]);
   data=result.data;error=result.error;
  }catch(e){error=e}
+ if(requestId!==window.__tm53LoadRequestId)return;
  if(error){
   contentHost.innerHTML=`<div class="card attention" style="padding:24px;border:1px solid #edcbd5;border-radius:14px;background:var(--card,#fff)"><b>Não foi possível carregar a Media Library.</b><p style="margin:10px 0;color:var(--muted,#777)">${esc(error.message||'Erro inesperado ao consultar os materiais.')}</p><p style="font-size:12px;color:var(--muted,#777)">Os registros existentes não foram removidos. Você pode tentar novamente.</p><button class="btn primary" type="button" onclick="teacherMaterialsPageV53()">↻ Tentar novamente</button></div>`;return
  }
