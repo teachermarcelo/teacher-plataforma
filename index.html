@@ -673,7 +673,22 @@ async function loadView(v){
  if(v==='assignments')return assignmentsPage();
  if(v==='feedback')return feedbackPage();
  if(v==='materials')return genericTable('materials');
- if(v==='teacherMaterials')return teacherMaterialsPageV53();
+ if(v==='teacherMaterials'){
+  const host=document.getElementById('content');
+  try{
+   if(!host)throw new Error('O contêiner #content não existe no HTML.');
+   if(typeof teacherMaterialsPageV53!=='function')throw new Error('A função teacherMaterialsPageV53 não foi carregada. Verifique erros anteriores no JavaScript.');
+   host.innerHTML='<section style="margin:20px;padding:24px;border:1px solid #ded5f5;border-radius:14px;background:#fff;color:#28213d"><b>Carregando Media Library…</b><p style="margin-top:8px;font-size:12px">Conectando à sua biblioteca sem alterar os registros.</p></section>';
+   await Promise.race([
+    teacherMaterialsPageV53(),
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error('A abertura da Media Library excedeu 20 segundos. A função de carregamento não terminou.')),20000))
+   ]);
+  }catch(err){
+   console.error('[Media Library route]',err);
+   if(host)host.innerHTML='<section role="alert" style="margin:20px;padding:24px;border:1px solid #edcbd5;border-radius:14px;background:#fff;color:#382435"><h2 style="margin:0 0 10px">Media Library não abriu</h2><p style="font-size:13px;line-height:1.6">'+String(err?.message||err).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</p><p style="font-size:12px">Seus registros não foram apagados. Use o botão para tentar novamente após corrigir a conexão.</p><button class="btn primary" onclick="loadView(\'teacherMaterials\')">↻ Tentar novamente</button></section>';
+  }
+  return;
+ }
  if(v==='calendar'||v==='studentCalendar')return calendarPage(v.startsWith('student'));
  if(v==='progress'||v==='studentProgress')return progressPage(v.startsWith('student'));
  if(v==='messages'||v==='studentMessages')return messagesPage(v.startsWith('student'));
