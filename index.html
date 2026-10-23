@@ -2415,7 +2415,40 @@ function ticResponsiveSrcdoc(content){
  if(!c)return '';
  const meta='<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">';
  if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}`);
- return '<!doctype html><html><head>'+meta+'</head><body>'+c+'</body></html>';
+ return '<!doctype html><html><head>'+meta+'</head><body>'+c+'
+<style id="tic-curriculum-visual-fix-v3">
+/* Curriculum: compact rhythm, stronger contrast, no oversized empty lesson cards */
+.tic-fullscreen-workspace .tic-workspace-structure{min-width:0;display:grid;gap:14px}
+.tic-fullscreen-workspace .tic-curriculum-sort{gap:14px!important}
+.tic-fullscreen-workspace .tic-module-sort{overflow:hidden;border:1px solid #d8d0ef!important;border-radius:15px!important;background:#fff!important;box-shadow:0 4px 14px rgba(40,24,90,.06)}
+.tic-fullscreen-workspace .tic-module-sort-head{display:flex!important;align-items:center!important;gap:12px!important;padding:13px 16px!important;background:linear-gradient(100deg,#f0eaff,#faf8ff)!important;border-bottom:1px solid #e4dcf5!important}
+.tic-fullscreen-workspace .tic-module-sort-head b{color:#24164b!important;font-size:14px!important;font-weight:800!important}
+.tic-fullscreen-workspace .tic-sort-muted,.tic-fullscreen-workspace .tic-module-sort-head small{color:#655a80!important}
+.tic-fullscreen-workspace .tic-module-lessons-sort{display:grid!important;gap:8px!important;padding:10px!important;background:#fbfaff!important;align-items:start!important}
+.tic-fullscreen-workspace .tic-lesson-sort{display:grid!important;grid-template-columns:20px 20px 32px minmax(0,1fr) auto!important;align-items:center!important;gap:10px!important;width:100%!important;min-height:64px!important;height:auto!important;box-sizing:border-box!important;padding:12px 14px!important;border:1px solid #ded7ed!important;border-radius:12px!important;background:#fff!important;color:#21183b!important;box-shadow:0 2px 7px rgba(30,20,65,.04)!important}
+.tic-fullscreen-workspace .tic-lesson-sort:hover{border-color:#9c83ed!important;background:#fcfaff!important;box-shadow:0 5px 14px rgba(75,45,160,.09)!important}
+.tic-fullscreen-workspace .tic-order-copy{min-width:0!important;display:grid!important;gap:5px!important}
+.tic-fullscreen-workspace .tic-order-copy b{color:#21183b!important;font-size:13px!important;font-weight:800!important;line-height:1.4!important;white-space:normal!important;overflow-wrap:anywhere!important}
+.tic-fullscreen-workspace .tic-order-copy small{color:#675b83!important;font-size:11px!important;line-height:1.35!important}
+.tic-fullscreen-workspace .tic-order-num{display:grid!important;place-items:center!important;width:30px!important;height:30px!important;min-width:30px!important;border-radius:9px!important;background:#ece5ff!important;color:#4b2aaf!important;font-weight:800!important}
+.tic-fullscreen-workspace .tic-order-handle{color:#71628f!important;cursor:grab!important}
+.tic-fullscreen-workspace .tic-order-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:6px!important;flex-wrap:wrap!important}
+.tic-fullscreen-workspace .tic-order-actions .btn{min-width:38px!important;min-height:36px!important;padding:7px 10px!important;border:1px solid #cfc2f4!important;background:#f3efff!important;color:#43238e!important;font-weight:800!important}
+.tic-fullscreen-workspace .tic-order-actions .btn:hover{background:#e4d9ff!important;border-color:#9b80eb!important}
+.tic-fullscreen-workspace .tic-workspace-head .btn{background:#fff!important;color:#392078!important;border:1px solid #ded0ff!important;font-weight:800!important}
+.tic-fullscreen-workspace .tic-workspace-head .btn.primary{background:#ff2e9a!important;color:#fff!important;border-color:#ff2e9a!important}
+.tic-fullscreen-workspace .actions.section{display:flex!important;gap:10px!important;flex-wrap:wrap!important;padding:0!important;margin:12px 0 16px!important}
+.tic-fullscreen-workspace .actions.section .btn{min-height:42px!important;padding:10px 16px!important}
+.tic-fullscreen-workspace .card.section{display:grid!important;grid-template-columns:minmax(220px,1fr) minmax(200px,280px) auto auto auto auto!important;gap:8px!important;align-items:center!important;background:#fff!important;border:1px solid #ded7ef!important;border-radius:14px!important;padding:14px!important;margin:0 0 16px!important}
+.tic-fullscreen-workspace .card.section b{color:#26164f!important}
+.tic-fullscreen-workspace .card.section small{color:#655a80!important}
+.tic-fullscreen-workspace .card.section .btn{min-height:38px!important;padding:8px 12px!important;white-space:nowrap!important}
+.tic-fullscreen-workspace .notice.success,.tic-fullscreen-workspace .notice.warning{border-radius:12px!important;line-height:1.55!important}
+.tic-fullscreen-workspace :is(button,input,select,textarea):focus-visible{outline:3px solid #7c3aed!important;outline-offset:2px!important}
+@media(max-width:1050px){.tic-fullscreen-workspace .card.section{grid-template-columns:minmax(0,1fr) minmax(180px,1fr) auto!important}.tic-fullscreen-workspace .tic-lesson-sort{grid-template-columns:20px 20px 30px minmax(0,1fr)!important}.tic-fullscreen-workspace .tic-order-actions{grid-column:4;justify-content:flex-start!important}}
+@media(max-width:620px){.tic-fullscreen-workspace .card.section{grid-template-columns:1fr!important}.tic-fullscreen-workspace .tic-lesson-sort{grid-template-columns:18px 18px 28px minmax(0,1fr)!important;gap:7px!important;padding:10px!important}.tic-fullscreen-workspace .tic-order-actions{grid-column:1/-1;padding-left:70px}.tic-fullscreen-workspace .tic-workspace-head{align-items:flex-start}.tic-fullscreen-workspace .actions.section .btn{flex:1 1 100%}}
+</style>
+</body></html>';
 }
 async function submitInteractiveLesson(lessonId,payload){
  const s=await studentRecord();if(!s)return;const {data:l,error}=await sb.from('tic_lessons').select('id,allow_student_response,active,student_visible').eq('id',lessonId).eq('active',true).eq('student_visible',true).maybeSingle();if(error||!l)return toast(error?.message||'Lesson não encontrada.','error');if(l.allow_student_response===false)return toast('O Teacher não ativou respostas nesta Lesson.','info');
