@@ -39,6 +39,14 @@
   .tic-cc-command-item.kind-meeting{border-left-color:#0ea5e9;background:linear-gradient(110deg,#f0f9ff,#fff)}
   .tic-cc-command-item.kind-assessment{border-left-color:#f59e0b;background:linear-gradient(110deg,#fffbeb,#fff)}
   .tic-cc-command-item.kind-class{border-left-color:#8b5cf6;background:linear-gradient(110deg,#f5f3ff,#fff)}
+  .tic-cc-command-item.kind-planning{border-left-color:#10b981;background:linear-gradient(110deg,#ecfdf5,#fff)}
+  .tic-cc-command-item.kind-material{border-left-color:#0ea5e9;background:linear-gradient(110deg,#eff6ff,#fff)}
+  .tic-cc-command-item.kind-task{border-left-color:#f59e0b;background:linear-gradient(110deg,#fffbeb,#fff)}
+  .tic-cc-command-item.kind-other{border-left-color:#64748b;background:linear-gradient(110deg,#f8fafc,#fff)}
+  .tic-cc-command-type.planning{background:#d1fae5;color:#065f46}
+  .tic-cc-command-type.material{background:#dbeafe;color:#1e40af}
+  .tic-cc-command-type.task{background:#fef3c7;color:#92400e}
+  .tic-cc-command-type.other{background:#e2e8f0;color:#334155}
   .tic-cc-command-item.kind-cancelled{border-left-color:#ef4444;background:linear-gradient(110deg,#fff1f2,#fff)}
   .tic-cc-command-title{border:0;background:transparent;padding:0;color:#21143d;font:inherit;font-size:13px;font-weight:850;text-align:left;cursor:pointer;line-height:1.35}
   .tic-cc-command-title:hover{color:#6d28d9;text-decoration:underline}
@@ -92,7 +100,8 @@
   const allUrls=[...new Set([trimmedUrl,...parseExtraLinks(item.notes)].filter(u=>/^https?:\/\//i.test(u)))];
   const linkHtml=allUrls.length?'<div class="tic-cc-command-note" style="display:flex;flex-direction:column;gap:6px">'+allUrls.map((url,i)=>'<a class="tic-cc-resource-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">🔗 '+(i===0?'Abrir link principal':'Abrir recurso '+(i+1))+' ↗</a>').join('')+'</div>':'';
   const eventType=String(item.event_type||item.category||'class').toLowerCase();
-  const typeClass=eventType.includes('meet')||eventType.includes('reuni')?'meeting':eventType.includes('assess')||eventType.includes('avali')?'assessment':'class';
+  const categoryType=String(item.category||'').toLowerCase();
+  const typeClass=kind==='planning'?(categoryType.includes('material')?'material':categoryType.includes('agenda')||categoryType.includes('comprom')?'meeting':categoryType.includes('note')||categoryType.includes('anota')?'other':'planning'):kind==='task'?'task':eventType.includes('meet')||eventType.includes('reuni')?'meeting':eventType.includes('assess')||eventType.includes('avali')?'assessment':eventType.includes('other')?'other':'class';
   const cardClass='kind-'+(status==='cancelled'?'cancelled':typeClass);
   const clickUrl=allUrls[0]||'';
   if(kind==='event'){
@@ -102,7 +111,7 @@
   }else{
    actions='<div class="tic-cc-command-item-actions"><button type="button" class="tic-cc-command-link" data-tic-cc-open-tasks>Ver / corrigir tasks ↗</button></div>';
   }
-  return '<article class="tic-cc-command-item '+cardClass+'"><div class="tic-cc-command-date"><b>'+esc(day)+'</b>'+esc(label)+'</div><div class="tic-cc-command-item-main"><h4>'+(kind==='event'&&clickUrl?'<a class="tic-cc-command-title" href="'+esc(clickUrl)+'" target="_blank" rel="noopener noreferrer">'+esc(title)+'</a>':'<button type="button" class="tic-cc-command-title" '+(kind==='event'?'data-tic-cc-open-event="'+esc(item.id)+'" data-class-id="'+esc(item.class_id||'')+'"':'')+'>'+esc(title)+'</button>')+' <span class="tic-cc-command-type '+typeClass+'">'+esc(typeClass==='meeting'?'Compromisso':typeClass==='assessment'?'Avaliação':kind==='planning'?'Planejamento':kind==='task'?'Tarefa':'Aula')+'</span><div class="tic-cc-command-meta">'+esc(details)+'</div><div style="margin-top:6px"><span class="tic-cc-command-pill '+statusClass+'">'+esc(statusLabel)+'</span></div>'+(notes?'<p class="tic-cc-command-note">'+esc(notes)+'</p>':'')+linkHtml+actions+'</div></article>';
+  return '<article class="tic-cc-command-item '+cardClass+'"><div class="tic-cc-command-date"><b>'+esc(day)+'</b>'+esc(label)+'</div><div class="tic-cc-command-item-main"><h4>'+(kind==='event'&&clickUrl?'<a class="tic-cc-command-title" href="'+esc(clickUrl)+'" target="_blank" rel="noopener noreferrer">'+esc(title)+'</a>':'<button type="button" class="tic-cc-command-title" '+(kind==='event'?'data-tic-cc-open-event="'+esc(item.id)+'" data-class-id="'+esc(item.class_id||'')+'"':'')+'>'+esc(title)+'</button>')+' <span class="tic-cc-command-type '+typeClass+'">'+esc(typeClass==='meeting'?'Compromisso':typeClass==='assessment'?'Avaliação':typeClass==='material'?'Material':typeClass==='planning'?'Planejamento':typeClass==='other'?'Anotação':typeClass==='task'?'Tarefa':'Aula')+'</span><div class="tic-cc-command-meta">'+esc(details)+'</div><div style="margin-top:6px"><span class="tic-cc-command-pill '+statusClass+'">'+esc(statusLabel)+'</span></div>'+(notes?'<p class="tic-cc-command-note">'+esc(notes)+'</p>':'')+linkHtml+actions+'</div></article>';
  }
  function renderList(items,kind,studentMap,classMap,assignmentMap){
   if(!items.length)return '<div class="tic-cc-command-empty">Nada registrado aqui ainda. Os itens existentes aparecerão automaticamente.</div>';
