@@ -668,7 +668,7 @@ async function loadView(v){
  if(v==='overview')return overview();
  if(v==='students')return studentsPage();
  if(v==='classes')return classesPage();
- if(v==='courses')return coursesPageV11();
+ if(v==='courses')return window.coursesPageV11();
  if(v==='lessons'||v==='plans')return lessonsPage(v==='plans');
  if(v==='assignments')return assignmentsPage();
  if(v==='feedback')return feedbackPage();
@@ -3101,6 +3101,7 @@ async async function coursesPageV11(){
 </div>`;
  }catch(e){$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar os cursos.</b><p>${esc(e.message||e)}</p><button class="btn primary" onclick="coursesPageV11()">Tentar novamente</button></div>`}
 }
+window.coursesPageV11=coursesPageV11;
 coursesPage=coursesPageV11;
 
 /* Multi-course assignment, preserving existing course enrollment behavior. */
@@ -9582,7 +9583,7 @@ observer.observe(document.documentElement,{childList:true,subtree:true});
 <script src="class-center-usability.js?v=1"></script>
 <script src="class-center-command-overview-v1.js?v=4"></script>
 <script src="teacher-planning-calendar-bridge-v1.js?v=2"></script>
-<script src="course-builder-fullpage-v1.js?v=3"></script>
+<script src="course-builder-fullpage-v1.js?v=4"></script>
 <script>
 (function(){
  const style=document.createElement('style');style.id='tic-curriculum-fullscreen-v2';
