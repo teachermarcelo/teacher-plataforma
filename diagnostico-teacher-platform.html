@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Diagnóstico seguro — Teacher Platform</title>
+<style>
+:root{color-scheme:light dark;font:16px/1.5 system-ui,sans-serif}body{max-width:980px;margin:0 auto;padding:24px;background:Canvas;color:CanvasText}h1{font-size:1.6rem}p{max-width:78ch}.note{padding:12px 14px;border:1px solid #8b7bd0;border-radius:12px}button{font:inherit;padding:10px 14px;border-radius:9px;border:1px solid #888;cursor:pointer;margin:4px 4px 4px 0}.secondary{opacity:.85}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{text-align:left;padding:9px;border-bottom:1px solid #8886;vertical-align:top;overflow-wrap:anywhere}code,pre{overflow-wrap:anywhere;white-space:pre-wrap}#status{margin-top:12px;font-weight:600}.ok{color:#16803c}.bad{color:#c23b42}.pending{color:#a46b00}small{opacity:.8}
+</style>
+</head>
+<body>
+<h1>Diagnóstico seguro da Teacher Platform</h1>
+<p>Esta página verifica apenas sinais técnicos básicos do navegador e alguns arquivos públicos do próprio site. Ela não modifica o projeto principal, não apaga cache, não cancela o Service Worker, não lê valores do localStorage e não consulta nem altera tabelas do Supabase.</p>
+<div class="note"><strong>Como usar:</strong> abra esta página no mesmo navegador em que o painel do professor trava e clique em “Executar verificações”. Se a página principal travar antes de abrir esta ferramenta, abra o link diretamente em uma nova aba.</div>
+<div>
+<button id="run">Executar verificações</button>
+<button id="download" class="secondary" disabled>Baixar relatório TXT</button>
+<button id="copy" class="secondary" disabled>Copiar relatório</button>
+</div>
+<div id="status" role="status">Aguardando execução.</div>
+<table><thead><tr><th>Teste</th><th>Resultado</th><th>Detalhes</th></tr></thead><tbody id="results"></tbody></table>
+<p><small>Privacidade: o relatório inclui navegador, estado do documento, nomes de caches e resultados HTTP de arquivos públicos. Não inclui cookies, tokens, credenciais, conteúdo de materiais nem dados pessoais.</small></p>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const rows=[];
+function add(test,result,details,state='pending'){
+ rows.push({test,result,details,state});
+ const tr=document.createElement('tr');
+ for(const value of [test,result,details]){const td=document.createElement('td');td.textContent=String(value);tr.appendChild(td)}
+ tr.className=state;$('results').appendChild(tr);
+}
+function updateStatus(t){$('status').textContent=t}
+async function timedFetch(path){
+ const started=performance.now();
+ try{
+  const response=await fetch(path,{method:'GET',cache:'no-store',credentials:'same-origin'});
+  const elapsed=Math.round(performance.now()-started);
+  const length=response.headers.get('content-length')||'não informado';
+  return {result:response.ok?'OK':'HTTP '+response.status,details:'HTTP '+response.status+'; '+elapsed+' ms; tamanho: '+length,ok:response.ok};
+ }catch(error){return {result:'FALHOU',details:String(error&&error.message||error),ok:false}}
+}
+async function run(){
+ $('results').replaceChildren();rows.length=0;$('download').disabled=true;$('copy').disabled=true;
+ updateStatus('Executando verificações…');
+ add('Data/hora',new Date().toLocaleString('pt-BR'), 'Hora local deste computador.','ok');
+ add('Navegador',navigator.userAgent,'Identificação informada pelo navegador.','ok');
+ add('Estado da página',document.readyState,'Estado atual do documento de diagnóstico.','ok');
+ add('Conexão',navigator.onLine?'online':'offline','Indicador do navegador; não garante acesso a todos os servidores.',navigator.onLine?'ok':'bad');
+ add('JavaScript responsivo','OK','A página de diagnóstico executou o código e atualizou a interface.','ok');
+ if(navigator.storage&&navigator.storage.estimate){
+  try{const e=await navigator.storage.estimate();add('Estimativa de armazenamento','Disponível','Uso aproximado: '+(e.usage==null?'não informado':Math.round(e.usage/1024/1024)+' MB')+'; cota aproximada: '+(e.quota==null?'não informada':Math.round(e.quota/1024/1024)+' MB')+'. Nenhum dado foi lido.', 'ok')}
+  catch(e){add('Estimativa de armazenamento','Indisponível',String(e),'pending')}
+ }else add('Estimativa de armazenamento','Não suportado','API não disponível neste navegador.','pending');
+ if('serviceWorker' in navigator){
+  try{
+   const regs=await navigator.serviceWorker.getRegistrations();
+   const relevant=regs.filter(r=>r.scope.includes('/teacher-plataforma/'));
+   add('Service Worker da plataforma',relevant.length?'Encontrado':'Não encontrado nesta sessão',
+    relevant.map(r=>'scope='+r.scope+'; estado='+((r.active&&r.active.state)||'sem worker ativo')).join(' | ')||'Não foi encontrado registro com escopo /teacher-plataforma/.',relevant.length?'pending':'pending');
+  }catch(e){add('Service Worker da plataforma','Falha ao consultar',String(e),'bad')}
+ }else add('Service Worker da plataforma','Não suportado','navigator.serviceWorker indisponível.','pending');
+ if('caches' in window){
+  try{const names=await caches.keys();add('Nomes dos caches','Consultado',names.length?names.join(', '):'Nenhum cache listado. Nenhum conteúdo foi aberto ou apagado.','pending')}
+  catch(e){add('Nomes dos caches','Falha ao consultar',String(e),'bad')}
+ }else add('Nomes dos caches','Não suportado','Cache Storage API indisponível.','pending');
+ const paths=['./','./service-worker.js','./dashboard-theme.js','./teacher-file-management-ux.js'];
+ for(const path of paths){
+  updateStatus('Verificando '+path+'…');
+  const r=await timedFetch(path);
+  add('Arquivo '+path,r.result,r.details,r.ok?'ok':'bad');
+ }
+ const report=['RELATÓRIO DE DIAGNÓSTICO — TEACHER PLATFORM',...rows.map(r=>r.test+': '+r.result+' — '+r.details),'','Este relatório não lê nem altera dados do Supabase.'].join('\n');
+ window.__teacherDiagnosticReport=report;
+ $('download').disabled=false;$('copy').disabled=false;
+ updateStatus('Verificações concluídas. Baixe ou copie o relatório e compartilhe apenas se desejar.');
+}
+$('run').addEventListener('click',run);
+$('download').addEventListener('click',()=>{
+ const blob=new Blob([window.__teacherDiagnosticReport||''],{type:'text/plain;charset=utf-8'});
+ const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='relatorio-diagnostico-teacher-platform.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+$('copy').addEventListener('click',async()=>{
+ try{await navigator.clipboard.writeText(window.__teacherDiagnosticReport||'');updateStatus('Relatório copiado.');}
+ catch(e){updateStatus('Não foi possível copiar automaticamente; use Baixar relatório TXT.');}
+});
+})();
+</script>
+</body>
+</html>
