@@ -11,6 +11,8 @@
  const dayFmt=v=>{if(!v)return 'Sem data';const d=new Date(v);return Number.isNaN(d.getTime())?'Sem data':d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});};
  const db=()=>window.sb||(typeof sb!=='undefined'?sb:null);
  const user=()=>window.session?.user||(typeof session!=='undefined'?session?.user:null)||window.__session?.user||null;
+ const parseExtraLinks=value=>{const s=String(value||''),i=s.indexOf('[FI_EXTRA_LINKS]');if(i<0)return [];return [...new Set(s.slice(i+'[FI_EXTRA_LINKS]'.length).split(/[\\n\\r,;]+/).map(x=>x.trim()).filter(x=>/^https?:\\/\\//i.test(x)))];};
+ const cleanNotes=value=>String(value||'').split('[FI_EXTRA_LINKS]')[0].replace(/\\n?\\[TEACHER_PLANNING_ITEM:[^\\]]+\\]/g,'').trim();
  function addStyles(){
   if(document.getElementById('tic-cc-command-overview-css'))return;
   const s=document.createElement('style');s.id='tic-cc-command-overview-css';
@@ -72,11 +74,12 @@
   const statusLabel=({scheduled:'Agendada',planned:'Planejado',in_progress:'Em preparação',pending:'Pendente',submitted:'Entregue',overdue:'Atrasada',completed:'Realizada',done:'Concluído',cancelled:'Cancelada',postponed:'Adiada'})[status]||status;
   const statusClass=['completed','done','submitted'].includes(status)?'done':['overdue','cancelled'].includes(status)?'late':'';
   const details=[studentName,className,item.event_type?({class:'Aula',meeting:'Reunião',assessment:'Avaliação',next_class:'Próxima aula',other:'Outro'}[item.event_type]||item.event_type):'',valid?dateFmt(d):'Sem data'].filter(Boolean).join(' · ');
-  const notes=item.notes||item.instructions||'';
+  const notes=cleanNotes(item.notes||item.instructions||'');
   let actions='';
   const resourceUrl=kind==='event'?(item.meeting_url||item.resource_url||item.url):(kind==='planning'?(item.resource_url||item.meeting_url||item.url):'');
-  const trimmedUrl=typeof resourceUrl==='string'?resourceUrl.trim():'';const safeUrl=trimmedUrl.startsWith('https://')||trimmedUrl.startsWith('http://')?trimmedUrl:'';
-  const linkHtml=safeUrl?'<p class="tic-cc-command-note"><a class="tic-cc-resource-link" href="'+esc(safeUrl)+'" target="_blank" rel="noopener noreferrer">🔗 Abrir link da aula / material ↗</a></p>':'';
+  const trimmedUrl=typeof resourceUrl==='string'?resourceUrl.trim():'';
+  const allUrls=[...new Set([trimmedUrl,...parseExtraLinks(item.notes)].filter(u=>/^https?:\\/\\//i.test(u)))];
+  const linkHtml=allUrls.length?'<div class="tic-cc-command-note" style="display:flex;flex-direction:column;gap:6px">'+allUrls.map((url,i)=>'<a class="tic-cc-resource-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">🔗 '+(i===0?'Abrir link principal':'Abrir recurso '+(i+1))+' ↗</a>').join('')+'</div>':'';
   if(kind==='event'){
    actions='<div class="tic-cc-command-item-actions">'+(item.class_id?'<button type="button" data-tic-cc-edit-event="'+esc(item.id)+'" data-class-id="'+esc(item.class_id)+'">✎ Editar</button>':'')+'<button type="button" data-tic-cc-delete-event="'+esc(item.id)+'">Remover</button>'+'</div>';
   }else if(kind==='planning'){
