@@ -182,3 +182,42 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
  },true);
 })();
+
+
+/* App-wide view watchdog: never leave a workspace blank when a data request stalls.
+   It does not modify records or replace the existing page renderers. */
+(function installViewRecoveryV1(){
+ 'use strict';
+ if(window.__fiViewRecoveryV1)return;
+ window.__fiViewRecoveryV1=true;
+ const timeoutMs=16000;
+ function showFailure(view,reason){
+  const host=document.getElementById('content')||document.getElementById('ticV41ClassBody')||document.getElementById('classCenterBody');
+  if(!host)return;
+  const safe=String(reason||'A consulta demorou mais que o esperado.').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  host.innerHTML='<section class="fi-view-recovery" role="alert"><div class="fi-view-recovery-icon">⏳</div><h3>Esta área não terminou de carregar</h3><p><b>Seção:</b> '+view+'</p><p class="fi-view-recovery-reason">'+safe+'</p><p>Seus dados não foram apagados. Tente novamente; se persistir, verifique a conexão com o Supabase e as permissões de acesso.</p><button type="button" class="btn primary" data-fi-view-retry>↻ Tentar novamente</button><button type="button" class="btn secondary" data-fi-view-home>Voltar ao Overview</button></section>';
+  host.querySelector('[data-fi-view-retry]')?.addEventListener('click',()=>window.loadView?.(view));
+  host.querySelector('[data-fi-view-home]')?.addEventListener('click',()=>window.loadView?.('overview'));
+ }
+ const original=window.loadView;
+ if(typeof original==='function'&&!original.__fiViewRecoveryV1){
+  const wrapped=async function(view){
+   let timer;
+   try{
+    const result=await Promise.race([
+     Promise.resolve().then(()=>original.apply(this,arguments)),
+     new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Tempo limite excedido ('+(timeoutMs/1000)+' s). A consulta pode estar sem resposta.')),timeoutMs)})
+    ]);
+    clearTimeout(timer);return result;
+   }catch(err){
+    clearTimeout(timer);
+    console.error('[Teacher Platform] Falha ao abrir seção:',view,err);
+    showFailure(view,err?.message||'Erro inesperado ao carregar os dados.');
+   }
+  };
+  wrapped.__fiViewRecoveryV1=true;wrapped.__fiOriginalLoadView=original;window.loadView=wrapped;
+ }
+ const style=document.createElement('style');style.id='fi-view-recovery-css';
+ style.textContent='.fi-view-recovery{max-width:760px;margin:24px auto;padding:28px;border:1px solid #e3d9f5;border-radius:18px;background:linear-gradient(145deg,#fff,#f8f5ff);color:#292342;box-shadow:0 10px 32px #30205a0b}.fi-view-recovery-icon{font-size:28px}.fi-view-recovery h3{font-size:20px;margin:12px 0 8px}.fi-view-recovery p{font-size:12px;line-height:1.6;color:#6f6685}.fi-view-recovery-reason{padding:10px 12px;border-radius:9px;background:#f1edfa;overflow-wrap:anywhere}.fi-view-recovery .btn{margin:8px 8px 0 0}@media(prefers-color-scheme:dark){body:not(.fi-light) .fi-view-recovery{background:#182438;border-color:#3b4963;color:#f5f2ff}body:not(.fi-light) .fi-view-recovery p{color:#c8cde0}body:not(.fi-light) .fi-view-recovery-reason{background:#101a2a}}';
+ if(!document.getElementById(style.id))document.head.appendChild(style);
+})();
