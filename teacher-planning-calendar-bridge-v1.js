@@ -140,7 +140,6 @@
     if(typeof window.closeModal==='function')window.closeModal();
     if(typeof window.toast==='function')window.toast('Planejamento salvo e sincronizado com a turma/Calendar.','success');
     if(typeof window.loadTeacherPlanningItems==='function')await window.loadTeacherPlanningItems();
-    if(typeof window.loadView==='function')window.loadView('calendar');
    };
    window.saveTeacherPlanningItem.__bridgeV1=true;
   }
