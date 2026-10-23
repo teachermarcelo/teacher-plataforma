@@ -1044,7 +1044,12 @@ async function teacherMaterialsPageV53(){
  </div><div class="fi-media-activefilters" id="tm53FilterSummary"></div>
  <div id="tm53Grid" class="fi-media-groups"></div>
  </section>`;
- renderTeacherMaterialsV53();
+ try{
+  renderTeacherMaterialsV53();
+ }catch(renderError){
+  console.error('[Media Library] Erro ao desenhar materiais:',renderError);
+  contentHost.innerHTML=`<div class="card attention" style="padding:24px;border:1px solid #edcbd5;border-radius:14px;background:var(--card,#fff)"><b>A biblioteca carregou, mas ocorreu um erro ao montar os cartões.</b><p style="margin:10px 0;color:var(--muted,#777)">${esc(renderError?.message||String(renderError))}</p><p style="font-size:12px;color:var(--muted,#777)">Seus registros continuam preservados. A mensagem acima ajudará a identificar o componente que falhou.</p><button class="btn primary" type="button" onclick="teacherMaterialsPageV53()">↻ Tentar novamente</button></div>`;
+ }
 }
 function teacherMaterialsTabV54(tab){
  window.__tm53Tab=['library','models','drive'].includes(tab)?tab:'library';
