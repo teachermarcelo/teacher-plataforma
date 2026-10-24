@@ -2664,6 +2664,52 @@ body.tic-curriculum-fullscreen #content{padding:0!important;max-width:none!impor
 @media(max-width:520px){.tic-workspace-head{border-radius:17px!important}.tic-workspace-head .actions{display:grid;grid-template-columns:1fr 1fr;width:100%}.tic-workspace-head .actions .btn{width:100%;padding:0 8px!important;font-size:11px}.tic-fullscreen-workspace .card.section{grid-template-columns:1fr!important}.tic-fullscreen-workspace .card.section>div:first-child{grid-column:auto}.tic-fullscreen-workspace .actions.section .btn{width:100%;justify-content:center}.tic-lesson-sort{grid-template-columns:16px 12px 28px minmax(0,1fr)!important}.tic-lesson-sort .tic-order-copy b{font-size:12px!important}.tic-lesson-sort .tic-order-actions .btn{padding:0 8px!important}}
 @media(prefers-reduced-motion:reduce){.tic-module-sort,.tic-lesson-sort{transition:none!important}}
 </style>
+
+<style id="tic-courses-live-layout-fix-v3">
+/* V3: apply to the live curriculum DOM even when another route opens it outside the new workspace wrapper */
+body:has(#ticCurriculumSortList){background:#f4f5fc!important}
+body:has(#ticCurriculumSortList) #ticCurriculumSortList{display:grid!important;gap:16px!important;min-width:0;margin-top:16px}
+body:has(#ticCurriculumSortList) #ticCurriculumSortList>.tic-module-sort{display:block!important;overflow:hidden!important;border:1px solid #e2def4!important;border-radius:20px!important;background:#fff!important;box-shadow:0 9px 28px #28205c0c!important;margin:0!important}
+body:has(#ticCurriculumSortList) #ticCurriculumSortList>.tic-module-sort>.tic-module-sort-head{display:grid!important;grid-template-columns:24px 38px minmax(0,1fr) auto!important;gap:12px!important;align-items:center!important;padding:17px 20px!important;min-height:72px!important;background:linear-gradient(105deg,#f0ecff,#fff 72%)!important;border-bottom:1px solid #eeeaf8!important}
+body:has(#ticCurriculumSortList) .tic-module-sort-head>div:nth-child(3)>b{font-size:15px!important;font-weight:850!important;color:#211b51!important;line-height:1.5!important}
+body:has(#ticCurriculumSortList) .tic-module-sort-head .tic-order-num{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:36px!important;height:36px!important;min-width:36px!important;border-radius:12px!important;background:linear-gradient(140deg,#6239dc,#9869f5)!important;color:#fff!important;font-size:13px!important;font-weight:900!important;box-shadow:0 4px 12px #7045e51f!important}
+body:has(#ticCurriculumSortList) .tic-module-sort-head .tic-order-actions{display:flex!important;gap:8px!important;align-items:center!important;justify-content:flex-end!important;flex-wrap:wrap!important}
+body:has(#ticCurriculumSortList) .tic-module-sort-head .btn{min-height:36px!important;border-radius:11px!important;padding:0 14px!important;font-weight:750!important}
+body:has(#ticCurriculumSortList) #ticCurriculumSortList .tic-module-lessons-sort{display:grid!important;gap:10px!important;padding:14px!important;background:#fbfaff!important;min-width:0!important}
+body:has(#ticCurriculumSortList) #ticCurriculumSortList .tic-lesson-sort{display:grid!important;grid-template-columns:20px 18px 34px minmax(0,1fr) auto!important;gap:12px!important;align-items:center!important;min-height:84px!important;padding:14px 16px!important;border:1px solid #e8e4f6!important;border-radius:15px!important;background:#fff!important;box-shadow:0 3px 12px #2c205e06!important;margin:0!important}
+body:has(#ticCurriculumSortList) #ticCurriculumSortList .tic-lesson-sort:hover{border-color:#cfc1ff!important;box-shadow:0 8px 18px #3927790c!important}
+body:has(#ticCurriculumSortList) #ticCurriculumSortList .tic-order-copy{display:grid!important;gap:5px!important;min-width:0!important}
+body:has(#ticCurriculumSortList) #ticCurriculumSortList .tic-order-copy b{font-size:14px!important;line-height:1.45!important;color:#25204d!important;overflow-wrap:anywhere!important}
+body:has(#ticCurriculumSortList) #ticCurriculumSortList .tic-order-copy small{font-size:11px!important;color:#827c9c!important;line-height:1.5!important}
+body:has(#ticCurriculumSortList) #ticCurriculumSortList .tic-lesson-sort .tic-order-num{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:32px!important;height:32px!important;min-width:32px!important;border-radius:10px!important;background:#eee8ff!important;color:#5936c7!important;font-weight:900!important}
+body:has(#ticCurriculumSortList) #ticCurriculumSortList .tic-lesson-sort .tic-order-actions{display:flex!important;gap:7px!important;justify-content:flex-end!important;flex-wrap:wrap!important}
+body:has(#ticCurriculumSortList) #ticCurriculumSortList .tic-lesson-sort .btn{min-height:36px!important;min-width:36px!important;border-radius:10px!important}
+body:has(#ticCurriculumSortList) .tic-order-handle{color:#9285b8!important;font-size:17px!important;cursor:grab!important}
+body:has(#ticCurriculumSortList) .card.section:has(+ #ticCurriculumSortList){display:grid!important;grid-template-columns:minmax(220px,1.4fr) minmax(210px,1fr) auto!important;gap:10px!important;align-items:center!important;margin:16px 0!important;padding:18px!important;border:1px solid #e0def2!important;border-radius:18px!important;background:#fff!important;box-shadow:0 8px 22px #28205c08!important}
+body:has(#ticCurriculumSortList) .card.section:has(+ #ticCurriculumSortList)>div:first-child{grid-row:span 2!important}
+body:has(#ticCurriculumSortList) .card.section:has(+ #ticCurriculumSortList)>div:first-child b{display:block!important;margin-bottom:5px!important;font-size:16px!important;color:#252052!important}
+body:has(#ticCurriculumSortList) .card.section:has(+ #ticCurriculumSortList)>div:first-child small{font-size:12px!important;line-height:1.6!important;color:#77718f!important}
+body:has(#ticCurriculumSortList) #ticBulkTargetModuleV12{width:100%!important;min-height:42px!important;border:1px solid #ded8f0!important;border-radius:12px!important;padding:0 12px!important;background:#fff!important}
+body:has(#ticCurriculumSortList) .card.section:has(+ #ticCurriculumSortList) .btn{min-height:41px!important;border-radius:12px!important;font-weight:750!important}
+body:has(#ticCurriculumSortList) .actions.section{display:flex!important;gap:10px!important;flex-wrap:wrap!important;margin:14px 0!important}
+body:has(#ticCurriculumSortList) .actions.section .btn{min-height:42px!important;border-radius:12px!important;padding:0 17px!important;font-weight:750!important}
+body:has(#ticCurriculumSortList) .notice.success{padding:16px 18px!important;border:1px solid #ded7ff!important;border-left:5px solid #7045e5!important;border-radius:16px!important;background:linear-gradient(110deg,#f0edff,#fff 72%)!important;color:#2d245c!important;line-height:1.65!important}
+body:has(#ticCurriculumSortList) .notice.warning.section{border-radius:14px!important;padding:14px 16px!important}
+body:has(#ticCurriculumSortList) :is(button,input,select,textarea):focus-visible{outline:3px solid #8965ee!important;outline-offset:3px!important}
+@media(max-width:900px){
+ body:has(#ticCurriculumSortList) .card.section:has(+ #ticCurriculumSortList){grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+ body:has(#ticCurriculumSortList) .card.section:has(+ #ticCurriculumSortList)>div:first-child{grid-column:1/-1!important;grid-row:auto!important}
+ body:has(#ticCurriculumSortList) #ticCurriculumSortList .tic-module-sort-head{grid-template-columns:20px 34px minmax(0,1fr)!important;padding:14px!important}
+ body:has(#ticCurriculumSortList) #ticCurriculumSortList .tic-module-sort-head .tic-order-actions{grid-column:1/-1!important;justify-content:flex-start!important}
+ body:has(#ticCurriculumSortList) #ticCurriculumSortList .tic-lesson-sort{grid-template-columns:18px 14px 30px minmax(0,1fr)!important;gap:8px!important;padding:11px!important}
+ body:has(#ticCurriculumSortList) #ticCurriculumSortList .tic-lesson-sort .tic-order-actions{grid-column:4!important;justify-content:flex-start!important;padding-top:5px!important}
+}
+@media(max-width:520px){
+ body:has(#ticCurriculumSortList) .card.section:has(+ #ticCurriculumSortList){grid-template-columns:minmax(0,1fr)!important}
+ body:has(#ticCurriculumSortList) .card.section:has(+ #ticCurriculumSortList)>div:first-child{grid-column:auto!important}
+ body:has(#ticCurriculumSortList) .actions.section .btn{width:100%!important;justify-content:center!important}
+}
+</style>
 </body></html>';
 }
 
