@@ -901,6 +901,54 @@ function addAccessibleContrastV65(){
 }
 addAccessibleContrastV65();
 addAccessibleContrastV65();
+
+/* Global legibility repair: prevent dark-on-dark labels, pills and card metadata. */
+function addGlobalReadableContrastV66(){
+ if(document.getElementById('fiGlobalReadableContrastV66'))return;
+ const st=document.createElement('style');
+ st.id='fiGlobalReadableContrastV66';
+ st.textContent=`
+ body.fi-premium #content .v41-class-card,
+ body.fi-premium #content .v41-class-card *{text-shadow:none}
+ body.fi-premium #content .v41-class-card .badge,
+ body.fi-premium #content .v41-class-card [class*="status"],
+ body.fi-premium #content .v41-class-card [class*="pill"],
+ body.fi-premium #content .v41-class-card .level,
+ body.fi-premium #content .v41-class-card .tag{
+   background:#e8edf6!important;color:#263b5c!important;
+   -webkit-text-fill-color:#263b5c!important;border-color:#cbd5e1!important;
+ }
+ body.fi-premium #content .v41-class-card .badge *,
+ body.fi-premium #content .v41-class-card [class*="status"] *,
+ body.fi-premium #content .v41-class-card [class*="pill"] *,
+ body.fi-premium #content .v41-class-card .level *,
+ body.fi-premium #content .v41-class-card .tag *{color:inherit!important;-webkit-text-fill-color:inherit!important}
+ body.fi-premium #content .v41-class-card h1,
+ body.fi-premium #content .v41-class-card h2,
+ body.fi-premium #content .v41-class-card h3,
+ body.fi-premium #content .v41-class-card .student-name{color:#172033!important;-webkit-text-fill-color:#172033!important}
+ body.fi-premium #content .v41-class-card p,
+ body.fi-premium #content .v41-class-card small,
+ body.fi-premium #content .v41-class-card .muted,
+ body.fi-premium #content .v41-class-card .meta{color:#52617a!important;-webkit-text-fill-color:#52617a!important}
+ body.fi-premium:not(.fi-light) #content .v41-class-card .badge,
+ body.fi-premium:not(.fi-light) #content .v41-class-card [class*="status"],
+ body.fi-premium:not(.fi-light) #content .v41-class-card [class*="pill"],
+ body.fi-premium:not(.fi-light) #content .v41-class-card .level,
+ body.fi-premium:not(.fi-light) #content .v41-class-card .tag{background:#e8edf6!important;color:#263b5c!important;-webkit-text-fill-color:#263b5c!important}
+ body.fi-premium:not(.fi-light) #content .v41-class-card h1,
+ body.fi-premium:not(.fi-light) #content .v41-class-card h2,
+ body.fi-premium:not(.fi-light) #content .v41-class-card h3,
+ body.fi-premium:not(.fi-light) #content .v41-class-card .student-name{color:#f8fafc!important;-webkit-text-fill-color:#f8fafc!important}
+ body.fi-premium:not(.fi-light) #content .v41-class-card p,
+ body.fi-premium:not(.fi-light) #content .v41-class-card small,
+ body.fi-premium:not(.fi-light) #content .v41-class-card .muted,
+ body.fi-premium:not(.fi-light) #content .v41-class-card .meta{color:#cbd5e1!important;-webkit-text-fill-color:#cbd5e1!important}
+ `;
+ document.head.appendChild(st);
+}
+addGlobalReadableContrastV66();
+
 window.fiPremiumRefresh=init;
 
 /* Additive teacher analytics dashboard. Does not replace existing views or mutate records. */
