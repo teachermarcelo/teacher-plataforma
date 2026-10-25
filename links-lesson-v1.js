@@ -60,6 +60,6 @@ function install(){
  anchor.insertAdjacentElement('afterend',b);
 }
 function scan(){install()}
-function navExit(){document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-ll-added]');if(!b){restoreView();var workspace=document.getElementById('links-lesson-workspace');if(workspace){workspace.style.display='none';workspace.setAttribute('aria-hidden','true')}root=null}},true)}
+function navExit(){document.addEventListener('click',function(e){var target=e.target&&e.target.closest?e.target.closest('button,a,[role="button"]'):null;if(!target||target.hasAttribute('data-ll-added'))return;var navTarget=target.closest('#teacherNav [data-view],.sidebar .nav a,.sidebar .nav button,#sidebar .nav a,#sidebar .nav button,aside .nav a,aside .nav button');if(!navTarget)return;restoreView();var workspace=document.getElementById('links-lesson-workspace');if(workspace){workspace.style.display='none';workspace.setAttribute('aria-hidden','true')}root=null},true)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){scan();navExit();new MutationObserver(scan).observe(document.body,{childList:true,subtree:true})},{once:true});else{scan();navExit();new MutationObserver(scan).observe(document.body,{childList:true,subtree:true})}
 })();
