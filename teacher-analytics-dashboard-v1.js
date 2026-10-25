@@ -115,19 +115,24 @@ function isTeacher(){
  const p=window.profile||window.currentProfile||window.userProfile||{};
  const role=String(p.role||p.user_role||$('#userRole')?.textContent||document.body.getAttribute('data-role')||'').toLowerCase();
  if(/teacher|admin|professor|docente/.test(role)||document.body.classList.contains('fi-teacher-mode'))return true;
- const navText=String(document.querySelector('aside')?.innerText||$('#sidebar')?.innerText||$('.sidebar')?.innerText||'').toLowerCase();
- const hasTeacherNav=/students/.test(navText)&&/classes/.test(navText)&&/contacts/.test(navText);
- const hasStudentNav=/lessons recebidas|my assignments|minhas tarefas/.test(navText);
- return hasTeacherNav&&!hasStudentNav;
+ const sidebar=document.querySelector('aside')||$('#sidebar')||$('.sidebar');
+ const navText=String(sidebar?.innerText||sidebar?.textContent||'').toLowerCase();
+ const roleText=String(document.body.innerText||'').toLowerCase();
+ const hasTeacherNav=/students/.test(navText)&&/classes/.test(navText)&&/contatos|contacts/.test(navText);
+ const hasTeacherProfile=/teacher platform/.test(roleText)&&/teacher marcelo/.test(roleText)&&/teacher/.test(roleText);
+ const hasStudentNav=/lessons recebidas|my assignments|minhas tarefas|aulas recebidas/.test(navText);
+ return (hasTeacherNav||hasTeacherProfile)&&!hasStudentNav;
 }
 function isOverview(){
  const view=String(window.currentView||window.currentPage||window.currentViewName||'').toLowerCase().trim();
- const active=$('.nav button.active, .nav a.active, #sidebar .active, aside .active, .sidebar .active, [aria-current="page"]');
+ const navItems=Array.from(document.querySelectorAll('.nav button,.nav a,#sidebar button,#sidebar a,aside button,aside a,.sidebar button,.sidebar a,[aria-current="page"]'));
+ const active=navItems.find(el=>el.classList.contains('active')||el.getAttribute('aria-current')==='page'||el.getAttribute('aria-selected')==='true');
  const nav=String(active?.innerText||active?.textContent||'').toLowerCase().trim();
  if(/studentactivity|student-activity|student activity|lesson|course|class|task|calendar|message|report|material|setting|assessment|game|ready|immersion|contact/.test(view))return false;
  if(/students|lessons received|aulas recebidas|tarefas|games analytics|student activity|class center|classes|contatos/.test(nav))return false;
  if(/overview|dashboard|visão geral|visao geral|início|inicio|home/.test(view+' '+nav))return true;
- return !view&&!nav;
+ const overviewActive=navItems.some(el=>(el.classList.contains('active')||el.getAttribute('aria-current')==='page')&&/overview|visão geral|visao geral|início|inicio/.test(String(el.innerText||el.textContent||'').toLowerCase()));
+ return overviewActive||(!view&&!nav);
 }
 function mount(){
  if(!isTeacher()||!isOverview())return;
