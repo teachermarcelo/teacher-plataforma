@@ -147,8 +147,7 @@ function addStyle(){
  body.fi-premium:not(.fi-light) #content input,
  body.fi-premium:not(.fi-light) #content select,
  body.fi-premium:not(.fi-light) #content textarea{background:#081a2b!important;color:#f4f7ff!important;border-color:#38516b!important}
- body.fi-premium.fi-light .main>.container>.page-head h1{color:#17233a!important}
- body.fi-premium.fi-light .main>.container>.page-head p{color:#64748b!important}
+ body.fi-premium.fi-light .main>.container>.page-head h1{color:#17233a!important} body.fi-premium.fi-light .main>.container>.page-head p{color:#64748b!important}
  body.fi-premium.fi-light #content .card,
  body.fi-premium.fi-light #content .stat,
  body.fi-premium.fi-light #content .quick,
@@ -297,8 +296,7 @@ function addStyle(){
    background:#edf2f8!important;
    color:#26374d!important;
    -webkit-text-fill-color:#26374d!important;
-   border:1px solid #cbd6e5!important;
-   font-weight:800!important;
+   border:1px solid #cbd6e5!important;   font-weight:800!important;
  }
  body.fi-premium #content button.btn.danger,
  body.fi-premium #content .btn.danger {
@@ -447,8 +445,7 @@ function addStyle(){
  }
  body.fi-premium #content .table-wrap::-webkit-scrollbar{height:12px!important}
  body.fi-premium #content .table-wrap::-webkit-scrollbar-track{background:#dfe5ef!important;border-radius:99px!important}
- body.fi-premium #content .table-wrap::-webkit-scrollbar-thumb{background:#7253d6!important;border-radius:99px!important;border:2px solid #dfe5ef!important}
- body.fi-premium:not(.fi-light) #content .table-wrap::-webkit-scrollbar-track{background:#142941!important}
+ body.fi-premium #content .table-wrap::-webkit-scrollbar-thumb{background:#7253d6!important;border-radius:99px!important;border:2px solid #dfe5ef!important} body.fi-premium:not(.fi-light) #content .table-wrap::-webkit-scrollbar-track{background:#142941!important}
  body.fi-premium:not(.fi-light) #content .table-wrap::-webkit-scrollbar-thumb{background:#9a83ff!important;border-color:#142941!important}
  @media(max-width:900px){
    body.fi-premium #content .table-wrap:before{
@@ -597,8 +594,7 @@ function addStyle(){
    color:#49318f!important;
    -webkit-text-fill-color:#49318f!important;
    border:1px solid #d4c8ff!important;
-   font-weight:800!important;
- }
+   font-weight:800!important; }
  body.fi-premium #content table tbody td:first-child button *,
  body.fi-premium #content table tbody td:first-child .btn *,
  body.fi-premium #content table tbody td:first-child a *,
@@ -747,8 +743,7 @@ function installRefreshPositionPersistence(){
   if(typeof fn!=='function'||fn.__fiRefreshPositionWrapped)return false;
   const wrapped=function(view){
    if(!window.__fiRestoringLastPosition&&recentUserAction()){
-    try{
-     const nextView=String(view||''),previousView=sessionStorage.getItem(KEY)||'';
+    try{     const nextView=String(view||''),previousView=sessionStorage.getItem(KEY)||'';
      if(previousView&&previousView!==nextView){sessionStorage.removeItem('ticPlatformLastClassTabV1');sessionStorage.removeItem('ticPlatformLastClassTabViewV1')}
      sessionStorage.setItem(KEY,nextView);
     }catch(_){}
@@ -897,8 +892,7 @@ function addAccessibleContrastV65(){
  body.fi-premium.fi-light .tic-class-info-grid .mini b{color:#334155!important}
  body.fi-premium.fi-light .tic-overview-eyebrow{color:#5b36b8!important}
  body.fi-premium:not(.fi-light) .tic-class-overview-head{background:linear-gradient(115deg,#17172e,#202a43)!important;border-color:#3d4560!important}
- body.fi-premium:not(.fi-light) .tic-class-overview-head h2{color:#f8fafc!important}
- body.fi-premium:not(.fi-light) .tic-class-overview-head p{color:#c5d0df!important}
+ body.fi-premium:not(.fi-light) .tic-class-overview-head h2{color:#f8fafc!important} body.fi-premium:not(.fi-light) .tic-class-overview-head p{color:#c5d0df!important}
  body.fi-premium:not(.fi-light) .tic-overview-total{background:#202a43!important;border-color:#51427d!important;color:#e8ddff!important}
  body.fi-premium.fi-light .tic-class-overview-head{background:linear-gradient(115deg,#f0eaff,#fff)!important;border-color:#d8cdf6!important}
  @media(prefers-reduced-motion:reduce){body.fi-premium *{transition:none!important;animation:none!important}}
@@ -908,4 +902,20 @@ function addAccessibleContrastV65(){
 addAccessibleContrastV65();
 addAccessibleContrastV65();
 window.fiPremiumRefresh=init;
+
+/* Additive teacher analytics dashboard. Does not replace existing views or mutate records. */
+function loadFITeacherAnalytics(){
+ try{
+  if(document.querySelector('script[data-fi-teacher-analytics]'))return;
+  var script=document.createElement('script');
+  script.src='teacher-analytics-dashboard-v1.js?v=1';
+  script.async=true;
+  script.setAttribute('data-fi-teacher-analytics','true');
+  script.onerror=function(){console.warn('[Fluent Immersion] Teacher Analytics não carregou; as funções existentes foram mantidas.')};
+  document.head.appendChild(script);
+ }catch(e){console.warn('[Fluent Immersion] Analytics loader:',e)}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadFITeacherAnalytics,{once:true});
+else loadFITeacherAnalytics();
+
 })();
