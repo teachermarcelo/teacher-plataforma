@@ -111,10 +111,34 @@ root.querySelectorAll('[data-fi-notif-read]').forEach(button=>button.addEventLis
 root.querySelectorAll('[data-fi-ta-grade-form]').forEach(form=>form.addEventListener('submit',async event=>{event.preventDefault();const submissionId=form.getAttribute('data-fi-ta-grade-form');const gradeInput=form.querySelector('[name="grade"]');const feedbackInput=form.querySelector('[name="feedback"]');const save=form.querySelector('.ta-grade-save');const status=form.querySelector('.ta-grade-status');const grade=Number(gradeInput&&gradeInput.value);if(!Number.isFinite(grade)||grade<0||grade>100){if(status)status.textContent='Informe uma nota entre 0 e 100.';return}if(!window.confirm('Salvar a nota e o feedback desta entrega?'))return;save.disabled=true;save.textContent='Salvando…';if(status)status.textContent='Gravando no Supabase…';try{const client=getClient();if(!client)throw new Error('Cliente Supabase indisponível.');const result=await client.from('tic_submissions').update({grade:grade,teacher_visible_note:String(feedbackInput?.value||'').trim()||null,status:'reviewed'}).eq('id',submissionId).select('id').maybeSingle();if(result.error)throw result.error;if(!result.data)throw new Error('Nenhum registro foi atualizado. Verifique a sessão e as permissões do professor.');if(status)status.textContent='Correção salva. Atualizando indicadores…';await loadData();render()}catch(error){if(status)status.textContent='Não foi possível salvar: '+String(error?.message||error);save.disabled=false;save.textContent='Tentar novamente'}}));
 const sel=$('#fiTaStudent');if(sel)sel.addEventListener('change',()=>{state.selected=sel.value;render()});const studentSearch=$('#fiTaStudentSearch');if(studentSearch)studentSearch.addEventListener('input',()=>{const q=studentSearch.value.trim().toLocaleLowerCase('pt-BR');root.querySelectorAll('[data-fi-ta-student]').forEach(card=>{card.hidden=!card.textContent.toLocaleLowerCase('pt-BR').includes(q)})});root.querySelectorAll('[data-fi-ta-student]').forEach(card=>card.addEventListener('click',()=>{state.selected=card.getAttribute('data-fi-ta-student')||'';render();root.scrollIntoView({behavior:'smooth',block:'start'})}));const printButton=$('#fiTaPrint');if(printButton)printButton.addEventListener('click',()=>{if(!state.selected){const choose=window.confirm('Você está na visão geral. Deseja imprimir o relatório geral? Clique em Cancelar para selecionar um aluno primeiro.');if(!choose)return}window.print()});const refresh=$('#fiTaRefresh');if(refresh)refresh.addEventListener('click',async()=>{refresh.disabled=true;refresh.textContent='Carregando…';await loadData();render()});
 }
-function isTeacher(){const p=window.profile||{};const role=String(p.role||$('#userRole')?.textContent||'').toLowerCase();return /teacher|admin|professor|docente/.test(role)||document.body.classList.contains('fi-teacher-mode')}
-function isOverview(){const view=String(window.currentView||window.currentPage||'').toLowerCase();if(/student|lesson|course|class|task|calendar|message|report|material|setting|assessment|game|ready|immersion/.test(view))return false;const active=$('.nav button.active, .nav a.active, #sidebar .active');const nav=String(active?.innerText||active?.textContent||'').toLowerCase();return /visão geral|visao geral|overview|dashboard|início|inicio/.test(nav)||(!view&&!nav)}
-function mount(){if(!isTeacher()||!isOverview())return;const content=$('#content');if(!content)return;let root=$('#fiTeacherAnalyticsRoot');if(!root){root=document.createElement('div');root.id='fiTeacherAnalyticsRoot';content.insertBefore(root,content.firstChild)}css();if(!state.loaded&&!state.loading){loadData().then(render)}else render()}
-function hook(){const fn=window.loadView;if(typeof fn==='function'&&!fn.__fiTeacherAnalyticsHook){const wrapped=function(){const r=fn.apply(this,arguments);setTimeout(mount,80);return r};wrapped.__fiTeacherAnalyticsHook=true;wrapped.__fiOriginal=fn;window.loadView=wrapped}}
+function isTeacher(){
+ const p=window.profile||window.currentProfile||window.userProfile||{};
+ const role=String(p.role||p.user_role||$('#userRole')?.textContent||document.body.getAttribute('data-role')||'').toLowerCase();
+ if(/teacher|admin|professor|docente/.test(role)||document.body.classList.contains('fi-teacher-mode'))return true;
+ const navText=String(document.querySelector('aside')?.innerText||$('#sidebar')?.innerText||$('.sidebar')?.innerText||'').toLowerCase();
+ const hasTeacherNav=/students/.test(navText)&&/classes/.test(navText)&&/contacts/.test(navText);
+ const hasStudentNav=/lessons recebidas|my assignments|minhas tarefas/.test(navText);
+ return hasTeacherNav&&!hasStudentNav;
+}
+function isOverview(){
+ const view=String(window.currentView||window.currentPage||window.currentViewName||'').toLowerCase().trim();
+ const active=$('.nav button.active, .nav a.active, #sidebar .active, aside .active, .sidebar .active, [aria-current="page"]');
+ const nav=String(active?.innerText||active?.textContent||'').toLowerCase().trim();
+ if(/studentactivity|student-activity|student activity|lesson|course|class|task|calendar|message|report|material|setting|assessment|game|ready|immersion|contact/.test(view))return false;
+ if(/students|lessons received|aulas recebidas|tarefas|games analytics|student activity|class center|classes|contatos/.test(nav))return false;
+ if(/overview|dashboard|visão geral|visao geral|início|inicio|home/.test(view+' '+nav))return true;
+ return !view&&!nav;
+}
+function mount(){
+ if(!isTeacher()||!isOverview())return;
+ const content=$('#content');if(!content)return;
+ let root=$('#fiTeacherAnalyticsRoot');
+ if(!root){root=document.createElement('div');root.id='fiTeacherAnalyticsRoot';}
+ if(root.parentElement!==content)content.insertBefore(root,content.firstChild);
+ css();
+ if(!state.loaded&&!state.loading){loadData().then(render)}else render();
+}
+function hook(){const fn=window.loadView;if(typeof fn==='function'&&!fn.__fiTeacherAnalyticsHook){const wrapped=function(){const r=fn.apply(this,arguments);setTimeout(mount,80);setTimeout(mount,350);setTimeout(mount,900);return r};wrapped.__fiTeacherAnalyticsHook=true;wrapped.__fiOriginal=fn;window.loadView=wrapped}}
 function init(){css();hook();mount();const obs=new MutationObserver(()=>{if(!$('#fiTeacherAnalyticsRoot')&&isTeacher()&&isOverview())mount()});obs.observe(document.body,{childList:true,subtree:true});let tries=0;const timer=setInterval(()=>{hook();mount();if(++tries>24)clearInterval(timer)},500);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&$('#fiTeacherAnalyticsRoot')){loadData().then(render)}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
