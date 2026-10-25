@@ -949,6 +949,32 @@ function addGlobalReadableContrastV66(){
 }
 addGlobalReadableContrastV66();
 
+
+/* Platform-wide accessibility/stability pass: visible focus, readable status pills and safe responsive controls. */
+function addPlatformQualityPassV67(){
+ if(document.getElementById('fiPlatformQualityPassV67'))return;
+ const st=document.createElement('style');st.id='fiPlatformQualityPassV67';
+ st.textContent=`
+ body.fi-premium :is(button,a,[role="button"],input,select,textarea):focus-visible{outline:3px solid #8b5cf6!important;outline-offset:2px!important}
+ body.fi-premium #content :is(.badge,[class*="status"],[class*="pill"],[class*="tag"]){max-width:100%;overflow-wrap:anywhere}
+ body.fi-premium #content :is(input,select,textarea){max-width:100%}
+ body.fi-premium #content button{min-height:34px}
+ body.fi-premium.fi-light #content :is(.badge,[class*="status"],[class*="pill"],[class*="tag"]){text-shadow:none!important}
+ body.fi-premium.fi-light #content :is(.badge,[class*="status"],[class*="pill"],[class*="tag"]):not(.btn){border-color:#cbd5e1}
+ body.fi-premium:not(.fi-light) #content :is(input,select,textarea){color:#f8fafc}
+ body.fi-premium:not(.fi-light) #content input::placeholder,
+ body.fi-premium:not(.fi-light) #content textarea::placeholder{color:#aab8ce!important;opacity:1}
+ body.fi-premium #content :is(.v41-class-card,.tic-class-info-grid,.class-center-page){min-width:0}
+ @media(max-width:760px){
+   body.fi-premium #content :is(.table-wrap,.table-responsive){max-width:100%;overflow-x:auto}
+   body.fi-premium #content :is(input,select,textarea){font-size:16px}
+ }
+ @media(prefers-reduced-motion:reduce){body.fi-premium *,body.fi-premium *::before,body.fi-premium *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+ `;
+ document.head.appendChild(st);
+}
+addPlatformQualityPassV67();
+
 window.fiPremiumRefresh=init;
 
 /* Additive teacher analytics dashboard. Does not replace existing views or mutate records. */
@@ -956,7 +982,7 @@ function loadFITeacherAnalytics(){
  try{
   if(document.querySelector('script[data-fi-teacher-analytics]'))return;
   var script=document.createElement('script');
-  script.src='teacher-analytics-dashboard-v1.js?v=10';
+  script.src='teacher-analytics-dashboard-v1.js?v=11';
   script.async=true;
   script.setAttribute('data-fi-teacher-analytics','true');
   script.onerror=function(){console.warn('[Fluent Immersion] Teacher Analytics não carregou; as funções existentes foram mantidas.')};
