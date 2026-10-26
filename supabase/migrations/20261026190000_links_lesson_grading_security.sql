@@ -7,9 +7,10 @@ begin
  select l.content into v_content from public.ll_lessons l where l.id=p_lesson_id;
  if v_content is null then return null; end if;
  for v_q in select value from jsonb_array_elements(coalesce(v_content->'questions','[]'::jsonb)) loop
+  v_index:=v_index+1;
   v_type:=lower(coalesce(v_q->>'type',v_q->>'question_type',''));
   if v_type not in ('multiple_choice','multiple-choice','mcq','true_false','true/false','fill_blank','fill-blank','word_order') then continue; end if;
-  v_index:=v_index+1; v_key:=coalesce(v_q->>'id','q'||v_index::text);
+  v_key:=coalesce(v_q->>'id','q'||v_index::text);
   v_correct:=coalesce(v_q->>'answer',v_q->>'correct_answer',v_q->>'correctAnswer','');
   v_points:=greatest(0,coalesce(nullif(v_q->>'points','')::numeric,1));
   if v_type in ('multiple_choice','multiple-choice','mcq') then
