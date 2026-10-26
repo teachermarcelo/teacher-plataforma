@@ -1036,6 +1036,23 @@ else loadFITeacherAnalytics();
 
 })();
 
+
+/* FIX: Classes page title must scroll naturally with the page, never overlay cards */
+body.fi-premium #content .tic-class-overview-head{
+ position:relative!important;top:auto!important;z-index:1!important;
+ margin-top:18px!important;isolation:isolate!important;
+}
+body.fi-premium #content .tic-class-overview-head::before,
+body.fi-premium #content .tic-class-overview-head::after{
+ pointer-events:none!important;
+}
+body.fi-premium #content .tic-class-overview-head+ .tic-class-view-tools{
+ position:relative!important;top:auto!important;z-index:1!important;
+}
+body.fi-premium #content .tic-class-overview-card{
+ scroll-margin-top:90px!important;
+}
+
 /* CLASS CARDS — align exactly with the approved light/dark reference */
 body.fi-premium.fi-light #content .tic-class-overview-card{background:linear-gradient(145deg,#fff 0%,#fbfdff 100%)!important;border:1px solid #dce6f5!important;border-radius:20px!important;box-shadow:0 8px 26px #21365a0c!important;color:#102448!important}
 body.fi-premium.fi-light #content .tic-class-overview-card .section-head{background:transparent!important}
