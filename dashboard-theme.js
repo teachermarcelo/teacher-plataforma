@@ -1035,3 +1035,58 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 else loadFITeacherAnalytics();
 
 })();
+
+/* CLASS CARDS — align exactly with the approved light/dark reference */
+body.fi-premium.fi-light #content .tic-class-overview-card{background:linear-gradient(145deg,#fff 0%,#fbfdff 100%)!important;border:1px solid #dce6f5!important;border-radius:20px!important;box-shadow:0 8px 26px #21365a0c!important;color:#102448!important}
+body.fi-premium.fi-light #content .tic-class-overview-card .section-head{background:transparent!important}
+body.fi-premium.fi-light #content .tic-class-overview-card .badge.blue{display:inline-flex!important;align-items:center;justify-content:center;min-width:48px;min-height:48px;border-radius:50%!important;background:linear-gradient(135deg,#c4b5fd,#a78bfa)!important;color:#21124f!important;border:0!important;font-size:17px!important;font-weight:900!important}
+body.fi-premium.fi-light #content .tic-class-overview-card .section-head> :last-child.badge,
+body.fi-premium.fi-light #content .tic-class-overview-card .section-head .badge:not(.blue){background:#a7f3d0!important;color:#065f46!important;border:1px solid #6ee7b7!important;border-radius:999px!important;font-weight:850!important;padding:7px 12px!important}
+body.fi-premium.fi-light #content .tic-class-overview-card .tic-class-name,
+body.fi-premium.fi-light #content .tic-class-overview-card .section-head h2{color:#102448!important;font-weight:850!important}
+body.fi-premium.fi-light #content .tic-class-schedule{color:#526b91!important}
+body.fi-premium.fi-light #content .tic-class-kpi{background:linear-gradient(145deg,#fff,#f7faff)!important;border:1px solid #d6e3f5!important;border-radius:15px!important}
+body.fi-premium.fi-light #content .tic-class-kpi span{color:#243b61!important}
+body.fi-premium.fi-light #content .tic-class-kpi b{color:#102448!important}
+body.fi-premium.fi-light #content .tic-class-kpi small{color:#526b91!important}
+body.fi-premium.fi-light #content .tic-next-lesson{background:linear-gradient(115deg,#eef4ff,#f6f8ff)!important;border:1px solid #d6e3f5!important;border-radius:15px!important}
+body.fi-premium.fi-light #content .tic-next-content span{color:#385783!important}
+body.fi-premium.fi-light #content .tic-next-content b{color:#102448!important}
+body.fi-premium.fi-light #content .tic-next-content small{color:#526b91!important}
+body.fi-premium.fi-light #content .tic-next-status{background:#fff!important;color:#243b61!important;border:1px solid #dce6f5!important;border-radius:9px!important}
+body.fi-premium.fi-light #content .tic-class-info-grid .mini{background:#f3f7ff!important;border:1px solid #d6e3f5!important;border-radius:12px!important}
+body.fi-premium.fi-light #content .tic-class-info-grid .mini span{color:#385783!important}
+body.fi-premium.fi-light #content .tic-class-info-grid .mini b{color:#102448!important}
+body.fi-premium.fi-light #content .tic-class-actions .btn.primary{background:linear-gradient(120deg,#7045e8,#5134c8)!important;border:1px solid #6040d9!important;color:#fff!important;box-shadow:0 5px 13px #5b3cc426!important}
+body.fi-premium.fi-light #content .tic-class-actions .btn.secondary,
+body.fi-premium.fi-light #content .tic-class-actions .btn.ghost{background:#f2edff!important;border:1px solid #c7b7ff!important;color:#4c2db4!important}
+body.fi-premium.fi-light #content .tic-class-actions .btn.danger{background:#fff0f1!important;border:1px solid #ff9ba7!important;color:#b42332!important}
+body.fi-premium.fi-light #content .tic-class-actions .btn.warning{background:#fff7e8!important;border:1px solid #ffc66d!important;color:#92400e!important}
+body.fi-premium:not(.fi-light) #content .tic-class-overview-card{background:linear-gradient(145deg,#0d1b31 0%,#132540 100%)!important;border:1px solid #28466c!important;border-radius:20px!important;box-shadow:0 10px 28px #0003!important;color:#f3f7ff!important}
+body.fi-premium:not(.fi-light) #content .tic-class-overview-card .section-head{background:transparent!important}
+body.fi-premium:not(.fi-light) #content .tic-class-overview-card .badge.blue{display:inline-flex!important;align-items:center;justify-content:center;min-width:48px;min-height:48px;border-radius:50%!important;background:linear-gradient(135deg,#a78bfa,#7c5ce7)!important;color:#180d3b!important;border:1px solid #b7a4ff!important;font-size:17px!important;font-weight:900!important}
+body.fi-premium:not(.fi-light) #content .tic-class-overview-card .section-head> :last-child.badge,
+body.fi-premium:not(.fi-light) #content .tic-class-overview-card .section-head .badge:not(.blue){background:#6ee7c8!important;color:#063b36!important;border:1px solid #9bf5df!important;border-radius:999px!important;font-weight:900!important;padding:7px 12px!important}
+body.fi-premium:not(.fi-light) #content .tic-class-overview-card .tic-class-name,
+body.fi-premium:not(.fi-light) #content .tic-class-overview-card .section-head h2{color:#f7f9ff!important;font-weight:850!important}
+body.fi-premium:not(.fi-light) #content .tic-class-schedule{color:#b7d8ff!important}
+body.fi-premium:not(.fi-light) #content .tic-class-kpi{background:linear-gradient(145deg,#142a47,#10213a)!important;border:1px solid #2d4d77!important;border-radius:15px!important}
+body.fi-premium:not(.fi-light) #content .tic-class-kpi span{color:#e0eaff!important}
+body.fi-premium:not(.fi-light) #content .tic-class-kpi b{color:#fff!important}
+body.fi-premium:not(.fi-light) #content .tic-class-kpi small{color:#bfd2ee!important}
+body.fi-premium:not(.fi-light) #content .tic-next-lesson{background:linear-gradient(115deg,#132947,#172d4c)!important;border:1px solid #294a75!important;border-radius:15px!important}
+body.fi-premium:not(.fi-light) #content .tic-next-content span{color:#b7d8ff!important}
+body.fi-premium:not(.fi-light) #content .tic-next-content b{color:#f5f8ff!important}
+body.fi-premium:not(.fi-light) #content .tic-next-content small{color:#c4d7f2!important}
+body.fi-premium:not(.fi-light) #content .tic-next-status{background:#203a5e!important;color:#f3f7ff!important;border:1px solid #355782!important;border-radius:9px!important}
+body.fi-premium:not(.fi-light) #content .tic-class-info-grid .mini{background:#142a47!important;border:1px solid #2d4d77!important;border-radius:12px!important}
+body.fi-premium:not(.fi-light) #content .tic-class-info-grid .mini span{color:#c8d9f2!important}
+body.fi-premium:not(.fi-light) #content .tic-class-info-grid .mini b{color:#fff!important}
+body.fi-premium:not(.fi-light) #content .tic-class-actions .btn.primary{background:linear-gradient(120deg,#a78bfa,#8060ee)!important;border:1px solid #c2b0ff!important;color:#160b35!important;box-shadow:0 0 16px #9475ff42!important}
+body.fi-premium:not(.fi-light) #content .tic-class-actions .btn.secondary,
+body.fi-premium:not(.fi-light) #content .tic-class-actions .btn.ghost{background:#101f36!important;border:1px solid #7189b8!important;color:#e5dfff!important}
+body.fi-premium:not(.fi-light) #content .tic-class-actions .btn.danger{background:#3b1725!important;border:1px solid #ff7284!important;color:#ffb3bf!important}
+body.fi-premium:not(.fi-light) #content .tic-class-actions .btn.warning{background:#392810!important;border:1px solid #f6b84b!important;color:#ffdb88!important}
+body.fi-premium #content .tic-class-overview-card .badge{letter-spacing:.01em!important}
+body.fi-premium #content .tic-class-actions .btn{min-height:42px!important;border-radius:12px!important;font-weight:800!important}
+@media(max-width:700px){body.fi-premium #content .tic-class-overview-card .badge.blue{min-width:42px;min-height:42px}}
