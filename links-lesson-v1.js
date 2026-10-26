@@ -1,3 +1,6 @@
+/* Load stable library enhancements and disable superseded observer script before it executes. */
+window.__llEnhancementsV3=true;
+(function(){var s=document.createElement('script');s.src='links-lesson-enhancements-v4.js?v=1';s.defer=false;document.head.appendChild(s)})();
 (function(){
 'use strict';
 if(window.__linksLessonV1)return;window.__linksLessonV1=true;
