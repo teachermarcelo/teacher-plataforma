@@ -2463,7 +2463,9 @@ function ticResponsiveSrcdoc(content){
  if(!c)return '';
  const meta='<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">';
  if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}`);
- return '<!doctype html><html><head>'+meta+'</head><body>'+c+'
+ return '<!doctype html><html><head>'+meta+'</head><body>'+c+'</body></html>';
+}
+</script>
 <style id="tic-curriculum-visual-fix-v3">
 /* Curriculum: compact rhythm, stronger contrast, no oversized empty lesson cards */
 .tic-fullscreen-workspace .tic-workspace-structure{min-width:0;display:grid;gap:14px}
@@ -2648,7 +2650,9 @@ function ticViewerTextFrame(content){
  const c=String(content||'').trim();if(!c)return '';
  const looksHtml=/<(?:html|body|div|p|h[1-6]|ul|ol|table|span|strong|em|img|a\b|section|article)[\s>]/i.test(c);
  if(looksHtml)return ticResponsiveSrcdoc(c);
- return '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;margin:0;padding:28px;line-height:1.7;color:#202033}*{box-sizing:border-box}a{overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>'+esc(c).replace(/\n/g,'<br>')+'
+ return '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;margin:0;padding:28px;line-height:1.7;color:#202033}*{box-sizing:border-box}a{overflow-wrap:anywhere}img{max-width:100%;height:auto}</style></head><body>'+esc(c).replace(/\n/g,'<br>')+'</body></html>';
+}
+</script>
 <style id="tic-courses-studio-v2">
 /* Courses Studio V2 — visual-only redesign; existing CRUD, drag/drop and Supabase calls remain intact */
 body.tic-curriculum-fullscreen{background:#f4f5fc!important;color:#17183b}
@@ -2758,9 +2762,7 @@ body:has(#ticCurriculumSortList) :is(button,input,select,textarea):focus-visible
  body:has(#ticCurriculumSortList) .actions.section .btn{width:100%!important;justify-content:center!important}
 }
 </style>
-</body></html>';
-}
-
+<script>
 function ticFrameHtml(content){ const c=String(content||'').trim(); return c ? ticPlainOrHtmlFrame(c) : ''; }
 function ticViewerDevices(targetId='ticViewerFrame',wrapId='ticViewerWrap'){
  const w=$(wrapId); if(!w)return '';
