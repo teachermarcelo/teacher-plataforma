@@ -153,7 +153,7 @@ function mount(){
 function hook(){const fn=window.loadView;if(typeof fn==='function'&&!fn.__fiTeacherAnalyticsHook){const wrapped=function(){const r=fn.apply(this,arguments);setTimeout(mount,80);setTimeout(mount,350);setTimeout(mount,900);return r};wrapped.__fiTeacherAnalyticsHook=true;wrapped.__fiOriginal=fn;window.loadView=wrapped}}
 function init(){
  css();hook();mount();
- const obs=new MutationObserver(()=>{hook();if(isOverview())mount()});
+ const obs=new MutationObserver(()=>{hook();if(!$('#fiTeacherAnalyticsRoot')&&isOverview())mount()});
  obs.observe(document.body,{childList:true,subtree:true});
  let tries=0;const timer=setInterval(()=>{hook();mount();if(++tries>40)clearInterval(timer)},500);
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&isOverview()){mount();loadData().then(render)}});
