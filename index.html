@@ -753,54 +753,79 @@ async function saveStudent(e,id){
  closeModal();toast(r.data?.message||'Aluno criado e convite enviado.','success');loadView('students');
 }
 
+async function openClassMaterials(classId){
+ const a=await sb.from('tic_classes').select('id,name').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle();
+ if(a.error||!a.data)return toast(a.error?.message||'Turma não encontrada.','error');
+ const r=await sb.from('tic_class_material_links').select('id,title,url,material_type,note,position').eq('class_id',classId).eq('teacher_id',session.user.id).order('position',{ascending:true});
+ if(r.error)return toast('Não foi possível carregar os materiais: '+r.error.message,'error');
+ const rows=r.data||[];
+ const list=rows.map(x=>'<article class="tic-class-material-row"><div class="tic-class-material-main"><span class="tic-class-material-type">'+esc(x.material_type||'Material')+'</span><b>'+esc(x.title||'Material sem título')+'</b>'+(x.note?'<p>'+esc(x.note)+'</p>':'')+(x.url?'<a href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer">↗ Abrir material</a>':'<small>Sem link anexado</small>')+'</div><div class="tic-class-material-actions"><button type="button" class="btn sm secondary" onclick="editClassMaterialLink(\''+classId+'\',\''+x.id+'\')">✏️ Editar</button><button type="button" class="btn sm danger" onclick="deleteClassMaterialLink(\''+classId+'\',\''+x.id+'\')">🗑 Remover</button></div></article>').join('');
+ openModal('📚 Materiais · '+esc(a.data.name),'<div class="tic-class-materials"><p>Links e recursos desta turma. Adicione um item por link; os materiais ficam vinculados somente a esta turma.</p><form class="form" onsubmit="saveClassMaterialLink(event,\''+classId+'\',\'\')"><div class="field"><label>Título do material</label><input id="ticMatTitle" required maxlength="160" placeholder="Ex.: Listening practice — B1"></div><div class="form-grid"><div class="field"><label>Categoria</label><select id="ticMatType"><option>Link</option><option>Vídeo</option><option>PDF / Documento</option><option>Atividade</option><option>Áudio</option><option>Site</option><option>Outro</option></select></div><div class="field"><label>Link (URL)</label><input id="ticMatUrl" type="url" placeholder="https://..." required></div></div><div class="field"><label>Descrição / instruções</label><textarea id="ticMatNote" rows="2" placeholder="Como o aluno deve usar este material?"></textarea></div><div class="modal-actions"><button class="btn primary">＋ Adicionar material</button></div></form><div class="tic-class-material-list">'+(list||'<div class="empty">Nenhum material cadastrado para esta turma. Adicione o primeiro acima.</div>')+'</div><div class="modal-actions"><button type="button" class="btn ghost" onclick="closeModal()">Fechar</button></div></div>');
+}
+async function saveClassMaterialLink(e,classId,id){
+ e.preventDefault();const title=$('ticMatTitle')?.value.trim(),url=$('ticMatUrl')?.value.trim(),material_type=$('ticMatType')?.value||'Link',note=$('ticMatNote')?.value.trim()||null;
+ if(!title||!url)return toast('Informe o título e o link do material.','error');
+ try{const u=new URL(url);if(!['http:','https:'].includes(u.protocol))return toast('Use um link HTTP ou HTTPS válido.','error')}catch(_){return toast('Informe uma URL válida iniciada por https:// ou http://.','error')}
+ const payload={teacher_id:session.user.id,class_id:classId,title,url,material_type,note};
+ const q=id?sb.from('tic_class_material_links').update(payload).eq('id',id).eq('class_id',classId).eq('teacher_id',session.user.id):sb.from('tic_class_material_links').insert({...payload,position:Date.now()});
+ const r=await q;if(r.error)return toast('Não foi possível salvar o material: '+r.error.message,'error');
+ toast(id?'Material atualizado.':'Material adicionado à turma.','success');await openClassMaterials(classId);
+}
+async function editClassMaterialLink(classId,id){
+ const r=await sb.from('tic_class_material_links').select('id,title,url,material_type,note').eq('id',id).eq('class_id',classId).eq('teacher_id',session.user.id).maybeSingle();
+ if(r.error||!r.data)return toast(r.error?.message||'Material não encontrado.','error');const x=r.data;
+ openModal('✏️ Editar material','<form class="form" onsubmit="saveClassMaterialLink(event,\''+classId+'\',\''+id+'\')"><div class="field"><label>Título do material</label><input id="ticMatTitle" required maxlength="160" value="'+esc(x.title||'')+'"></div><div class="form-grid"><div class="field"><label>Categoria</label><select id="ticMatType">'+['Link','Vídeo','PDF / Documento','Atividade','Áudio','Site','Outro'].map(v=>'<option '+(v===(x.material_type||'Link')?'selected':'')+'>'+v+'</option>').join('')+'</select></div><div class="field"><label>Link (URL)</label><input id="ticMatUrl" type="url" required value="'+esc(x.url||'')+'"></div></div><div class="field"><label>Descrição / instruções</label><textarea id="ticMatNote" rows="3">'+esc(x.note||'')+'</textarea></div><div class="modal-actions"><button type="button" class="btn ghost" onclick="openClassMaterials(\''+classId+'\')">Cancelar</button><button class="btn primary">💾 Salvar alterações</button></div></form>');
+}
+async function deleteClassMaterialLink(classId,id){
+ if(!confirm('Remover este material da turma?'))return;
+ const r=await sb.from('tic_class_material_links').delete().eq('id',id).eq('class_id',classId).eq('teacher_id',session.user.id);
+ if(r.error)return toast('Não foi possível remover o material: '+r.error.message,'error');
+ toast('Material removido da turma.','success');await openClassMaterials(classId);
+}
+async function archiveClass(classId,restore=false){
+ const r=await sb.from('tic_classes').select('id,name,status').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle();
+ if(r.error||!r.data)return toast(r.error?.message||'Turma não encontrada.','error');
+ const c=r.data;if(!confirm((restore?'Reativar':'Arquivar')+' a turma "'+c.name+'"? '+(restore?'Ela voltará para a lista de turmas ativas.':'Ela sairá da lista ativa, preservando alunos, aulas, materiais e histórico.')))return;
+ const u=await sb.from('tic_classes').update({status:restore?'active':'inactive'}).eq('id',classId).eq('teacher_id',session.user.id);
+ if(u.error)return toast('Não foi possível atualizar a turma: '+u.error.message,'error');
+ toast(restore?'Turma reativada.':'Turma arquivada; os registros foram preservados.','success');await classesPage();
+}
+async function deleteClassSafely(classId){
+ const r=await sb.from('tic_classes').select('id,name').eq('id',classId).eq('teacher_id',session.user.id).maybeSingle();
+ if(r.error||!r.data)return toast(r.error?.message||'Turma não encontrada.','error');
+ const checks=await Promise.all([
+  sb.from('tic_class_students').select('id').eq('class_id',classId).limit(1),
+  sb.from('tic_events').select('id').eq('class_id',classId).limit(1),
+  sb.from('tic_assignments').select('id').eq('class_id',classId).limit(1),
+  sb.from('tic_class_material_links').select('id').eq('class_id',classId).limit(1),
+  sb.from('tic_class_board_items').select('id').eq('class_id',classId).limit(1),
+  sb.from('tic_class_board_hidden_items').select('id').eq('class_id',classId).limit(1)
+ ]);
+ if(checks.some(x=>x.error))return toast('Exclusão bloqueada: não foi possível verificar todos os vínculos. Arquive a turma para preservá-la.','error');
+ if(checks.some(x=>(x.data||[]).length))return toast('Esta turma possui alunos, aulas ou materiais vinculados. Use Arquivar para preservar o histórico.','info');
+ if(!confirm('Excluir definitivamente "'+r.data.name+'"? Nenhum registro vinculado foi encontrado.'))return;
+ const d=await sb.from('tic_classes').delete().eq('id',classId).eq('teacher_id',session.user.id);
+ if(d.error)return toast('Não foi possível excluir a turma: '+d.error.message,'error');
+ toast('Turma excluída.','success');await classesPage();
+}
 async function classesPage(){
  const {data,error}=await sb.from('tic_classes').select('*').eq('teacher_id',session.user.id).order('created_at',{ascending:false});
- if(error){$('content').innerHTML=`<div class="card attention"><b>Não foi possível carregar as turmas.</b><p>${esc(error.message)}</p></div>`;return}
- const classes=data||[],ids=classes.map(x=>x.id);let members=[],events=[];
- if(ids.length){
-  const [mr,er]=await Promise.all([
-   sb.from('tic_class_students').select('class_id,student_id,status').in('class_id',ids),
-   sb.from('tic_events').select('id,class_id,title,event_type,starts_at,ends_at,notes,status,meeting_url').eq('teacher_id',session.user.id).in('class_id',ids).order('starts_at',{ascending:true})
-  ]);
-  members=mr.data||[];if(er.error)console.warn('Class overview events could not be loaded:',er.error.message);events=er.data||[];
- }
+ if(error){$('content').innerHTML='<div class="card attention"><b>Não foi possível carregar as turmas.</b><p>'+esc(error.message)+'</p></div>';return}
+ const all=data||[],active=all.filter(x=>!['inactive','archived'].includes(String(x.status||'active').toLowerCase())),archived=all.filter(x=>['inactive','archived'].includes(String(x.status||'active').toLowerCase()));
+ const ids=all.map(x=>x.id);let members=[],events=[];
+ if(ids.length){const [mr,er]=await Promise.all([sb.from('tic_class_students').select('class_id,student_id,status').in('class_id',ids),sb.from('tic_events').select('id,class_id,title,event_type,starts_at,ends_at,notes,status,meeting_url').eq('teacher_id',session.user.id).in('class_id',ids).order('starts_at',{ascending:true})]);members=mr.data||[];if(er.error)console.warn('Class overview events:',er.error.message);events=er.data||[]}
  const countBy={};members.forEach(m=>{if(m.status==='active')countBy[m.class_id]=(countBy[m.class_id]||0)+1});
- const now=new Date(),byClass={};
- events.forEach(e=>{(byClass[e.class_id]||(byClass[e.class_id]=[])).push(e)});
- function metaFor(e){
-  let meta=null;const raw=String(e.notes||''),mark='[TIC_LESSON_TRACKING_V1]',idx=raw.indexOf(mark);
-  if(idx>=0){try{meta=JSON.parse(raw.slice(idx+mark.length).trim())}catch(_){}}
-  const st=String(meta&&meta.status||e.status||'').toLowerCase(),type=String(e.event_type||'').toLowerCase();
-  const cancelled=/cancel/.test(st)||/cancel/.test(type);
-  const taught=st==='taught'||['completed','complete','done','ministrada','ministrado'].includes(st)||type==='lesson_completed';
-  const planned=!cancelled&&!taught&&(st==='planned'||st==='pending'||st==='scheduled'||st==='review'||type==='lesson_tracking'||!!e.starts_at);
-  const date=e.starts_at?new Date(e.starts_at):null;
-  return {cancelled,taught,planned,date};
- }
+ const now=new Date(),byClass={};events.forEach(e=>{(byClass[e.class_id]||(byClass[e.class_id]=[])).push(e)});
+ function metaFor(e){let meta=null;const raw=String(e.notes||''),mark='[TIC_LESSON_TRACKING_V1]',idx=raw.indexOf(mark);if(idx>=0){try{meta=JSON.parse(raw.slice(idx+mark.length).trim())}catch(_){}}const st=String(meta&&meta.status||e.status||'').toLowerCase(),type=String(e.event_type||'').toLowerCase(),cancelled=/cancel/.test(st)||/cancel/.test(type),taught=st==='taught'||['completed','complete','done','ministrada','ministrado'].includes(st)||type==='lesson_completed',planned=!cancelled&&!taught&&(st==='planned'||st==='pending'||st==='scheduled'||st==='review'||type==='lesson_tracking'||!!e.starts_at),date=e.starts_at?new Date(e.starts_at):null;return {cancelled,taught,planned,date}}
  const fmtDate=d=>d&&!isNaN(d.getTime())?d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):'Data não definida';
- $('content').innerHTML=`<div class="tic-class-overview-head"><div><span class="tic-overview-eyebrow">CLASS COMMAND CENTER</span><h2>Visão geral das turmas</h2><p>Acompanhe aulas ministradas, planejadas e os próximos encontros de cada turma.</p></div><div class="tic-overview-total"><span>Turmas</span><b>${classes.length}</b></div></div><div class="grid cols2">${classes.map(c=>{
-  const evs=(byClass[c.id]||[]).map(e=>({e,m:metaFor(e)})).filter(x=>!x.m.cancelled);
-  const taught=evs.filter(x=>x.m.taught).length,planned=evs.filter(x=>x.m.planned).length;
-  const next=evs.filter(x=>x.m.date&&!isNaN(x.m.date.getTime())&&x.m.date>=now&&!x.m.taught).sort((a,b)=>a.m.date-b.m.date)[0];
-  const nextTitle=next?next.e.title||'Aula planejada':'Nenhuma aula agendada';
-  const nextDate=next?fmtDate(next.m.date):'Adicione uma aula para acompanhar aqui';
-  const nextTime=next&&next.m.date?next.m.date.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
-  return `<article class="card tic-class-overview-card">
-   <div class="section-head"><div><span class="badge blue">${esc(c.level||'A1')}</span><h2 class="tic-class-name">${esc(c.name)}</h2><small class="tic-class-schedule">${esc(c.schedule_text||'Horário não definido')}</small></div>${badge(c.status||'active')}</div>
-   <div class="tic-class-kpis">
-    <div class="tic-class-kpi tic-kpi-taught"><span>✓ Aulas ministradas</span><b>${taught}</b><small>Registradas no histórico</small></div>
-    <div class="tic-class-kpi tic-kpi-planned"><span>◷ Aulas planejadas</span><b>${planned}</b><small>Agendadas ou pendentes</small></div>
-   </div>
-   <div class="tic-next-lesson ${next?'tic-next-active':'tic-next-empty'}"><div class="tic-next-icon">${next?'📅':'🗓️'}</div><div class="tic-next-content"><span>PRÓXIMA AULA</span><b>${esc(nextTitle)}</b><small>${esc(nextDate)}${nextTime?' · '+esc(nextTime):''}</small></div><span class="tic-next-status">${next?'PLANEJADA':'SEM AGENDA'}</span></div>
-   <div class="tic-class-info-grid"><div class="mini"><span>👥 Alunos</span><b>${countBy[c.id]||0}</b></div><div class="mini"><span>🔗 Aula online</span><b>${c.meeting_url?'Configurado':'Não definida'}</b></div></div>
-   <div class="actions tic-class-actions">
-    <button class="btn sm primary" onclick="openClassCenter('${c.id}')">🎯 Abrir Class Center</button>
-    <button class="btn sm secondary" onclick="openClassMembers('${c.id}')">👥 Alunos</button>
-    <button class="btn sm ghost" onclick="openClassAssign('${c.id}')">📤 Atribuir</button>
-    <button class="btn sm ghost" onclick='editGeneric("classes",${JSON.stringify(c)})'>✏️ Editar</button>
-   </div>
-  </article>`
- }).join('')||'<div class="card empty">Nenhuma turma criada.</div>'}</div>`;
+ const showArchived=!!window.__ticShowArchivedClasses,visible=showArchived?archived:active;
+ const cards=visible.map(c=>{
+  const evs=(byClass[c.id]||[]).map(e=>({e,m:metaFor(e)})).filter(x=>!x.m.cancelled),taught=evs.filter(x=>x.m.taught).length,planned=evs.filter(x=>x.m.planned).length;
+  const next=evs.filter(x=>x.m.date&&!isNaN(x.m.date.getTime())&&x.m.date>=now&&!x.m.taught).sort((a,b)=>a.m.date-b.m.date)[0],nextTitle=next?next.e.title||'Aula planejada':'Nenhuma aula agendada',nextDate=next?fmtDate(next.m.date):'Adicione uma aula para acompanhar aqui',nextTime=next&&next.m.date?next.m.date.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+  return '<article class="card tic-class-overview-card '+(showArchived?'tic-class-archived':'')+'"><div class="section-head"><div><span class="badge blue">'+esc(c.level||'A1')+'</span><h2 class="tic-class-name">'+esc(c.name)+'</h2><small class="tic-class-schedule">'+esc(c.schedule_text||'Horário não definido')+'</small></div>'+badge(showArchived?'Arquivada':(c.status||'active'))+'</div><div class="tic-class-kpis"><div class="tic-class-kpi tic-kpi-taught"><span>✓ Aulas ministradas</span><b>'+taught+'</b><small>Registradas no histórico</small></div><div class="tic-class-kpi tic-kpi-planned"><span>◷ Aulas planejadas</span><b>'+planned+'</b><small>Agendadas ou pendentes</small></div></div><div class="tic-next-lesson '+(next?'tic-next-active':'tic-next-empty')+'"><div class="tic-next-icon">'+(next?'📅':'🗓️')+'</div><div class="tic-next-content"><span>PRÓXIMA AULA</span><b>'+esc(nextTitle)+'</b><small>'+esc(nextDate)+(nextTime?' · '+nextTime:'')+'</small></div><span class="tic-next-status">'+(next?'PLANEJADA':'SEM AGENDA')+'</span></div><div class="tic-class-info-grid"><div class="mini"><span>👥 Alunos</span><b>'+(countBy[c.id]||0)+'</b></div><div class="mini"><span>🔗 Aula online</span><b>'+(c.meeting_url?'Configurado':'Não definida')+'</b></div></div><div class="actions tic-class-actions">'+(showArchived?'<button class="btn sm primary" onclick="archiveClass(\''+c.id+'\',true)">↩ Reativar</button>':'<button class="btn sm primary" onclick="openClassCenter(\''+c.id+'\')">🎯 Abrir Class Center</button><button class="btn sm secondary" onclick="openClassMembers(\''+c.id+'\')">👥 Alunos</button><button class="btn sm ghost" onclick="openClassAssign(\''+c.id+'\')">📤 Atribuir</button><button class="btn sm secondary" onclick="openClassMaterials(\''+c.id+'\')">📚 Materiais</button><button class="btn sm ghost" onclick=\'editGeneric("classes",'+JSON.stringify(c)+')\'>✏️ Editar</button><button class="btn sm ghost" onclick="archiveClass(\''+c.id+'\')">🗄 Arquivar</button><button class="btn sm danger" onclick="deleteClassSafely(\''+c.id+'\')">🗑 Excluir</button>')+'</div></article>';
+ }).join('')||'<div class="card empty">'+(showArchived?'Nenhuma turma arquivada.':'Nenhuma turma ativa.')+'</div>';
+ $('content').innerHTML='<div class="tic-class-overview-head"><div><span class="tic-overview-eyebrow">CLASS COMMAND CENTER</span><h2>Visão geral das turmas</h2><p>Acompanhe aulas, gerencie alunos e organize materiais e links por turma.</p></div><div class="tic-overview-total"><span>'+(showArchived?'Turmas arquivadas':'Turmas ativas')+'</span><b>'+visible.length+'</b></div></div><div class="tic-class-view-tools"><label class="tic-class-search-label">⌕ <input id="ticClassSearch" type="search" placeholder="Buscar turma por nome, nível ou horário..." oninput="ticFilterClassCards()"></label><div class="tic-class-view-switch"><button type="button" class="btn '+(!showArchived?'primary':'ghost')+'" onclick="window.__ticShowArchivedClasses=false;classesPage()">Ativas ('+active.length+')</button><button type="button" class="btn '+(showArchived?'primary':'ghost')+'" onclick="window.__ticShowArchivedClasses=true;classesPage()">Arquivadas ('+archived.length+')</button></div></div><div id="ticClassCardsGrid" class="grid cols2">'+cards+'</div>';
+ window.ticFilterClassCards=function(){const q=String($('ticClassSearch')?.value||'').trim().toLocaleLowerCase('pt-BR');document.querySelectorAll('#ticClassCardsGrid .tic-class-overview-card').forEach(c=>{c.hidden=!!q&&!c.innerText.toLocaleLowerCase('pt-BR').includes(q)})};
 }
 
 async function openClassCenter(classId,initialTab='overview'){
@@ -1666,6 +1691,29 @@ async function doSearch(){const q=$('globalSearch').value.trim();if(!q){$('searc
 async function logout(){await sb.auth.signOut();location.reload()}
 </script>
 <style>
+/* Class management improvements */
+.tic-class-view-tools{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:14px 0}
+.tic-class-search-label{display:flex;align-items:center;gap:8px;flex:1;min-width:230px;padding:0 12px;border:1px solid var(--line,#ded8ee);border-radius:12px;background:var(--surface,#fff);color:var(--muted,#77718b)}
+.tic-class-search-label input{width:100%;min-width:0;border:0!important;outline:0!important;background:transparent!important;padding:12px 0;color:var(--text,#29213d)!important}
+.tic-class-view-switch{display:flex;gap:7px;flex-wrap:wrap}
+.tic-class-actions{align-items:center}
+.tic-class-actions .btn{min-height:36px}
+.tic-class-archived{opacity:.9;border-style:dashed!important}
+.tic-class-material-list{display:grid;gap:10px;margin-top:16px}
+.tic-class-materials>p{font-size:12px;color:var(--muted,#77718b);line-height:1.55;margin:0 0 14px}
+.tic-class-material-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding:13px;border:1px solid var(--line,#e4dff0);border-radius:13px;background:var(--surface,#fff);min-width:0}
+.tic-class-material-main{display:grid;gap:6px;min-width:0}
+.tic-class-material-main b{font-size:13px;overflow-wrap:anywhere}
+.tic-class-material-main p{margin:0;color:var(--muted,#77718b);font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
+.tic-class-material-main a{font-size:11px;font-weight:800;color:#6941d9;overflow-wrap:anywhere}
+.tic-class-material-main small{font-size:11px;color:var(--muted,#77718b)}
+.tic-class-material-type{width:max-content;max-width:100%;border-radius:99px;padding:4px 8px;background:#eee8ff;color:#5b35c6;font-size:10px;font-weight:800}
+.tic-class-material-actions{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+body:not(.fi-light) .tic-class-search-label,body:not(.fi-light) .tic-class-material-row{background:#171c2b!important;border-color:#34445c!important;color:#f5f7ff!important}
+body:not(.fi-light) .tic-class-material-main p,body:not(.fi-light) .tic-class-material-main small{color:#bac6da!important}
+body:not(.fi-light) .tic-class-material-type{background:#30234c;color:#dfd2ff}
+@media(max-width:700px){.tic-class-view-tools{align-items:stretch}.tic-class-search-label{min-width:0}.tic-class-view-switch{width:100%}.tic-class-view-switch .btn{flex:1}.tic-class-material-row{flex-direction:column}.tic-class-material-actions{width:100%}.tic-class-material-actions .btn{flex:1}}
+
 /* CURRICULUM UPGRADE — preserva o sistema existente */
 .course-dashboard{display:grid;grid-template-columns:1.25fr .75fr;gap:16px}.course-card{border:1px solid var(--line);border-radius:18px;background:#fff;padding:18px}.course-card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}.course-top{display:flex;justify-content:space-between;gap:15px;align-items:flex-start}.course-top h3{margin:0;font:800 18px "Plus Jakarta Sans"}.course-top p{margin:5px 0 0;color:var(--muted);font-size:12px}.course-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:15px 0}.course-stat{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fbfaff}.course-stat b{display:block;font-size:18px}.course-stat small{font-size:9px;color:var(--muted)}.curriculum-panel{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff}.curriculum-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;background:#faf9ff;border-bottom:1px solid var(--line)}.curriculum-head h3{margin:0;font-size:15px}.module-block{border-bottom:1px solid var(--line)}.module-block:last-child{border-bottom:0}.module-title{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 16px;background:#fff}.module-title b{font-size:13px}.module-title small{display:block;color:var(--muted);font-size:10px;margin-top:2px}.module-lessons{padding:0 16px 10px}.curriculum-lesson{display:grid;grid-template-columns:32px 1fr auto;gap:9px;align-items:center;border-top:1px solid #f0eef4;padding:9px 0}.lesson-number{width:28px;height:28px;border-radius:8px;background:#eee8ff;color:var(--p);display:grid;place-items:center;font-size:10px;font-weight:800}.lesson-copy b{font-size:12px}.lesson-copy small{display:block;color:var(--muted);font-size:10px}.lesson-controls{display:flex;gap:4px;align-items:center}.lesson-controls button{border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 7px;color:#6e6a7a}.lesson-controls button:hover{color:var(--p);border-color:#d8cef5}.course-student-list{max-height:330px;overflow:auto;border:1px solid var(--line);border-radius:12px}.course-student{display:flex;align-items:center;gap:9px;padding:10px 11px;border-bottom:1px solid var(--line)}.course-student:last-child{border-bottom:0}.course-student input{width:auto}.course-student small{color:var(--muted);display:block}.course-empty{padding:25px;text-align:center;color:var(--muted);font-size:12px}.drag-handle{cursor:grab;color:#aaa}.dragging{opacity:.45}.drop-target{background:#f7f2ff!important;outline:2px dashed #bba7ee}
 @media(max-width:900px){.course-dashboard{grid-template-columns:1fr}.course-stats{grid-template-columns:repeat(3,1fr)}}
