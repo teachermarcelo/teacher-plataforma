@@ -2,21 +2,21 @@
 create or replace function public.ll_calculate_objective_score(p_lesson_id uuid,p_answers jsonb)
 returns numeric language plpgsql stable security definer set search_path=public
 as $$
-declare v_content jsonb; v_q jsonb; v_key text; v_type text; v_correct text; v_given text; v_points numeric; v_total numeric:=0; v_earned numeric:=0; v_options jsonb; v_opt jsonb;
+declare v_content jsonb; v_q jsonb; v_key text; v_type text; v_correct text; v_given text; v_points numeric; v_total numeric:=0; v_earned numeric:=0; v_options jsonb; v_opt jsonb; v_index integer:=0;
 begin
  select l.content into v_content from public.ll_lessons l where l.id=p_lesson_id;
  if v_content is null then return null; end if;
  for v_q in select value from jsonb_array_elements(coalesce(v_content->'questions','[]'::jsonb)) loop
   v_type:=lower(coalesce(v_q->>'type',v_q->>'question_type',''));
   if v_type not in ('multiple_choice','multiple-choice','mcq','true_false','true/false','fill_blank','fill-blank','word_order') then continue; end if;
-  v_key:=coalesce(v_q->>'id','q'||(v_total+1)::text);
+  v_index:=v_index+1; v_key:=coalesce(v_q->>'id','q'||v_index::text);
   v_correct:=coalesce(v_q->>'answer',v_q->>'correct_answer',v_q->>'correctAnswer','');
   v_points:=greatest(0,coalesce(nullif(v_q->>'points','')::numeric,1));
   if v_type in ('multiple_choice','multiple-choice','mcq') then
    v_options:=coalesce(v_q->'options','[]'::jsonb);
    if v_correct ~ '^[0-9]+$' then
     v_opt:=v_options->(v_correct::integer);
-    if jsonb_typeof(v_opt)='object' then v_correct:=coalesce(v_opt->>'value',v_opt->>'text',v_opt->>'label',v_correct); end if;
+    if jsonb_typeof(v_opt)='object' then v_correct:=coalesce(v_opt->>'value',v_opt->>'text',v_opt->>'label',v_correct); elsif jsonb_typeof(v_opt)='string' then v_correct:=v_opt#>>'{}'; end if;
    end if;
   end if;
   v_given:=coalesce(p_answers->>v_key,''); v_total:=v_total+v_points;
@@ -40,13 +40,13 @@ begin
   return new;
  end if;
  if old.student_id is distinct from public.ll_current_student_id() then raise exception 'Not allowed to modify this attempt.'; end if;
+ if new.assignment_id is distinct from old.assignment_id or new.lesson_id is distinct from old.lesson_id or new.student_id is distinct from old.student_id or new.attempt_no is distinct from old.attempt_no or new.started_at is distinct from old.started_at or new.created_at is distinct from old.created_at then raise exception 'Students cannot change attempt identity.'; end if;
  if old.status in ('submitted','reviewed','completed') then
   if new.answers is distinct from old.answers or new.status is distinct from old.status or new.score is distinct from old.score or new.teacher_feedback is distinct from old.teacher_feedback or new.review is distinct from old.review or new.submitted_at is distinct from old.submitted_at or new.reviewed_at is distinct from old.reviewed_at then raise exception 'Submitted attempts are locked.'; end if;
  else
   if new.status='submitted' and old.status in ('in_progress','draft') then
    new.score:=public.ll_calculate_objective_score(new.lesson_id,new.answers);
-   new.teacher_feedback:=null;new.review:='{}'::jsonb;new.reviewed_at:=null;
-   if new.submitted_at is null then new.submitted_at:=now();end if;
+   new.teacher_feedback:=null;new.review:='{}'::jsonb;new.reviewed_at:=null;new.submitted_at:=now();
   else
    if new.score is distinct from old.score or new.teacher_feedback is distinct from old.teacher_feedback or new.review is distinct from old.review or new.reviewed_at is distinct from old.reviewed_at then raise exception 'Students cannot change grading fields.';end if;
   end if;
