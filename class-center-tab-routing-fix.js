@@ -33,16 +33,18 @@ if(typeof previousTab==='function'){
     while the tab strip and older modules call classCenterTabV41. */
  window.classCenterTab=routedTab;
 }
-function routeMaterials(ev){
- const btn=ev.target.closest?.('.v41-tabs button[data-tab="materials"]');
+function setActive(tab){document.querySelectorAll('.v41-tabs button[data-tab]').forEach(b=>{const on=b.dataset.tab===tab;b.classList.toggle('active',on);b.setAttribute('aria-selected',on?'true':'false')})}
+function routeSpecialTab(ev){
+ const btn=ev.target.closest?.('.v41-tabs button[data-tab="materials"],.v41-tabs button[data-tab="resources"]');
  if(!btn)return;
- const id=classIdNow(btn);
+ const tab=btn.dataset.tab,id=classIdNow(btn);
  if(!id)return;
- ev.preventDefault();
- ev.stopImmediatePropagation();
- showMaterials(id);
+ ev.preventDefault();ev.stopImmediatePropagation();setActive(tab);
+ if(tab==='materials'){showMaterials(id);return}
+ const fn=window.classCenterTabV41||window.classCenterTab;
+ if(typeof fn==='function')Promise.resolve(fn(id,'resources')).then(()=>setActive('resources')).catch(err=>{console.error('Class Center Resources routing:',err);setActive('resources')});
 }
-document.addEventListener('click',routeMaterials,true);
+document.addEventListener('click',routeSpecialTab,true);
 window.addEventListener('load',function(){
  const body=document.getElementById('ticV41ClassBody');
  const active=document.querySelector('.v41-tabs button[data-tab="materials"].active');
@@ -50,5 +52,7 @@ window.addEventListener('load',function(){
    const id=classIdNow(active);
    if(id)showMaterials(id);
  }
+ const resourceActive=document.querySelector('.v41-tabs button[data-tab="resources"].active');
+ if(body&&resourceActive&&/Resources da turma/i.test(body.textContent||''))setActive('resources');
 });
 })();
