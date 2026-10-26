@@ -125,15 +125,16 @@ function isTeacher(){
  return (hasTeacherNav||hasTeacherProfile||hasTeacherControls)&&!hasStudentNav;
 }
 function isOverview(){
- const view=String(window.currentView||window.currentPage||window.currentViewName||'').toLowerCase().trim();
- const navItems=Array.from(document.querySelectorAll('.nav button,.nav a,#sidebar button,#sidebar a,aside button,aside a,.sidebar button,.sidebar a,[aria-current="page"]'));
+ const navItems=Array.from(document.querySelectorAll('.nav button,.nav a,#sidebar button,#sidebar a,aside button,aside a,.sidebar button,.sidebar a,[aria-current="page"],[aria-selected="true"]'));
  const active=navItems.find(el=>el.classList.contains('active')||el.getAttribute('aria-current')==='page'||el.getAttribute('aria-selected')==='true');
  const nav=String(active?.innerText||active?.textContent||'').toLowerCase().trim();
+ // Prefer the actual selected navigation item over stale global route variables.
+ if(/overview|dashboard|visão geral|visao geral|início|inicio|home/.test(nav))return true;
+ if(/students|alunos|student activity|atividade do aluno|games analytics|class center|turmas|classes|contatos|contacts|games|jogos|lessons|aulas|courses|cursos|tasks|tarefas|calendar|calendário|mensagens|messages|reports|relatórios|materials|materiais|settings|configurações/.test(nav))return false;
+ const view=String(window.currentView||window.currentPage||window.currentViewName||'').toLowerCase().trim();
  if(/studentactivity|student-activity|student activity|lesson|course|class|task|calendar|message|report|material|setting|assessment|game|ready|immersion|contact/.test(view))return false;
- if(/students|lessons received|aulas recebidas|tarefas|games analytics|student activity|class center|classes|contatos/.test(nav))return false;
- if(/overview|dashboard|visão geral|visao geral|início|inicio|home/.test(view+' '+nav))return true;
- const overviewActive=navItems.some(el=>(el.classList.contains('active')||el.getAttribute('aria-current')==='page')&&/overview|visão geral|visao geral|início|inicio/.test(String(el.innerText||el.textContent||'').toLowerCase()));
- return overviewActive||(!view&&!nav);
+ if(/overview|dashboard|visão geral|visao geral|início|inicio|home/.test(view))return true;
+ return !view&&!nav;
 }
 function mount(){
  if(!isOverview())return;
