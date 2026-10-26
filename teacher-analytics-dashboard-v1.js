@@ -140,9 +140,8 @@ function mount(){
  if(!isOverview())return;
  const content=$('#content')||document.querySelector('main[role="main"]')||document.querySelector('main')||$('.app-content')||$('.main-content');
  if(!content)return;
- // This is the teacher platform Overview. Don't let profile metadata or localized role labels hide the existing analytics.
- const navText=String((document.querySelector('aside')||$('#sidebar')||$('.sidebar'))?.innerText||'').toLowerCase();
- if(/lessons received|my assignments|minhas tarefas|aulas recebidas/.test(navText))return;
+ // The Overview route has already been verified above. Do not suppress teacher analytics
+ // because a shared sidebar contains student-navigation labels in another responsive/menu state.
  let root=$('#fiTeacherAnalyticsRoot');
  if(!root){root=document.createElement('section');root.id='fiTeacherAnalyticsRoot';root.setAttribute('aria-label','Teacher Analytics Center');}
  if(root.parentElement!==content)content.insertBefore(root,content.firstChild);
