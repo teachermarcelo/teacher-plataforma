@@ -136,21 +136,26 @@ function isOverview(){
  return overviewActive||(!view&&!nav);
 }
 function mount(){
- if(!isTeacher()||!isOverview())return;
- const content=$('#content');if(!content)return;
+ if(!isOverview())return;
+ const content=$('#content')||document.querySelector('main[role="main"]')||document.querySelector('main')||$('.app-content')||$('.main-content');
+ if(!content)return;
+ // This is the teacher platform Overview. Don't let profile metadata or localized role labels hide the existing analytics.
+ const navText=String((document.querySelector('aside')||$('#sidebar')||$('.sidebar'))?.innerText||'').toLowerCase();
+ if(/lessons received|my assignments|minhas tarefas|aulas recebidas/.test(navText))return;
  let root=$('#fiTeacherAnalyticsRoot');
- if(!root){root=document.createElement('div');root.id='fiTeacherAnalyticsRoot';}
+ if(!root){root=document.createElement('section');root.id='fiTeacherAnalyticsRoot';root.setAttribute('aria-label','Teacher Analytics Center');}
  if(root.parentElement!==content)content.insertBefore(root,content.firstChild);
+ root.style.display='block';root.style.visibility='visible';
  css();
- if(!state.loaded&&!state.loading){loadData().then(render)}else render();
+ if(!state.loaded&&!state.loading){loadData().then(render).catch(e=>{state.error=e?.message||'Não foi possível carregar as métricas.';render()})}else render();
 }
 function hook(){const fn=window.loadView;if(typeof fn==='function'&&!fn.__fiTeacherAnalyticsHook){const wrapped=function(){const r=fn.apply(this,arguments);setTimeout(mount,80);setTimeout(mount,350);setTimeout(mount,900);return r};wrapped.__fiTeacherAnalyticsHook=true;wrapped.__fiOriginal=fn;window.loadView=wrapped}}
 function init(){
  css();hook();mount();
- const obs=new MutationObserver(()=>{hook();if(isTeacher()&&isOverview())mount()});
+ const obs=new MutationObserver(()=>{hook();if(isOverview())mount()});
  obs.observe(document.body,{childList:true,subtree:true});
  let tries=0;const timer=setInterval(()=>{hook();mount();if(++tries>40)clearInterval(timer)},500);
- document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&isTeacher()&&isOverview()){mount();loadData().then(render)}});
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&isOverview()){mount();loadData().then(render)}});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
