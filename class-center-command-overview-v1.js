@@ -48,6 +48,25 @@
   .tic-cc-command-item.kind-task{border:1px solid #fbbf24;border-left:5px solid #b45309;background:linear-gradient(135deg,#fef3c7 0%,#fed7aa 48%,#fff7ed 100%);box-shadow:0 6px 18px #b4530922}
   .tic-cc-command-item.kind-other{border:1px solid #cbd5e1;border-left:5px solid #475569;background:linear-gradient(135deg,#e2e8f0 0%,#cbd5e1 48%,#f8fafc 100%);box-shadow:0 6px 18px #47556922}
   .tic-cc-command-item.kind-cancelled{border:1px solid #fda4af;border-left:5px solid #e11d48;background:linear-gradient(135deg,#ffe4e6 0%,#fecdd3 48%,#fff1f2 100%);box-shadow:0 6px 18px #e11d4822}
+   .tic-cc-command-item.is-pending{border-color:#f59e0b!important;border-left-color:#d97706!important;background:linear-gradient(120deg,#fff7d6 0%,#ffedd5 55%,#fffaf0 100%)!important;box-shadow:0 7px 20px #d9770626!important}
+   .tic-cc-command-item.is-pending .tic-cc-command-pill{background:#b45309!important;color:#fff!important;font-weight:900}
+   .tic-cc-command-item.is-complete{border-left-color:#16a34a!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-card{background:#111827!important;border-color:#334155!important;color:#f8fafc!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-card-head{border-bottom-color:#334155!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-card-head p,body.fi-premium:not(.fi-light) .tic-cc-command-meta,body.fi-premium:not(.fi-light) .tic-cc-command-note{color:#cbd5e1!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-title{color:#f8fafc!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-item{background:#1e293b!important;border-color:#475569!important;color:#f8fafc!important;box-shadow:0 5px 16px #0003!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-item.kind-meeting{background:linear-gradient(120deg,#082f49,#0c4a6e)!important;border-color:#0ea5e9!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-item.kind-assessment{background:linear-gradient(120deg,#451a03,#78350f)!important;border-color:#f59e0b!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-item.kind-class{background:linear-gradient(120deg,#2e1065,#4c1d95)!important;border-color:#8b5cf6!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-item.kind-planning{background:linear-gradient(120deg,#022c22,#065f46)!important;border-color:#10b981!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-item.kind-material{background:linear-gradient(120deg,#172554,#1e40af)!important;border-color:#60a5fa!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-item.kind-task{background:linear-gradient(120deg,#451a03,#7c2d12)!important;border-color:#f59e0b!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-item.is-pending{background:linear-gradient(120deg,#422006,#78350f)!important;border-color:#fbbf24!important;border-left-color:#fbbf24!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-item.is-pending .tic-cc-command-pill{background:#fbbf24!important;color:#422006!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-filters button{background:#1e293b!important;border-color:#475569!important;color:#e2e8f0!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-filters button.active{background:#6d28d9!important;border-color:#a78bfa!important;color:#fff!important}
+   body.fi-premium:not(.fi-light) .tic-cc-command-title:hover{color:#c4b5fd!important}
   .tic-cc-command-item .tic-cc-command-date{box-shadow:0 3px 8px #00000012}
   .tic-cc-command-item.kind-meeting .tic-cc-command-date{background:#0284c7;color:#fff}
   .tic-cc-command-item.kind-assessment .tic-cc-command-date{background:#d97706;color:#fff}
@@ -116,7 +135,8 @@
   const eventType=String(item.event_type||item.category||'class').toLowerCase();
   const categoryType=String(item.category||'').toLowerCase();
   const typeClass=kind==='planning'?(categoryType.includes('material')?'material':categoryType.includes('agenda')||categoryType.includes('comprom')?'meeting':categoryType.includes('note')||categoryType.includes('anota')?'other':'planning'):kind==='task'?'task':eventType.includes('meet')||eventType.includes('reuni')?'meeting':eventType.includes('assess')||eventType.includes('avali')?'assessment':eventType.includes('other')?'other':'class';
-  const cardClass='kind-'+(status==='cancelled'?'cancelled':typeClass);
+  const statusTone=['overdue','pending','in_progress'].includes(status)?' is-pending':(['completed','done','submitted'].includes(status)?' is-complete':'');
+   const cardClass='kind-'+(status==='cancelled'?'cancelled':typeClass)+statusTone;
   const clickUrl=allUrls[0]||'';
   if(kind==='event'){
    actions='<div class="tic-cc-command-item-actions">'+(item.class_id?'<button type="button" data-tic-cc-edit-event="'+esc(item.id)+'" data-class-id="'+esc(item.class_id)+'">✎ Editar</button>':'')+'<button type="button" data-tic-cc-delete-event="'+esc(item.id)+'">Remover</button>'+'</div>';
@@ -167,7 +187,7 @@
   const datedPlanning=planning.filter(p=>p.scheduled_at);
   const upcomingPlanning=datedPlanning.filter(p=>new Date(p.scheduled_at).getTime()>=now&&p.status!=='done');
   const recentEvents=upcoming.slice(0,6);
-  const recentPlanning=[...planning].sort((a,b)=>new Date(a.scheduled_at||a.created_at||0)-new Date(b.scheduled_at||b.created_at||0)).slice(0,5);
+  const recentPlanning=planning.filter(p=>{const d=p.scheduled_at?new Date(p.scheduled_at).getTime():null;const status=String(p.status||'planned').toLowerCase();return (d===null||!Number.isFinite(d)||d>=now)&&!['done','completed','cancelled','archived'].includes(status)}).sort((a,b)=>new Date(a.scheduled_at||a.created_at||0)-new Date(b.scheduled_at||b.created_at||0)).slice(0,5);
   const topTasks=[...todayTasks].slice(0,5);
   panel.innerHTML=
    '<div class="tic-cc-command-head"><div><h2>🗓️ Agenda & Teacher Planning</h2><p>Visão diária do que está agendado, das tarefas e do que você está preparando para cada aluno.</p></div><div class="tic-cc-command-actions"><button type="button" data-tic-cc-new-event class="primary">＋ Agendar aula</button><button type="button" data-tic-cc-new-planning>＋ Planejar para aluno</button><button type="button" data-tic-cc-refresh>↻ Atualizar</button></div></div>'+
