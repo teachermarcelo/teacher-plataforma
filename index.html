@@ -2465,6 +2465,8 @@ function ticResponsiveSrcdoc(content){
  const meta='<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">';
  if(/<html[\s>]/i.test(c)) return c.replace(/<head([^>]*)>/i,`<head$1>${meta}`);
  return '<!doctype html><html><head>'+meta+'</head><body>'+c+'<script src="fixed-lessons-v1.js?v=1"></script>
+<script src="links-lesson-v1.js?v=2"></script>
+<script src="links-lesson-student-v1.js?v=2"></script>
 </body></html>';
 }
 </script>
