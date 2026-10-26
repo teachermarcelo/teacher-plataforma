@@ -125,12 +125,17 @@ function isTeacher(){
  return (hasTeacherNav||hasTeacherProfile||hasTeacherControls)&&!hasStudentNav;
 }
 function isOverview(){
- const navItems=Array.from(document.querySelectorAll('.nav button,.nav a,#sidebar button,#sidebar a,aside button,aside a,.sidebar button,.sidebar a,[aria-current="page"],[aria-selected="true"]'));
- const active=navItems.find(el=>el.classList.contains('active')||el.getAttribute('aria-current')==='page'||el.getAttribute('aria-selected')==='true');
- const nav=String(active?.innerText||active?.textContent||'').toLowerCase().trim();
- // Prefer the actual selected navigation item over stale global route variables.
- if(/overview|dashboard|visão geral|visao geral|início|inicio|home/.test(nav))return true;
- if(/students|alunos|student activity|atividade do aluno|games analytics|class center|turmas|classes|contatos|contacts|games|jogos|lessons|aulas|courses|cursos|tasks|tarefas|calendar|calendário|mensagens|messages|reports|relatórios|materials|materiais|settings|configurações/.test(nav))return false;
+ const isOverviewLabel=s=>/overview|dashboard|visão geral|visao geral|início|inicio|home/.test(String(s||'').toLowerCase().trim());
+ const isOtherViewLabel=s=>/students|alunos|student activity|atividade do aluno|games analytics|class center|turmas|classes|contatos|contacts|games|jogos|lessons|aulas|courses|cursos|tasks|tarefas|calendar|calendário|mensagens|messages|reports|relatórios|materials|materiais|settings|configurações/.test(String(s||'').toLowerCase().trim());
+ // Prefer the visibly active navigation control; ARIA markers can remain stale after SPA transitions.
+ const active=Array.from(document.querySelectorAll('.nav .active,#sidebar .active,aside .active,.sidebar .active,[aria-current="page"],[aria-selected="true"]'));
+ const activeLabels=active.map(el=>el.innerText||el.textContent||'');
+ if(activeLabels.some(isOverviewLabel))return true;
+ if(activeLabels.some(isOtherViewLabel))return false;
+ const navItems=Array.from(document.querySelectorAll('.nav button,.nav a,#sidebar button,#sidebar a,aside button,aside a,.sidebar button,.sidebar a'));
+ const nav=String(navItems.find(el=>el.classList.contains('active'))?.innerText||'').toLowerCase().trim();
+ if(isOverviewLabel(nav))return true;
+ if(isOtherViewLabel(nav))return false;
  const view=String(window.currentView||window.currentPage||window.currentViewName||'').toLowerCase().trim();
  if(/studentactivity|student-activity|student activity|lesson|course|class|task|calendar|message|report|material|setting|assessment|game|ready|immersion|contact/.test(view))return false;
  if(/overview|dashboard|visão geral|visao geral|início|inicio|home/.test(view))return true;
