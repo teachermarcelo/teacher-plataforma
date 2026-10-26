@@ -118,10 +118,11 @@ function isTeacher(){
  const sidebar=document.querySelector('aside')||$('#sidebar')||$('.sidebar');
  const navText=String(sidebar?.innerText||sidebar?.textContent||'').toLowerCase();
  const roleText=String(document.body.innerText||'').toLowerCase();
- const hasTeacherNav=/students/.test(navText)&&/classes/.test(navText)&&/contatos|contacts/.test(navText);
- const hasTeacherProfile=/teacher platform/.test(roleText)&&/teacher marcelo/.test(roleText)&&/teacher/.test(roleText);
+ const hasTeacherNav=/(students|alunos)/.test(navText)&&/(classes|turmas)/.test(navText)&&/(contatos|contacts)/.test(navText);
+ const hasTeacherProfile=/teacher marcelo/.test(roleText)||/teacher platform/.test(roleText)||/english classroom os/.test(roleText);
+ const hasTeacherControls=!!document.querySelector('#fiTaStudent, [data-view="students"], [data-view="classes"]');
  const hasStudentNav=/lessons recebidas|my assignments|minhas tarefas|aulas recebidas/.test(navText);
- return (hasTeacherNav||hasTeacherProfile)&&!hasStudentNav;
+ return (hasTeacherNav||hasTeacherProfile||hasTeacherControls)&&!hasStudentNav;
 }
 function isOverview(){
  const view=String(window.currentView||window.currentPage||window.currentViewName||'').toLowerCase().trim();
@@ -144,6 +145,12 @@ function mount(){
  if(!state.loaded&&!state.loading){loadData().then(render)}else render();
 }
 function hook(){const fn=window.loadView;if(typeof fn==='function'&&!fn.__fiTeacherAnalyticsHook){const wrapped=function(){const r=fn.apply(this,arguments);setTimeout(mount,80);setTimeout(mount,350);setTimeout(mount,900);return r};wrapped.__fiTeacherAnalyticsHook=true;wrapped.__fiOriginal=fn;window.loadView=wrapped}}
-function init(){css();hook();mount();const obs=new MutationObserver(()=>{if(!$('#fiTeacherAnalyticsRoot')&&isTeacher()&&isOverview())mount()});obs.observe(document.body,{childList:true,subtree:true});let tries=0;const timer=setInterval(()=>{hook();mount();if(++tries>24)clearInterval(timer)},500);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&$('#fiTeacherAnalyticsRoot')){loadData().then(render)}})}
+function init(){
+ css();hook();mount();
+ const obs=new MutationObserver(()=>{hook();if(isTeacher()&&isOverview())mount()});
+ obs.observe(document.body,{childList:true,subtree:true});
+ let tries=0;const timer=setInterval(()=>{hook();mount();if(++tries>40)clearInterval(timer)},500);
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&isTeacher()&&isOverview()){mount();loadData().then(render)}});
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
