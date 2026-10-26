@@ -1,11 +1,11 @@
--- Links Lesson: secure grading fields and lock submitted attempts without altering existing rows.
+-- Links Lesson: protect grading fields, lock submitted attempts and auto-grade objective questions.
 create or replace function public.ll_guard_attempt_mutation()
 returns trigger language plpgsql security definer set search_path = public, auth
 as $$
 declare v_teacher boolean;
 begin
-  select public.ll_is_teacher(a.teacher_id) into v_teacher
-  from public.ll_assignments a where a.id=old.assignment_id;
+  if auth.role() = 'service_role' then return new; end if;
+  select public.ll_is_teacher(a.teacher_id) into v_teacher from public.ll_assignments a where a.id=old.assignment_id;
   if coalesce(v_teacher,false) then
     if new.assignment_id is distinct from old.assignment_id or new.lesson_id is distinct from old.lesson_id or new.student_id is distinct from old.student_id or new.attempt_no is distinct from old.attempt_no or new.answers is distinct from old.answers or new.started_at is distinct from old.started_at or new.created_at is distinct from old.created_at then
       raise exception 'Teacher grading cannot rewrite attempt identity or student answers.';
@@ -14,7 +14,9 @@ begin
   end if;
   if old.student_id is distinct from public.ll_current_student_id() then raise exception 'Not allowed to modify this attempt.'; end if;
   if old.status in ('submitted','reviewed','completed') then
-    if new.answers is distinct from old.answers or new.status is distinct from old.status or new.score is distinct from old.score or new.teacher_feedback is distinct from old.teacher_feedback or new.review is distinct from old.review or new.submitted_at is distinct from old.submitted_at or new.reviewed_at is distinct from old.reviewed_at then raise exception 'Submitted attempts are locked.'; end if;
+    if new.answers is distinct from old.answers or new.status is distinct from old.status or new.score is distinct from old.score or new.teacher_feedback is distinct from old.teacher_feedback or new.review is distinct from old.review or new.submitted_at is distinct from old.submitted_at or new.reviewed_at is distinct from old.reviewed_at then
+      raise exception 'Submitted attempts are locked.';
+    end if;
   else
     if new.score is distinct from old.score or new.teacher_feedback is distinct from old.teacher_feedback or new.review is distinct from old.review or new.reviewed_at is distinct from old.reviewed_at then raise exception 'Students cannot change grading fields.'; end if;
     if new.status not in ('in_progress','draft','submitted') then raise exception 'Invalid student attempt status.'; end if;
@@ -25,11 +27,44 @@ end $$;
 drop trigger if exists ll_attempts_guard_mutation on public.ll_attempts;
 create trigger ll_attempts_guard_mutation before update on public.ll_attempts for each row execute function public.ll_guard_attempt_mutation();
 
+create or replace function public.ll_auto_grade_attempt()
+returns trigger language plpgsql security definer set search_path=public
+as $$
+declare v_content jsonb; v_q jsonb; v_key text; v_type text; v_correct text; v_given text; v_points numeric; v_total numeric:=0; v_earned numeric:=0; v_options jsonb; v_opt jsonb; v_target text;
+begin
+  if new.status <> 'submitted' or old.status='submitted' then return new; end if;
+  select l.content into v_content from public.ll_lessons l where l.id=new.lesson_id;
+  if v_content is null then return new; end if;
+  for v_q in select value from jsonb_array_elements(coalesce(v_content->'questions','[]'::jsonb))
+  loop
+    v_type:=lower(coalesce(v_q->>'type',v_q->>'question_type',''));
+    if v_type not in ('multiple_choice','multiple-choice','mcq','true_false','true/false','fill_blank','fill-blank','word_order') then continue; end if;
+    v_key:=coalesce(v_q->>'id','q'||(v_total+1)::text);
+    v_correct:=coalesce(v_q->>'answer',v_q->>'correct_answer',v_q->>'correctAnswer','');
+    v_points:=greatest(0,coalesce(nullif(v_q->>'points','')::numeric,1));
+    if v_type in ('multiple_choice','multiple-choice','mcq') then
+      v_options:=coalesce(v_q->'options','[]'::jsonb);
+      if v_correct ~ '^[0-9]+$' then
+        v_opt:=v_options->(v_correct::integer);
+        if jsonb_typeof(v_opt)='object' then v_correct:=coalesce(v_opt->>'value',v_opt->>'text',v_opt->>'label',v_correct); end if;
+      end if;
+    end if;
+    v_given:=coalesce(new.answers->>v_key,'');
+    v_total:=v_total+v_points;
+    if lower(btrim(v_given))=lower(btrim(v_correct)) and v_correct<>'' then v_earned:=v_earned+v_points; end if;
+  end loop;
+  if v_total>0 then new.score:=round((v_earned/v_total)*100,2); end if;
+  return new;
+end $$;
+drop trigger if exists ll_attempts_auto_grade on public.ll_attempts;
+create trigger ll_attempts_auto_grade before update of status on public.ll_attempts for each row execute function public.ll_auto_grade_attempt();
+
 create or replace function public.ll_guard_answer_mutation()
 returns trigger language plpgsql security definer set search_path=public,auth
 as $$
 declare v_attempt public.ll_attempts%rowtype; v_teacher boolean; v_attempt_id uuid;
 begin
+  if auth.role() = 'service_role' then if tg_op='DELETE' then return old; else return new; end if; end if;
   if tg_op='DELETE' then v_attempt_id=old.attempt_id; else v_attempt_id=new.attempt_id; end if;
   select * into v_attempt from public.ll_attempts where id=v_attempt_id for update;
   if not found then raise exception 'Attempt not found.'; end if;
