@@ -1024,7 +1024,7 @@ function loadFITeacherAnalytics(){
  try{
   if(document.querySelector('script[data-fi-teacher-analytics]'))return;
   var script=document.createElement('script');
-  script.src='teacher-analytics-dashboard-v1.js?v=22';
+  script.src='teacher-analytics-dashboard-v1.js?v=23';
   script.async=true;
   script.setAttribute('data-fi-teacher-analytics','true');
   script.onerror=function(){console.warn('[Fluent Immersion] Teacher Analytics não carregou; as funções existentes foram mantidas.')};
