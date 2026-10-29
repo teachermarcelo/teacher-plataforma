@@ -1040,3 +1040,189 @@ else loadFITeacherAnalytics();
 
 /* Inject the Classes/global-theme CSS as CSS, not raw JavaScript. */
 (function(){var fiRepairStyle=document.createElement('style');fiRepairStyle.setAttribute('data-fi-global-classes-theme','v27');fiRepairStyle.textContent="/* FIX: Classes page title must scroll naturally with the page, never overlay cards */\nbody.fi-premium #content .tic-class-overview-head{\n position:relative!important;top:auto!important;z-index:1!important;\n margin-top:18px!important;isolation:isolate!important;\n}\nbody.fi-premium #content .tic-class-overview-head::before,\nbody.fi-premium #content .tic-class-overview-head::after{\n pointer-events:none!important;\n}\nbody.fi-premium #content .tic-class-overview-head+ .tic-class-view-tools{\n position:relative!important;top:auto!important;z-index:1!important;\n}\nbody.fi-premium #content .tic-class-overview-card{\n scroll-margin-top:90px!important;\n}\n\n/* CLASS CARDS — align exactly with the approved light/dark reference */\nbody.fi-premium.fi-light #content .tic-class-overview-card{background:linear-gradient(145deg,#fff 0%,#fbfdff 100%)!important;border:1px solid #dce6f5!important;border-radius:20px!important;box-shadow:0 8px 26px #21365a0c!important;color:#102448!important}\nbody.fi-premium.fi-light #content .tic-class-overview-card .section-head{background:transparent!important}\nbody.fi-premium.fi-light #content .tic-class-overview-card .badge.blue{display:inline-flex!important;align-items:center;justify-content:center;min-width:48px;min-height:48px;border-radius:50%!important;background:linear-gradient(135deg,#c4b5fd,#a78bfa)!important;color:#21124f!important;border:0!important;font-size:17px!important;font-weight:900!important}\nbody.fi-premium.fi-light #content .tic-class-overview-card .section-head> :last-child.badge,\nbody.fi-premium.fi-light #content .tic-class-overview-card .section-head .badge:not(.blue){background:#a7f3d0!important;color:#065f46!important;border:1px solid #6ee7b7!important;border-radius:999px!important;font-weight:850!important;padding:7px 12px!important}\nbody.fi-premium.fi-light #content .tic-class-overview-card .tic-class-name,\nbody.fi-premium.fi-light #content .tic-class-overview-card .section-head h2{color:#102448!important;font-weight:850!important}\nbody.fi-premium.fi-light #content .tic-class-schedule{color:#526b91!important}\nbody.fi-premium.fi-light #content .tic-class-kpi{background:linear-gradient(145deg,#fff,#f7faff)!important;border:1px solid #d6e3f5!important;border-radius:15px!important}\nbody.fi-premium.fi-light #content .tic-class-kpi span{color:#243b61!important}\nbody.fi-premium.fi-light #content .tic-class-kpi b{color:#102448!important}\nbody.fi-premium.fi-light #content .tic-class-kpi small{color:#526b91!important}\nbody.fi-premium.fi-light #content .tic-next-lesson{background:linear-gradient(115deg,#eef4ff,#f6f8ff)!important;border:1px solid #d6e3f5!important;border-radius:15px!important}\nbody.fi-premium.fi-light #content .tic-next-content span{color:#385783!important}\nbody.fi-premium.fi-light #content .tic-next-content b{color:#102448!important}\nbody.fi-premium.fi-light #content .tic-next-content small{color:#526b91!important}\nbody.fi-premium.fi-light #content .tic-next-status{background:#fff!important;color:#243b61!important;border:1px solid #dce6f5!important;border-radius:9px!important}\nbody.fi-premium.fi-light #content .tic-class-info-grid .mini{background:#f3f7ff!important;border:1px solid #d6e3f5!important;border-radius:12px!important}\nbody.fi-premium.fi-light #content .tic-class-info-grid .mini span{color:#385783!important}\nbody.fi-premium.fi-light #content .tic-class-info-grid .mini b{color:#102448!important}\nbody.fi-premium.fi-light #content .tic-class-actions .btn.primary{background:linear-gradient(120deg,#7045e8,#5134c8)!important;border:1px solid #6040d9!important;color:#fff!important;box-shadow:0 5px 13px #5b3cc426!important}\nbody.fi-premium.fi-light #content .tic-class-actions .btn.secondary,\nbody.fi-premium.fi-light #content .tic-class-actions .btn.ghost{background:#f2edff!important;border:1px solid #c7b7ff!important;color:#4c2db4!important}\nbody.fi-premium.fi-light #content .tic-class-actions .btn.danger{background:#fff0f1!important;border:1px solid #ff9ba7!important;color:#b42332!important}\nbody.fi-premium.fi-light #content .tic-class-actions .btn.warning{background:#fff7e8!important;border:1px solid #ffc66d!important;color:#92400e!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-overview-card{background:linear-gradient(145deg,#0d1b31 0%,#132540 100%)!important;border:1px solid #28466c!important;border-radius:20px!important;box-shadow:0 10px 28px #0003!important;color:#f3f7ff!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-overview-card .section-head{background:transparent!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-overview-card .badge.blue{display:inline-flex!important;align-items:center;justify-content:center;min-width:48px;min-height:48px;border-radius:50%!important;background:linear-gradient(135deg,#a78bfa,#7c5ce7)!important;color:#180d3b!important;border:1px solid #b7a4ff!important;font-size:17px!important;font-weight:900!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-overview-card .section-head> :last-child.badge,\nbody.fi-premium:not(.fi-light) #content .tic-class-overview-card .section-head .badge:not(.blue){background:#6ee7c8!important;color:#063b36!important;border:1px solid #9bf5df!important;border-radius:999px!important;font-weight:900!important;padding:7px 12px!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-overview-card .tic-class-name,\nbody.fi-premium:not(.fi-light) #content .tic-class-overview-card .section-head h2{color:#f7f9ff!important;font-weight:850!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-schedule{color:#b7d8ff!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-kpi{background:linear-gradient(145deg,#142a47,#10213a)!important;border:1px solid #2d4d77!important;border-radius:15px!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-kpi span{color:#e0eaff!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-kpi b{color:#fff!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-kpi small{color:#bfd2ee!important}\nbody.fi-premium:not(.fi-light) #content .tic-next-lesson{background:linear-gradient(115deg,#132947,#172d4c)!important;border:1px solid #294a75!important;border-radius:15px!important}\nbody.fi-premium:not(.fi-light) #content .tic-next-content span{color:#b7d8ff!important}\nbody.fi-premium:not(.fi-light) #content .tic-next-content b{color:#f5f8ff!important}\nbody.fi-premium:not(.fi-light) #content .tic-next-content small{color:#c4d7f2!important}\nbody.fi-premium:not(.fi-light) #content .tic-next-status{background:#203a5e!important;color:#f3f7ff!important;border:1px solid #355782!important;border-radius:9px!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-info-grid .mini{background:#142a47!important;border:1px solid #2d4d77!important;border-radius:12px!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-info-grid .mini span{color:#c8d9f2!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-info-grid .mini b{color:#fff!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-actions .btn.primary{background:linear-gradient(120deg,#a78bfa,#8060ee)!important;border:1px solid #c2b0ff!important;color:#160b35!important;box-shadow:0 0 16px #9475ff42!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-actions .btn.secondary,\nbody.fi-premium:not(.fi-light) #content .tic-class-actions .btn.ghost{background:#101f36!important;border:1px solid #7189b8!important;color:#e5dfff!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-actions .btn.danger{background:#3b1725!important;border:1px solid #ff7284!important;color:#ffb3bf!important}\nbody.fi-premium:not(.fi-light) #content .tic-class-actions .btn.warning{background:#392810!important;border:1px solid #f6b84b!important;color:#ffdb88!important}\nbody.fi-premium #content .tic-class-overview-card .badge{letter-spacing:.01em!important}\nbody.fi-premium #content .tic-class-actions .btn{min-height:42px!important;border-radius:12px!important;font-weight:800!important}\n@media(max-width:700px){body.fi-premium #content .tic-class-overview-card .badge.blue{min-width:42px;min-height:42px}}\n";document.head.appendChild(fiRepairStyle);})();
+
+
+/* UI refinement 2026-10-29 — additive layer.
+   Preserves existing routes, DOM behavior, storage, Supabase calls and business logic. */
+(function teacherPlatformVisualRefinement(){
+  if (document.getElementById('tp-ui-refinement-20261029')) return;
+  const style = document.createElement('style');
+  style.id = 'tp-ui-refinement-20261029';
+  style.textContent = String.raw`
+    :root {
+      --tp-accent: #7047e8;
+      --tp-accent-strong: #5b32d6;
+      --tp-accent-soft: #f1edff;
+      --tp-ink: #17213a;
+      --tp-muted: #66748e;
+      --tp-border: #dfe5f1;
+      --tp-surface: #ffffff;
+      --tp-canvas: #f5f7fc;
+      --tp-radius: 15px;
+    }
+    body:not(.fi-premium) {
+      color: var(--tp-ink);
+      background: var(--tp-canvas);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    body:not(.fi-premium) .sidebar {
+      background: #fff;
+      border-right: 1px solid var(--tp-border);
+      box-shadow: 3px 0 22px rgba(30, 39, 75, .025);
+    }
+    body:not(.fi-premium) .brand {
+      letter-spacing: -.45px;
+    }
+    body:not(.fi-premium) .nav button {
+      border-radius: 11px;
+      transition: background .16s ease, color .16s ease, transform .16s ease;
+    }
+    body:not(.fi-premium) .nav button:hover {
+      transform: translateX(2px);
+      background: #f4f1ff;
+      color: var(--tp-accent-strong);
+    }
+    body:not(.fi-premium) .nav button.active {
+      box-shadow: inset 3px 0 0 #9c83ff, 0 5px 14px rgba(112,71,232,.12);
+    }
+    body:not(.fi-premium) .topbar {
+      min-height: 68px;
+      background: rgba(255,255,255,.96);
+      border-bottom: 1px solid var(--tp-border);
+      box-shadow: 0 3px 18px rgba(31, 43, 78, .025);
+      backdrop-filter: blur(12px);
+    }
+    body:not(.fi-premium) .main,
+    body:not(.fi-premium) .container {
+      background: var(--tp-canvas);
+    }
+    body:not(.fi-premium) .container {
+      min-width: 0;
+    }
+    body:not(.fi-premium) .page-head {
+      margin-bottom: 18px;
+    }
+    body:not(.fi-premium) .page-head h1 {
+      color: #111c36;
+      letter-spacing: -1.15px;
+      line-height: 1.12;
+    }
+    body:not(.fi-premium) .page-head p,
+    body:not(.fi-premium) .crumb,
+    body:not(.fi-premium) .muted {
+      color: var(--tp-muted);
+    }
+    body:not(.fi-premium) .card,
+    body:not(.fi-premium) .stat,
+    body:not(.fi-premium) .quick,
+    body:not(.fi-premium) .table-wrap,
+    body:not(.fi-premium) .modal-card,
+    body:not(.fi-premium) .empty {
+      min-width: 0;
+      border: 1px solid var(--tp-border);
+      border-radius: var(--tp-radius);
+      background: var(--tp-surface);
+      box-shadow: 0 5px 18px rgba(35, 47, 84, .035);
+    }
+    body:not(.fi-premium) .card h2,
+    body:not(.fi-premium) .card h3 {
+      color: #17213a;
+      letter-spacing: -.2px;
+    }
+    body:not(.fi-premium) button,
+    body:not(.fi-premium) .btn {
+      transition: transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease;
+    }
+    body:not(.fi-premium) button:focus-visible,
+    body:not(.fi-premium) a:focus-visible,
+    body:not(.fi-premium) input:focus-visible,
+    body:not(.fi-premium) select:focus-visible,
+    body:not(.fi-premium) textarea:focus-visible {
+      outline: 3px solid rgba(112,71,232,.27);
+      outline-offset: 2px;
+    }
+    body:not(.fi-premium) input,
+    body:not(.fi-premium) select,
+    body:not(.fi-premium) textarea {
+      max-width: 100%;
+      border-color: #d7deec;
+      border-radius: 10px;
+    }
+    body:not(.fi-premium) .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    body:not(.fi-premium) table {
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    body:not(.fi-premium) th {
+      color: #53617b;
+      background: #f7f8fc;
+      font-size: 11px;
+      letter-spacing: .025em;
+      text-transform: uppercase;
+    }
+    body:not(.fi-premium) td,
+    body:not(.fi-premium) th {
+      overflow-wrap: anywhere;
+    }
+    body:not(.fi-premium) .stat-value {
+      color: var(--tp-accent-strong);
+      letter-spacing: -.8px;
+    }
+    body:not(.fi-premium) .badge,
+    body:not(.fi-premium) .pill {
+      border-radius: 999px;
+    }
+    @media (max-width: 1100px) {
+      body:not(.fi-premium) .container { padding-left: 18px; padding-right: 18px; }
+      body:not(.fi-premium) .page-head { gap: 12px; flex-wrap: wrap; }
+      body:not(.fi-premium) .card,
+      body:not(.fi-premium) .stat { overflow-wrap: anywhere; }
+    }
+    @media (max-width: 760px) {
+      body:not(.fi-premium) .topbar {
+        min-height: 58px;
+        padding-left: 12px;
+        padding-right: 12px;
+        gap: 8px;
+      }
+      body:not(.fi-premium) .container {
+        padding: 16px 12px 28px;
+      }
+      body:not(.fi-premium) .page-head {
+        margin-bottom: 14px;
+      }
+      body:not(.fi-premium) .page-head h1 {
+        font-size: clamp(25px, 7vw, 34px);
+      }
+      body:not(.fi-premium) .card,
+      body:not(.fi-premium) .stat,
+      body:not(.fi-premium) .quick {
+        border-radius: 13px;
+      }
+      body:not(.fi-premium) .table-wrap table {
+        min-width: 560px;
+      }
+      body:not(.fi-premium) .modal-card {
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
+        max-height: calc(100dvh - 24px);
+        overflow: auto;
+      }
+      body:not(.fi-premium) .nav button:hover { transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body:not(.fi-premium) *,
+      body:not(.fi-premium) *::before,
+      body:not(.fi-premium) *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+      }
+    }
+  `;
+  (document.head || document.documentElement).appendChild(style);
+})(); 
